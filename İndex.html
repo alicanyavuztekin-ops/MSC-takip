@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="MSC Takip">
+  <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/MSC_crociere_logo.svg/1024px-MSC_crociere_logo.svg.png">
+
+  <title>MSC Gemi & Beyanname Takip Paneli</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body { font-family: 'Inter', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-100 font-sans text-slate-800 antialiased">
+
+  <header class="bg-blue-900 text-white shadow-lg p-4 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto flex justify-between items-center">
+      <div class="flex items-center gap-3">
+        <div class="bg-yellow-400 text-blue-950 p-2 rounded-lg font-bold text-xl">
+          <i class="fa-solid fa-ship"></i>
+        </div>
+        <div>
+          <h1 class="text-lg md:text-xl font-bold tracking-wide uppercase">MSC & MEDLOG GEMİ TAKİP</h1>
+          <p class="text-xs text-blue-200">Liman Operasyon & Beyanname Sistemi</p>
+        </div>
+      </div>
+      <button type="button" onclick="requestNotificationPermission()" class="bg-blue-800 hover:bg-blue-700 text-xs text-blue-100 px-3 py-2 rounded-lg border border-blue-600 flex items-center gap-2 cursor-pointer transition-all">
+        <i class="fa-solid fa-bell text-yellow-400"></i> BİLDİRİMLERİ AÇ
+      </button>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-500 font-semibold uppercase">TOPLAM TAKİP</p>
+          <p id="stat-total" class="text-2xl font-bold text-slate-800 mt-1">0</p>
+        </div>
+        <div class="bg-blue-50 p-3 rounded-xl text-blue-600"><i class="fa-solid fa-anchor text-2xl"></i></div>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-500 font-semibold uppercase">5 SAAT KALA (KRİTİK)</p>
+          <p id="stat-critical" class="text-2xl font-bold text-red-600 mt-1">0</p>
+        </div>
+        <div class="bg-red-50 p-3 rounded-xl text-red-600"><i class="fa-solid fa-triangle-exclamation text-2xl"></i></div>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-500 font-semibold uppercase">YAKLAŞAN (10 SAAT)</p>
+          <p id="stat-warning" class="text-2xl font-bold text-amber-600 mt-1">0</p>
+        </div>
+        <div class="bg-amber-50 p-3 rounded-xl text-amber-600"><i class="fa-solid fa-clock text-2xl"></i></div>
+      </div>
+
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+        <div>
+          <p class="text-xs text-slate-500 font-semibold uppercase">TOPLAM BEYANNAME</p>
+          <p id="stat-declarations" class="text-2xl font-bold text-emerald-600 mt-1">0</p>
+        </div>
+        <div class="bg-emerald-50 p-3 rounded-xl text-emerald-600"><i class="fa-solid fa-file-invoice text-2xl"></i></div>
+      </div>
+    </div>
+
+    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+      <h2 class="text-base font-bold mb-4 text-slate-800 flex items-center gap-2 border-b pb-2 uppercase">
+        <i class="fa-solid fa-plus-circle text-blue-600"></i> YENİ GEMİ VE BEYANNAME GİRİŞİ
+      </h2>
+      <form id="ship-form" onsubmit="addShip(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">GEMİ ADI</label>
+          <input type="text" id="shipName" required placeholder="ÖRN: MSC MAYA" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none uppercase">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">IMO / MMSI NO</label>
+          <input type="text" id="imoNumber" placeholder="ÖRN: 9708679" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none uppercase">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">VARIŞ LİMANI</label>
+          <select id="port" required class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white uppercase">
+            <option value="İZMİR ALSANCAK">İZMİR ALSANCAK</option>
+            <option value="ALİAĞA SOCAR">ALİAĞA SOCAR</option>
+            <option value="MERSİN">MERSİN</option>
+            <option value="TEKİRDAĞ">TEKİRDAĞ</option>
+            <option value="GEMLİK">GEMLİK</option>
+            <option value="AMBARLI">AMBARLI</option>
+          </select>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">TAHMİNİ VARIŞ (ETA)</label>
+          <input type="datetime-local" id="eta" required class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">BEYANNAME ADEDİ</label>
+          <input type="number" id="declarations" min="1" required placeholder="ÖRN: 15" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">E-POSTA ADRESİ</label>
+          <input type="email" id="notificationEmail" required placeholder="ornek@medlog.com.tr" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none uppercase">
+        </div>
+        <div class="flex items-end">
+          <button type="submit" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold p-2.5 rounded-lg transition-all text-sm flex justify-center items-center gap-2 cursor-pointer shadow-md shadow-blue-200">
+            <i class="fa-solid fa-check-circle"></i> TAKİBE AL
+          </button>
+        </div>
+      </form>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3">
+        <h3 class="font-bold text-slate-800 flex items-center gap-2 uppercase">
+          <i class="fa-solid fa-list-check text-blue-600"></i> TAKİP EDİLEN GEMİLER
+        </h3>
+        <div class="flex items-center gap-2 w-full sm:w-auto">
+          <span class="text-xs text-slate-500 font-semibold uppercase">LİMAN FİLTRESİ:</span>
+          <select id="filterPort" onchange="renderShips()" class="text-xs p-2 border border-slate-300 rounded-lg outline-none bg-white font-medium uppercase">
+            <option value="ALL">TÜMÜ</option>
+            <option value="İZMİR ALSANCAK">İZMİR ALSANCAK</option>
+            <option value="ALİAĞA SOCAR">ALİAĞA SOCAR</option>
+            <option value="MERSİN">MERSİN</option>
+            <option value="TEKİRDAĞ">TEKİRDAĞ</option>
+            <option value="GEMLİK">GEMLİK</option>
+            <option value="AMBARLI">AMBARLI</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-slate-50 text-slate-500 text-xs font-semibold uppercase border-b border-slate-200">
+              <th class="p-3">GEMİ ADI / IMO</th>
+              <th class="p-3">VARIŞ LİMANI</th>
+              <th class="p-3">BEYANNAME</th>
+              <th class="p-3">E-POSTA</th>
+              <th class="p-3">ETA (VARIŞ)</th>
+              <th class="p-3">KALAN SÜRE</th>
+              <th class="p-3">DURUM</th>
+              <th class="p-3 text-right">CANLI İZLE VE İŞLEM</th>
+            </tr>
+          </thead>
+          <tbody id="ship-list-body" class="divide-y divide-slate-100 text-sm">
+            </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <div id="mapModal" class="fixed inset-0 bg-slate-900/80 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+    <div class="bg-white rounded-2xl max-w-5xl w-full p-5 space-y-4 relative shadow-2xl">
+      <div class="flex justify-between items-center border-b pb-3">
+        <div>
+          <h3 id="modalTitle" class="font-bold text-lg text-slate-800 uppercase">CANLI GEMİ HARİTASI</h3>
+          <p id="modalSub" class="text-xs text-slate-500 uppercase">VesselFinder Canlı AIS Entegrasyonu</p>
+        </div>
+        <button onclick="closeMapModal()" class="text-slate-400 hover:text-red-600 text-2xl font-bold p-1 cursor-pointer transition-colors">&times;</button>
+      </div>
+
+      <div class="w-full h-[480px] rounded-xl overflow-hidden border border-slate-200 relative bg-slate-100">
+        <iframe id="mapIframe" class="w-full h-full border-0" src=""></iframe>
+      </div>
+
+      <div class="flex flex-wrap justify-between items-center gap-3 pt-2 border-t text-xs">
+        <span class="text-slate-500 font-medium uppercase">Haritada çıkmazsa harici platformda açın:</span>
+        <div id="externalLinks" class="flex items-center gap-2">
+          </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Yerel Depolama (Verileri Tarayıcıda Saklar)
+    let ships = [];
+    try {
+      ships = JSON.parse(localStorage.getItem('msc_ships_v11')) || [];
+    } catch(err) {
+      ships = [];
+    }
+
+    function saveShips() {
+      localStorage.setItem('msc_ships_v11', JSON.stringify(ships));
+      renderShips();
+    }
+
+    // Gerçek E-posta Gönderim Servisi (FormSubmit)
+    function sendRealEmail(toEmail, subjectText, bodyText) {
+      fetch("https://formsubmit.co/ajax/" + encodeURIComponent(toEmail.toLowerCase()), {
+        method: "POST",
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          _subject: subjectText,
+          MESAJ: bodyText,
+          _captcha: "false"
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        console.log("Mail Gönderildi: " + toEmail, data);
+      })
+      .catch(err => {
+        console.error("Mail Hatası: ", err);
+      });
+    }
+
+    // Gemi Ekleme İşlemi
+    function addShip(e) {
+      e.preventDefault();
+
+      const name = document.getElementById('shipName').value.trim().toUpperCase();
+      const imo = document.getElementById('imoNumber').value.trim().toUpperCase();
+      const port = document.getElementById('port').value.toUpperCase();
+      const eta = document.getElementById('eta').value;
+      const declarations = document.getElementById('declarations').value;
+      const email = document.getElementById('notificationEmail').value.trim().toUpperCase();
+
+      if (!name || !eta || !declarations || !email) {
+        alert("LÜTFEN ZORUNLU ALANLARI DOLDURUN.");
+        return;
+      }
+
+      const newShip = {
+        id: Date.now(),
+        name: name,
+        imo: imo || 'BELİRTİLMEDİ',
+        port: port,
+        eta: eta,
+        declarations: parseInt(declarations),
+        email: email,
+        status: 'PENDING',
+        emailSent10h: false,
+        emailSent5h: false,
+        emailSentArrived: false
+      };
+
+      ships.push(newShip);
+      saveShips();
+
+      // Takibe Alındı E-postası Gönderimi
+      const mailSubject = "✅ TAKİBE ALINDI: " + name + " GEMİSİ";
+      const mailBody = "SİSTEM AKTİF!\n\n" + name + " Gemisi takibe alındı.\nVarış Limanı: " + port + "\nBeyanname Adedi: " + declarations + "\nETA (Varış Saati): " + new Date(eta).toLocaleString('tr-TR') + "\nBildirim E-postası: " + email;
+
+      sendRealEmail(email, mailSubject, mailBody);
+
+      alert("✅ SİSTEM AKTİF!\n\n'" + name + "' GEMİSİ TAKİBE ALINDI VE E-POSTA ATILDI.\n\n(ÖNEMLİ: EĞER E-POSTA ADRESİNİZİ İLK KEZ GİRDİYSENİZ, GELEN ONAY MAİLİNDEN 'ACTIVATE' BUTONUNA BASMAYI UNUTMAYIN!)");
+
+      if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification("✅ TAKİBE ALINDI: " + name, {
+          body: port + " LİMANI İÇİN " + declarations + " ADET BEYANNAME KAYDEDİLDİ."
+        });
+      }
+
+      document.getElementById('ship-form').reset();
+    }
+
+    function deleteShip(id) {
+      if(confirm("BU KAYDI SİLMEK İSTEDİĞİNİZE EMİN MİSİNİZ?")) {
+        ships = ships.filter(s => s.id !== id);
+        saveShips();
+      }
+    }
+
+    function completeShip(id) {
+      ships = ships.map(s => s.id === id ? {...s, status: 'COMPLETED'} : s);
+      saveShips();
+    }
+
+    function calculateTimeRemaining(etaString) {
+      const etaDate = new Date(etaString);
+      const now = new Date();
+      const diffMs = etaDate - now;
+      const diffHours = diffMs / (1000 * 60 * 60);
+
+      if (isNaN(diffHours)) {
+        return { totalHours: 0, formatted: 'GEÇERSİZ TARİH' };
+      }
+
+      return {
+        totalHours: diffHours,
+        formatted: diffHours > 0 
+          ? Math.floor(diffHours) + " SAAT " + Math.floor((diffHours % 1) * 60) + " DK"
+          : 'LİMANDA / SÜRE DOLDU'
+      };
+    }
+
+    function requestNotificationPermission() {
+      if ('Notification' in window) {
+        Notification.requestPermission().then(permission => {
+          if(permission === 'granted') alert("BİLDİRİMLER AKTİF HALE GETİRİLDİ!");
+        });
+      }
+    }
+
+    // Otomatik Mail ve Bildirim Kontrolü
+    function checkNotifications() {
+      ships.forEach(ship => {
+        if (ship.status !== 'COMPLETED') {
+          const time = calculateTimeRemaining(ship.eta);
+
+          // 1. 10 SAAT KALA MAİLİ
+          if (time.totalHours <= 10 && time.totalHours > 5 && !ship.emailSent10h) {
+            const subject10h = "🚨 UYARI: " + ship.name + " VARIŞA 10 SAAT KALA!";
+            const body10h = "10 SAAT KALA UYARISI!\n\nGEMİ ADI: " + ship.name + "\nVARIŞ LİMANI: " + ship.port + "\nKALAN SÜRE: " + time.formatted + "\nBEYANNAME ADEDİ: " + ship.declarations + "\n\nBEYANNAMELERİNİZİ KONTROL EDİNİZ.";
+            
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification("🚨 10 SAAT KALA: " + ship.name, { body: body10h });
+            }
+
+            sendRealEmail(ship.email, subject10h, body10h);
+            ship.emailSent10h = true;
+            localStorage.setItem('msc_ships_v11', JSON.stringify(ships));
+          }
+
+          // 2. 5 SAAT KALA MAİLİ (KRİTİK)
+          if (time.totalHours <= 5 && time.totalHours > 0 && !ship.emailSent5h) {
+            const subject5h = "🔴 KRİTİK UYARI: " + ship.name + " VARIŞA 5 SAAT KALA!";
+            const body5h = "KRİTİK 5 SAAT KALA UYARISI!\n\nGEMİ ADI: " + ship.name + "\nVARIŞ LİMANI: " + ship.port + "\nKALAN SÜRE: " + time.formatted + "\nBEYANNAME ADEDİ: " + ship.declarations + "\n\nLÜTFEN BEYANNAME İŞLEMLERİNİ TAMAMLAYINIZ!";
+
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification("🔴 5 SAAT KALA (KRİTİK): " + ship.name, { body: body5h });
+            }
+
+            sendRealEmail(ship.email, subject5h, body5h);
+            ship.emailSent5h = true;
+            ship.emailSent10h = true;
+            localStorage.setItem('msc_ships_v11', JSON.stringify(ships));
+          }
+
+          // 3. TAM VARIŞ MAİLİ (0 SAAT / LİMANA ULAŞTI)
+          if (time.totalHours <= 0 && !ship.emailSentArrived) {
+            const subjectArrived = "⚓ GEMİ LİMANA VARDI: " + ship.name;
+            const bodyArrived = "GEMİ LİMANA ULAŞTI!\n\nGEMİ ADI: " + ship.name + "\nVARIŞ LİMANI: " + ship.port + "\nBEYANNAME ADEDİ: " + ship.declarations + "\n\nBEYANNAME KAPAMA İŞLEMLERİNİ BAŞLATABİLİRSİNİZ.";
+
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification("⚓ GEMİ LİMANA VARDI: " + ship.name, { body: bodyArrived });
+            }
+
+            sendRealEmail(ship.email, subjectArrived, bodyArrived);
+            ship.emailSentArrived = true;
+            ship.emailSent5h = true;
+            ship.emailSent10h = true;
+            localStorage.setItem('msc_ships_v11', JSON.stringify(ships));
+          }
+        }
+      });
+    }
+
+    // Canlı Harita Açma (Modal)
+    function openLiveMap(shipName, imo) {
+      let query = (imo !== 'BELİRTİLMEDİ' && imo !== '') ? imo : shipName;
+      
+      document.getElementById('modalTitle').innerText = shipName + " - CANLI KONUM";
+      document.getElementById('modalSub').innerText = "IMO/MMSI: " + imo;
+
+      // VesselFinder Iframe URL'si
+      document.getElementById('mapIframe').src = "https://www.vesselfinder.com/aismap";
+
+      // Harici Platform Doğrudan Linkleri
+      let mtUrl = "https://www.marinetraffic.com/en/ais/index/search/all/keyword:" + encodeURIComponent(query);
+      let vfUrl = "https://www.vesselfinder.com/vessels?name=" + encodeURIComponent(query);
+      let mstUrl = "https://www.myshiptracking.com/vessels?name=" + encodeURIComponent(query);
+
+      document.getElementById('externalLinks').innerHTML = `
+        <a href="${mtUrl}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors flex items-center gap-1">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> MARINETRAFFIC
+        </a>
+        <a href="${vfUrl}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors flex items-center gap-1">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> VESSELFINDER
+        </a>
+        <a href="${mstUrl}" target="_blank" class="bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors flex items-center gap-1">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> MYSHIPTRACKING
+        </a>
+      `;
+
+      document.getElementById('mapModal').classList.remove('hidden');
+    }
+
+    function closeMapModal() {
+      document.getElementById('mapIframe').src = "";
+      document.getElementById('mapModal').classList.add('hidden');
+    }
+
+    // Tabloyu Ekrana Çizme
+    function renderShips() {
+      const tbody = document.getElementById('ship-list-body');
+      const filterPort = document.getElementById('filterPort').value;
+      tbody.innerHTML = '';
+
+      let totalDecs = 0;
+      let criticalCount = 0;
+      let warningCount = 0;
+
+      const filteredShips = filterPort === 'ALL' 
+        ? ships 
+        : ships.filter(s => s.port === filterPort);
+
+      if (filteredShips.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-center text-slate-400 font-medium">HENÜZ TAKİP EDİLEN GEMİ KAYDI BULUNMUYOR.</td></tr>';
+      }
+
+      filteredShips.forEach(ship => {
+        const time = calculateTimeRemaining(ship.eta);
+        let badgeClass = '';
+        let badgeText = '';
+
+        if (ship.status === 'COMPLETED') {
+          badgeClass = 'bg-slate-100 text-slate-600 border-slate-300';
+          badgeText = 'TAMAMLANDI';
+        } else if (time.totalHours <= 0) {
+          badgeClass = 'bg-slate-800 text-white font-bold';
+          badgeText = '⚓ LİMANA VARDI';
+        } else if (time.totalHours <= 5) {
+          badgeClass = 'bg-red-100 text-red-700 border-red-300 font-bold animate-pulse';
+          badgeText = '🔴 5 SAAT KALA (KRİTİK)';
+          criticalCount++;
+        } else if (time.totalHours <= 10) {
+          badgeClass = 'bg-orange-100 text-orange-700 border-orange-300 font-bold';
+          badgeText = '🟠 10 SAAT KALA';
+          warningCount++;
+        } else if (time.totalHours <= 24) {
+          badgeClass = 'bg-amber-100 text-amber-700 border-amber-300';
+          badgeText = '🟡 24 SAAT KALA';
+          warningCount++;
+        } else {
+          badgeClass = 'bg-emerald-100 text-emerald-700 border-emerald-300';
+          badgeText = '🟢 NORMAL (> 24 SAAT)';
+        }
+
+        totalDecs += (ship.declarations || 0);
+
+        const row = `
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="p-3">
+              <div class="font-bold text-slate-800">${ship.name}</div>
+              <div class="text-xs text-slate-400">IMO/MMSI: ${ship.imo}</div>
+            </td>
+            <td class="p-3"><span class="bg-blue-50 text-blue-700 border border-blue-200 text-xs px-2.5 py-1 rounded-full font-semibold">${ship.port}</span></td>
+            <td class="p-3 font-bold text-slate-700">${ship.declarations} ADET</td>
+            <td class="p-3 text-xs text-slate-500 font-mono">${ship.email}</td>
+            <td class="p-3 text-slate-600 text-xs font-medium">${new Date(ship.eta).toLocaleString('tr-TR')}</td>
+            <td class="p-3 font-mono text-xs font-bold text-slate-700">${time.formatted}</td>
+            <td class="p-3"><span class="text-xs px-2.5 py-1 rounded-md border ${badgeClass}">${badgeText}</span></td>
+            <td class="p-3 text-right space-x-1">
+              <button onclick="openLiveMap('${ship.name}', '${ship.imo}')" title="CANLI KONUM" class="text-blue-600 hover:text-blue-800 bg-blue-50 p-2 rounded-lg border border-blue-200 text-xs font-semibold cursor-pointer inline-flex items-center gap-1 transition-colors">
+                <i class="fa-solid fa-location-dot"></i> CANLI KONUM
+              </button>
+              ${ship.status !== 'COMPLETED' ? `
+                <button onclick="completeShip(${ship.id})" title="TAMAMLA" class="text-emerald-600 hover:text-emerald-800 bg-emerald-50 p-2 rounded-lg border border-emerald-200 cursor-pointer inline-flex items-center gap-1 transition-colors">
+                  <i class="fa-solid fa-check"></i>
+                </button>
+              ` : ''}
+              <button onclick="deleteShip(${ship.id})" title="SİL" class="text-red-600 hover:text-red-800 bg-red-50 p-2 rounded-lg border border-red-200 cursor-pointer inline-flex items-center gap-1 transition-colors">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+        tbody.innerHTML += row;
+      });
+
+      // İstatistik Güncellemeleri
+      document.getElementById('stat-total').innerText = ships.length;
+      document.getElementById('stat-critical').innerText = criticalCount;
+      document.getElementById('stat-warning').innerText = warningCount;
+      document.getElementById('stat-declarations').innerText = totalDecs;
+
+      checkNotifications();
+    }
+
+    renderShips();
+    setInterval(renderShips, 60000); // Her 1 dakikada bir otomatik yenile
+  </script>
+</body>
+</html>
