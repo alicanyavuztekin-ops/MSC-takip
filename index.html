@@ -49,7 +49,7 @@
           <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">ŞİFRE</label>
           <input type="password" id="login-password" required placeholder="••••••••" class="w-full text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
         </div>
-        <button type="submit" class="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold p-3 rounded-lg transition-all text-sm shadow-md cursor-pointer">
+        <button type="submit" id="btn-login" class="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold p-3 rounded-lg transition-all text-sm shadow-md cursor-pointer">
           GİRİŞ YAP
         </button>
       </form>
@@ -63,7 +63,7 @@
           <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">ŞİFRE (EN AZ 6 KARAKTER)</label>
           <input type="password" id="register-password" required minlength="6" placeholder="••••••••" class="w-full text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
         </div>
-        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold p-3 rounded-lg transition-all text-sm shadow-md cursor-pointer">
+        <button type="submit" id="btn-register" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold p-3 rounded-lg transition-all text-sm shadow-md cursor-pointer">
           HESAP OLUŞTUR
         </button>
       </form>
@@ -226,24 +226,19 @@
     </main>
 
     <div id="mapModal" class="fixed inset-0 bg-slate-900/80 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-      <div class="bg-white rounded-2xl max-w-5xl w-full p-5 space-y-4 relative shadow-2xl">
+      <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-6 relative shadow-2xl">
         <div class="flex justify-between items-center border-b pb-3">
           <div>
             <h3 id="modalTitle" class="font-bold text-lg text-slate-800 uppercase">CANLI GEMİ HARİTASI</h3>
-            <p id="modalSub" class="text-xs text-slate-500 uppercase">VesselFinder Canlı AIS Entegrasyonu</p>
+            <p id="modalSub" class="text-xs text-slate-500 uppercase">TAKİP PLATFORMUNU SEÇİN</p>
           </div>
-          <button onclick="closeMapModal()" class="text-slate-400 hover:text-red-600 text-2xl font-bold p-1 cursor-pointer transition-colors">&times;</button>
+          <button onclick="closeMapModal()" class="text-slate-400 hover:text-red-600 text-3xl font-bold p-1 cursor-pointer transition-colors">&times;</button>
         </div>
 
-        <div class="w-full h-[480px] rounded-xl overflow-hidden border border-slate-200 relative bg-slate-100">
-          <iframe id="mapIframe" class="w-full h-full border-0" src=""></iframe>
-        </div>
-
-        <div class="flex flex-wrap justify-between items-center gap-3 pt-2 border-t text-xs">
-          <span class="text-slate-500 font-medium uppercase">Haritada çıkmazsa harici platformda açın:</span>
-          <div id="externalLinks" class="flex items-center gap-2">
-            </div>
-        </div>
+        <div id="modal-map-buttons" class="space-y-4">
+          </div>
+        
+        <p class="text-[10px] text-slate-400 text-center uppercase">Güvenlik politikaları gereği haritalar yeni sekmede tam ekran açılır.</p>
       </div>
     </div>
 
@@ -261,7 +256,6 @@
       measurementId: "G-3CQTMTRFF5"
     };
 
-    // Firebase Servislerini Başlatma
     if (!firebase.apps.length) {
       firebase.initializeApp(firebaseConfig);
     }
@@ -284,7 +278,6 @@
         document.getElementById('user-display-email').innerText = user.email;
         document.getElementById('notificationEmail').value = user.email.toUpperCase();
 
-        // Firestore Canlı Veri Dinleyicisi
         listenShipsRealtime();
       } else {
         appContainer.classList.add('hidden');
@@ -294,7 +287,7 @@
       }
     });
 
-    // SEKME DEĞİŞTİRME (GİRİŞ / KAYIT)
+    // SEKME DEĞİŞTİRME
     function switchAuthTab(tab) {
       const loginForm = document.getElementById('login-form');
       const registerForm = document.getElementById('register-form');
@@ -317,14 +310,17 @@
       }
     }
 
-    // GİRİŞ YAPMA İŞLEMİ
+    // GİRİŞ YAPMA
     function handleLogin(e) {
       e.preventDefault();
-      const email = document.getElementById('login-email').value;
+      const email = document.getElementById('login-email').value.trim();
       const password = document.getElementById('login-password').value;
       const authError = document.getElementById('auth-error');
+      const btn = document.getElementById('btn-login');
 
       authError.classList.add('hidden');
+      btn.disabled = true;
+      btn.innerText = "GİRİŞ YAPILIYOR...";
 
       auth.signInWithEmailAndPassword(email, password)
         .then(() => {
@@ -333,29 +329,46 @@
         .catch(error => {
           authError.innerText = "Giriş Hatası: " + translateAuthError(error.code);
           authError.classList.remove('hidden');
+        })
+        .finally(() => {
+          btn.disabled = false;
+          btn.innerText = "GİRİŞ YAP";
         });
     }
 
-    // KAYIT OLMA İŞLEMİ
+    // KAYIT OLMA VE HOŞ GELDİN MAİLİ GÖNDERME
     function handleRegister(e) {
       e.preventDefault();
-      const email = document.getElementById('register-email').value;
+      const email = document.getElementById('register-email').value.trim();
       const password = document.getElementById('register-password').value;
       const authError = document.getElementById('auth-error');
+      const btn = document.getElementById('btn-register');
 
       authError.classList.add('hidden');
+      btn.disabled = true;
+      btn.innerText = "KAYIT OLUŞTURULUYOR...";
 
       auth.createUserWithEmailAndPassword(email, password)
-        .then(() => {
+        .then((userCredential) => {
           document.getElementById('register-form').reset();
+
+          const welcomeSubject = "🎉 HOŞ GELDİNİZ: MSC & MEDLOG TAKİP SİSTEMİ";
+          const welcomeBody = "HESABINIZ BAŞARIYLA OLUŞTURULDU!\n\nKullanıcı E-postası: " + email + "\n\nArtık MSC & MEDLOG gemi ve beyanname takiplerinizi bulut veritabanımız üzerinden güvenle ve kalıcı olarak yönetebilirsiniz.";
+
+          sendRealEmail(email, welcomeSubject, welcomeBody);
+          alert("✅ HESABINIZ BAŞARIYLA OLUŞTURULDU!\n\nBilgilendirme e-postası " + email + " adresinize gönderildi.");
         })
         .catch(error => {
           authError.innerText = "Kayıt Hatası: " + translateAuthError(error.code);
           authError.classList.remove('hidden');
+        })
+        .finally(() => {
+          btn.disabled = false;
+          btn.innerText = "HESAP OLUŞTUR";
         });
     }
 
-    // OTURUMU KAPATMA İŞLEMİ
+    // OTURUMU KAPATMA
     function handleLogout() {
       if (confirm("Oturumu kapatmak istediğinize emin misiniz?")) {
         auth.signOut();
@@ -369,15 +382,19 @@
         case 'auth/email-already-in-use': return "Bu e-posta adresi zaten kullanımda.";
         case 'auth/weak-password': return "Şifre en az 6 karakter olmalıdır.";
         case 'auth/invalid-email': return "Geçersiz e-posta adresi.";
+        case 'auth/configuration-not-found': return "Firebase Authentication aktif değil. Lütfen Console'dan Email/Password'ü açın.";
         default: return "Bir hata oluştu (" + code + ")";
       }
     }
 
-    // FIRESTORE CANLI VERİ DİNLEME (REALTIME SNAPSHOT)
+    // FIRESTORE CANLI VERİ DİNLEME (KULLANICIYA ÖZEL)
     function listenShipsRealtime() {
       if (!currentUser) return;
 
+      if (unsubscribeFirestore) unsubscribeFirestore();
+
       unsubscribeFirestore = db.collection('ships')
+        .where('userId', '==', currentUser.uid)
         .onSnapshot(snapshot => {
           ships = [];
           snapshot.forEach(doc => {
@@ -389,10 +406,11 @@
           renderShips();
         }, error => {
           console.error("Firestore Hata: ", error);
+          alert("Veriler yüklenirken hata oluştu!\nNedeni: " + error.message + "\n\nLütfen Firebase Console -> Firestore Database -> Rules sekmesinden okuma/yazma izinlerini kontrol ediniz.");
         });
     }
 
-    // GERÇEK E-POSTA GÖNDERİM SERVİSİ (FORMSUBMIT)
+    // E-POSTA GÖNDERİM SERVİSİ
     function sendRealEmail(toEmail, subjectText, bodyText) {
       fetch("https://formsubmit.co/ajax/" + encodeURIComponent(toEmail.toLowerCase()), {
         method: "POST",
@@ -415,7 +433,7 @@
       });
     }
 
-    // YENİ GEMİ EKLEME İŞLEMİ (FIRESTORE KAYIT)
+    // YENİ GEMİ EKLEME 
     function addShip(e) {
       e.preventDefault();
 
@@ -452,16 +470,11 @@
         emailSent10h: false,
         emailSent5h: false,
         emailSentArrived: false,
-        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+        createdAt: new Date().toISOString()
       };
 
-      // Firestore Veritabanına Ekleme
       db.collection('ships').add(newShipData)
         .then(() => {
-          btnSubmit.disabled = false;
-          btnSubmit.innerHTML = '<i class="fa-solid fa-check-circle"></i> TAKİBE AL';
-
-          // Takibe Alındı E-postası Gönderimi
           const mailSubject = "✅ TAKİBE ALINDI: " + name + " GEMİSİ";
           const mailBody = "SİSTEM AKTİF!\n\n" + name + " Gemisi takibe alındı.\nVarış Limanı: " + port + "\nBeyanname Adedi: " + declarations + "\nETA (Varış Saati): " + new Date(eta).toLocaleString('tr-TR') + "\nBildirim E-postası: " + email;
 
@@ -479,9 +492,12 @@
           document.getElementById('notificationEmail').value = currentUser.email.toUpperCase();
         })
         .catch(error => {
+          console.error("Gemi Ekleme Hatası:", error);
+          alert("HATA: Gemi veritabanına kaydedilemedi!\n\nNedeni: " + error.message + "\n\nLütfen Firestore Kurallarında (Rules) okuma/yazma izni verildiğinden emin olun.");
+        })
+        .finally(() => {
           btnSubmit.disabled = false;
           btnSubmit.innerHTML = '<i class="fa-solid fa-check-circle"></i> TAKİBE AL';
-          alert("Veri kaydedilirken hata oluştu: " + error.message);
         });
     }
 
@@ -495,7 +511,7 @@
       }
     }
 
-    // İŞLEMİ TAMAMLAMA İŞLEMİ
+    // TAMAMLAMA İŞLEMİ
     function completeShip(firestoreId) {
       db.collection('ships').doc(firestoreId).update({
         status: 'COMPLETED'
@@ -532,13 +548,13 @@
       }
     }
 
-    // OTOMATİK MAIL VE BİLDİRİM KONTROLÜ
+    // UYARI VE MAİL KONTROLLERİ
     function checkNotifications() {
       ships.forEach(ship => {
         if (ship.status !== 'COMPLETED') {
           const time = calculateTimeRemaining(ship.eta);
 
-          // 1. 10 SAAT KALA MAİLİ
+          // 10 SAAT KALA MAİLİ
           if (time.totalHours <= 10 && time.totalHours > 5 && !ship.emailSent10h) {
             const subject10h = "🚨 UYARI: " + ship.name + " VARIŞA 10 SAAT KALA!";
             const body10h = "10 SAAT KALA UYARISI!\n\nGEMİ ADI: " + ship.name + "\nVARIŞ LİMANI: " + ship.port + "\nKALAN SÜRE: " + time.formatted + "\nBEYANNAME ADEDİ: " + ship.declarations + "\n\nBEYANNAMELERİNİZİ KONTROL EDİNİZ.";
@@ -554,7 +570,7 @@
             }
           }
 
-          // 2. 5 SAAT KALA MAİLİ (KRİTİK)
+          // 5 SAAT KALA MAİLİ (KRİTİK)
           if (time.totalHours <= 5 && time.totalHours > 0 && !ship.emailSent5h) {
             const subject5h = "🔴 KRİTİK UYARI: " + ship.name + " VARIŞA 5 SAAT KALA!";
             const body5h = "KRİTİK 5 SAAT KALA UYARISI!\n\nGEMİ ADI: " + ship.name + "\nVARIŞ LİMANI: " + ship.port + "\nKALAN SÜRE: " + time.formatted + "\nBEYANNAME ADEDİ: " + ship.declarations + "\n\nLÜTFEN BEYANNAME İŞLEMLERİNİ TAMAMLAYINIZ!";
@@ -573,7 +589,7 @@
             }
           }
 
-          // 3. TAM VARIŞ MAİLİ (0 SAAT / LİMANA ULAŞTI)
+          // TAM VARIŞ MAİLİ (0 SAAT / LİMANA ULAŞTI)
           if (time.totalHours <= 0 && !ship.emailSentArrived) {
             const subjectArrived = "⚓ GEMİ LİMANA VARDI: " + ship.name;
             const bodyArrived = "GEMİ LİMANA ULAŞTI!\n\nGEMİ ADI: " + ship.name + "\nVARIŞ LİMANI: " + ship.port + "\nBEYANNAME ADEDİ: " + ship.declarations + "\n\nBEYANNAME KAPAMA İŞLEMLERİNİ BAŞLATABİLİRSİNİZ.";
@@ -596,28 +612,26 @@
       });
     }
 
-    // CANLI HARİTA MODAL
+    // YENİ CANLI HARİTA FONKSİYONU
     function openLiveMap(shipName, imo) {
       let query = (imo !== 'BELİRTİLMEDİ' && imo !== '') ? imo : shipName;
       
       document.getElementById('modalTitle').innerText = shipName + " - CANLI KONUM";
       document.getElementById('modalSub').innerText = "IMO/MMSI: " + imo;
 
-      document.getElementById('mapIframe').src = "https://www.vesselfinder.com/aismap";
-
       let mtUrl = "https://www.marinetraffic.com/en/ais/index/search/all/keyword:" + encodeURIComponent(query);
       let vfUrl = "https://www.vesselfinder.com/vessels?name=" + encodeURIComponent(query);
       let mstUrl = "https://www.myshiptracking.com/vessels?name=" + encodeURIComponent(query);
 
-      document.getElementById('externalLinks').innerHTML = `
-        <a href="${mtUrl}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors flex items-center gap-1">
-          <i class="fa-solid fa-arrow-up-right-from-square"></i> MARINETRAFFIC
+      document.getElementById('modal-map-buttons').innerHTML = `
+        <a href="${mtUrl}" target="_blank" class="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center py-4 rounded-xl font-bold text-lg transition-colors shadow-lg">
+          <i class="fa-solid fa-anchor mr-2"></i> MarineTraffic'te İzle
         </a>
-        <a href="${vfUrl}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors flex items-center gap-1">
-          <i class="fa-solid fa-arrow-up-right-from-square"></i> VESSELFINDER
+        <a href="${vfUrl}" target="_blank" class="block w-full bg-emerald-600 hover:bg-emerald-700 text-white text-center py-4 rounded-xl font-bold text-lg transition-colors shadow-lg">
+          <i class="fa-solid fa-ship mr-2"></i> VesselFinder'da İzle
         </a>
-        <a href="${mstUrl}" target="_blank" class="bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors flex items-center gap-1">
-          <i class="fa-solid fa-arrow-up-right-from-square"></i> MYSHIPTRACKING
+        <a href="${mstUrl}" target="_blank" class="block w-full bg-slate-700 hover:bg-slate-800 text-white text-center py-4 rounded-xl font-bold text-lg transition-colors shadow-lg">
+          <i class="fa-solid fa-satellite-dish mr-2"></i> MyShipTracking'de İzle
         </a>
       `;
 
@@ -625,11 +639,10 @@
     }
 
     function closeMapModal() {
-      document.getElementById('mapIframe').src = "";
       document.getElementById('mapModal').classList.add('hidden');
     }
 
-    // TABLOYU EKRANA ÇİZME
+    // TABLOYU ÇİZME
     function renderShips() {
       const tbody = document.getElementById('ship-list-body');
       const filterPort = document.getElementById('filterPort').value;
@@ -715,7 +728,6 @@
       checkNotifications();
     }
 
-    // Her 1 dakikada bir süreleri kontrol et
     setInterval(checkNotifications, 60000);
   </script>
 </body>
