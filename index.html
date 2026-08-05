@@ -112,18 +112,22 @@
         <h2 class="text-base font-bold mb-4 text-[#002855] flex items-center gap-2 border-b pb-2 uppercase">
           <i class="fa-solid fa-plus-circle text-[#FFCC00]"></i> YENİ GEMİ VE BEYANNAME GİRİŞİ
         </h2>
-        <form id="ship-form" onsubmit="addShip(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-8 gap-4">
+        <form id="ship-form" onsubmit="addShip(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-9 gap-4">
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">GEMİ ADI</label>
-            <input type="text" id="shipName" required placeholder="ÖRN: MSC MAYA" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none uppercase">
+            <input type="text" id="shipName" required oninput="autoFillMmsi(this.value)" placeholder="ÖRN: MEDLOG HIZIR" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none uppercase">
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">MMSI (9 HANELİ RADYO NO)</label>
-            <input type="text" id="mmsiNumber" required placeholder="ÖRN: 271043000" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none uppercase">
+            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">MMSI NO</label>
+            <input type="text" id="mmsiNumber" required placeholder="Otomatik gelir" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none uppercase bg-slate-50 font-mono text-xs">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">BİLDİRİM MAİLİ</label>
+            <input type="email" id="notificationEmail" required placeholder="ornek@medlog.com.tr" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none">
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">VARIŞ LİMANI</label>
-            <select id="port" required class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none bg-white uppercase">
+            <select id="port" required class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none bg-white uppercase text-xs">
               <option value="İZMİR ALSANCAK">İZMİR ALSANCAK</option>
               <option value="ALİAĞA SOCAR">ALİAĞA SOCAR</option>
               <option value="MERSİN">MERSİN</option>
@@ -133,20 +137,19 @@
             </select>
           </div>
           <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">TAHMİNİ VARIŞ (ETA)</label>
-            <input type="datetime-local" id="eta" required class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none">
+            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">TAHMİNİ VARIŞ</label>
+            <input type="datetime-local" id="eta" required class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none text-xs">
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">BEYANNAME</label>
-            <input type="number" id="declarations" min="1" required placeholder="Adet" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none">
+            <input type="number" id="declarations" min="1" required placeholder="Adet" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none text-xs">
           </div>
           <div class="lg:col-span-2">
-            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">EK NOT (İSTEĞE BAĞLI)</label>
-            <input type="text" id="shipNote" placeholder="Örn: Evraklar eksik..." class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none uppercase">
+            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">EK NOT</label>
+            <input type="text" id="shipNote" placeholder="Notlar..." class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none uppercase text-xs">
           </div>
           <div class="flex items-end">
-            <input type="hidden" id="notificationEmail">
-            <button type="submit" id="btn-submit-ship" class="w-full bg-[#FFCC00] hover:bg-yellow-500 text-[#002855] font-bold p-2.5 rounded-lg transition-all text-sm flex justify-center items-center gap-2 cursor-pointer shadow-md">
+            <button type="submit" id="btn-submit-ship" class="w-full bg-[#FFCC00] hover:bg-yellow-500 text-[#002855] font-bold p-2.5 rounded-lg transition-all text-xs flex justify-center items-center gap-1 cursor-pointer shadow-md">
               <i class="fa-solid fa-check-circle"></i> EKLE
             </button>
           </div>
@@ -156,7 +159,7 @@
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3">
           <h3 class="font-bold text-[#002855] flex items-center gap-2 uppercase">
-            <i class="fa-solid fa-list-check text-[#002855]"></i> TAKİp EDİLEN GEMİLER
+            <i class="fa-solid fa-list-check text-[#002855]"></i> TAKİP EDİLEN GEMİLER
           </h3>
           <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
             <button onclick="exportToExcel()" class="bg-[#002855] hover:bg-[#001d3d] text-yellow-300 text-xs font-bold px-3 py-2 rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer border border-yellow-400/40">
@@ -182,11 +185,11 @@
             <thead>
               <tr class="bg-slate-50 text-slate-500 text-[11px] font-bold uppercase border-b border-slate-200">
                 <th class="p-3">GEMİ ADI / MMSI</th>
-                <th class="p-3">LİMAN / NOT</th>
+                <th class="p-3">LİMAN / NOT / MAİL</th>
                 <th class="p-3">BEYANNAME</th>
                 <th class="p-3">ETA (VARIŞ)</th>
                 <th class="p-3">KALAN SÜRE</th>
-                <th class="p-3">GÜMRÜK DURUMU</th>
+                <th class="p-3">GÜMRÜK</th>
                 <th class="p-3 text-right">İŞLEMLER</th>
               </tr>
             </thead>
@@ -228,13 +231,17 @@
           </div>
           <div class="grid grid-cols-2 gap-4">
             <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">TAHMİNİ VARIŞ (ETA)</label>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">TAHMİNİ VARIŞ</label>
               <input type="datetime-local" id="edit-eta" required class="w-full text-sm p-2.5 border border-slate-300 rounded-lg outline-none">
             </div>
             <div>
-              <label class="block text-xs font-semibold text-slate-600 mb-1">BEYANNAME ADEDİ</label>
+              <label class="block text-xs font-semibold text-slate-600 mb-1">BEYANNAME</label>
               <input type="number" id="edit-declarations" required class="w-full text-sm p-2.5 border border-slate-300 rounded-lg outline-none">
             </div>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">BİLDİRİM MAİLİ</label>
+            <input type="email" id="edit-email" required class="w-full text-sm p-2.5 border border-slate-300 rounded-lg outline-none">
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1">VARIŞ LİMANI</label>
@@ -274,8 +281,33 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // OTURUMUN KALICI OLMASI SAĞLANDI (Sayfa yenilemede çıkış yapmaz)
     auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+
+    // MEDLOG VE MSC GEMİLERİ MMSI VERİTABANI
+    const mscShipDatabase = {
+      "MEDLOG HIZIR": "271043000",
+      "MEDLOG EFE": "271042000",
+      "MEDLOG CAN": "271044000",
+      "MEDLOG AYLİN": "271045000",
+      "MEDLOG Kaan": "271046000",
+      "MEDLOG LİMAN": "271047000",
+      "MSC MAYA": "373178000",
+      "MSC ISTANBUL": "373187000",
+      "MSC OSCAR": "353147000",
+      "MSC ZOE": "373179000",
+      "MSC GULSUN": "374636000",
+      "MSC MINA": "374495000",
+      "MSC AMSTERDAM": "353136000",
+      "MSC BARCELONA": "353139000"
+    };
+
+    function autoFillMmsi(shipName) {
+      const cleanName = shipName.trim().toUpperCase();
+      const mmsiInput = document.getElementById('mmsiNumber');
+      if (mscShipDatabase[cleanName]) {
+        mmsiInput.value = mscShipDatabase[cleanName];
+      }
+    }
 
     let currentUser = null;
     let ships = [];
@@ -379,7 +411,6 @@
         });
     }
 
-    // GEMİ EKLENDİĞİNDE BİLDİRİM MAİLİ GÖNDERME ÖZELLİĞİ
     function addShip(e) {
       e.preventDefault();
       const name = document.getElementById('shipName').value.trim().toUpperCase();
@@ -388,7 +419,7 @@
       const eta = document.getElementById('eta').value;
       const declarations = document.getElementById('declarations').value;
       const note = document.getElementById('shipNote').value.trim().toUpperCase();
-      const email = currentUser.email;
+      const email = document.getElementById('notificationEmail').value.trim().toUpperCase();
 
       const newShipData = {
         userId: currentUser.uid,
@@ -410,8 +441,8 @@
       db.collection('ships').add(newShipData)
         .then(() => {
           document.getElementById('ship-form').reset();
-          
-          // EKLENDİĞİNE DAİR MAİL GÖNDERİMİ
+          document.getElementById('notificationEmail').value = currentUser.email.toUpperCase();
+
           fetch("https://formsubmit.co/ajax/" + encodeURIComponent(email.toLowerCase()), {
             method: "POST",
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
@@ -436,6 +467,7 @@
       document.getElementById('edit-eta').value = ship.eta;
       document.getElementById('edit-declarations').value = ship.declarations;
       document.getElementById('edit-port').value = ship.port;
+      document.getElementById('edit-email').value = ship.email || '';
       document.getElementById('edit-note').value = ship.note || '';
       document.getElementById('editModal').classList.remove('hidden');
     }
@@ -452,6 +484,7 @@
         eta: document.getElementById('edit-eta').value,
         declarations: parseInt(document.getElementById('edit-declarations').value),
         port: document.getElementById('edit-port').value.toUpperCase(),
+        email: document.getElementById('edit-email').value.trim().toUpperCase(),
         note: document.getElementById('edit-note').value.trim().toUpperCase(),
         emailSent10h: false,
         emailSent5h: false,
@@ -484,7 +517,6 @@
       if ('Notification' in window) Notification.requestPermission();
     }
 
-    // MMSI İLE CANLI KONUM YAKALAMA
     function openShipMap(shipName, mmsi, eta) {
       document.getElementById('modalShipTitle').innerText = shipName;
       document.getElementById('modalShipSub').innerText = "MMSI: " + mmsi + " | ETA: " + new Date(eta).toLocaleString('tr-TR');
@@ -550,19 +582,20 @@
         return;
       }
 
-      let csvContent = "\uFEFFGEMI ADI,MMSI NUMARASI,VARIS LIMANI,BEYANNAME ADEDI,ETA (TAHMINI VARIS),GUMRUK DURUMU,DURUMU,NOT\n";
+      let csvContent = "\uFEFFGEMI ADI,MMSI NUMARASI,VARIS LIMANI,BEYANNAME ADEDI,BILDIRIM MAILI,ETA (TAHMINI VARIS),GUMRUK DURUMU,DURUMU,NOT\n";
 
       filteredShips.forEach(ship => {
         const name = `"${(ship.name || '').replace(/"/g, '""')}"`;
         const mmsi = `"${(ship.mmsi || '').replace(/"/g, '""')}"`;
         const port = `"${(ship.port || '').replace(/"/g, '""')}"`;
         const declarations = ship.declarations || 0;
+        const email = `"${(ship.email || '').replace(/"/g, '""')}"`;
         const eta = `"${new Date(ship.eta).toLocaleString('tr-TR')}"`;
         const customs = ship.customsCleared ? `"TAMAMLANDI"` : `"BEKLİYOR"`;
         const status = ship.status === 'COMPLETED' ? `"TAMAMLANDI"` : `"DEVAM EDİYOR"`;
         const note = `"${(ship.note || '').replace(/"/g, '""')}"`;
 
-        csvContent += `${name},${mmsi},${port},${declarations},${eta},${customs},${status},${note}\n`;
+        csvContent += `${name},${mmsi},${port},${declarations},${email},${eta},${customs},${status},${note}\n`;
       });
 
       const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -602,6 +635,7 @@
         const customsBtnClass = ship.customsCleared ? 'bg-emerald-100 text-emerald-700 border-emerald-300' : 'bg-slate-100 text-slate-500 border-slate-300';
         const customsBtnIcon = ship.customsCleared ? '<i class="fa-solid fa-check-double"></i> TAMAMLANDI' : '<i class="fa-solid fa-hourglass-half"></i> BEKLİYOR';
         const noteDisplay = ship.note ? `<div class="mt-1 text-[10px] text-amber-600 font-semibold bg-amber-50 p-1 rounded border border-amber-200"><i class="fa-solid fa-thumbtack"></i> ${ship.note}</div>` : '';
+        const emailDisplay = `<div class="text-[10px] text-slate-500 font-mono"><i class="fa-solid fa-envelope"></i> ${ship.email || 'BELİRTİLMEDİ'}</div>`;
 
         tbody.innerHTML += `
           <tr class="hover:bg-slate-50 transition-colors">
@@ -611,6 +645,7 @@
             </td>
             <td class="p-3">
               <span class="bg-blue-50 text-blue-700 border border-blue-200 text-[10px] px-2 py-0.5 rounded font-bold">${ship.port}</span>
+              ${emailDisplay}
               ${noteDisplay}
             </td>
             <td class="p-3 font-bold text-slate-700 text-xs">${ship.declarations} ADET</td>
