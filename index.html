@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-title" content="MSC Takip">
   <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/MSC_crociere_logo.svg/1024px-MSC_crociere_logo.svg.png">
 
-  <title>MSC Gemi & Beyanname Takip Paneli</title>
+  <title>MSC & MEDLOG Gemi Takip Paneli</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -28,28 +28,28 @@
   <div id="auth-container" class="flex items-center justify-center min-h-screen p-4">
     <div class="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full space-y-6 border border-slate-200">
       <div class="text-center space-y-2">
-        <div class="bg-blue-900 text-yellow-400 w-16 h-16 rounded-2xl flex items-center justify-center mx-auto text-3xl font-bold shadow-md">
+        <div class="bg-[#002855] text-[#FFCC00] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto text-3xl font-bold shadow-md border border-yellow-400">
           <i class="fa-solid fa-ship"></i>
         </div>
-        <h2 class="text-2xl font-bold text-slate-800 uppercase tracking-wide">MSC & MEDLOG TAKİP</h2>
+        <h2 class="text-2xl font-bold text-[#002855] uppercase tracking-wide">MSC & MEDLOG TAKİP</h2>
         <p class="text-xs text-slate-500 font-medium">Liman Operasyon Sistemine Giriş Yapın</p>
       </div>
 
       <div class="flex border-b border-slate-200 text-sm font-semibold">
-        <button id="tab-login" onclick="switchAuthTab('login')" class="w-1/2 py-2 text-blue-900 border-b-2 border-blue-900 font-bold">GİRİŞ YAP</button>
+        <button id="tab-login" onclick="switchAuthTab('login')" class="w-1/2 py-2 text-[#002855] border-b-2 border-[#002855] font-bold">GİRİŞ YAP</button>
         <button id="tab-register" onclick="switchAuthTab('register')" class="w-1/2 py-2 text-slate-400 border-b-2 border-transparent">KAYIT OL</button>
       </div>
 
       <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">E-POSTA ADRESİ</label>
-          <input type="email" id="login-email" required placeholder="ornek@medlog.com.tr" class="w-full text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+          <input type="email" id="login-email" required placeholder="ornek@medlog.com.tr" class="w-full text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none">
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">ŞİFRE</label>
-          <input type="password" id="login-password" required placeholder="••••••••" class="w-full text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+          <input type="password" id="login-password" required placeholder="••••••••" class="w-full text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none">
         </div>
-        <button type="submit" id="btn-login" class="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold p-3 rounded-lg transition-all text-sm shadow-md cursor-pointer">
+        <button type="submit" id="btn-login" class="w-full bg-[#002855] hover:bg-[#001d3d] text-[#FFCC00] font-bold p-3 rounded-lg transition-all text-sm shadow-md cursor-pointer">
           GİRİŞ YAP
         </button>
       </form>
@@ -57,13 +57,13 @@
       <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4 hidden">
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">E-POSTA ADRESİ</label>
-          <input type="email" id="register-email" required placeholder="ornek@medlog.com.tr" class="w-full text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+          <input type="email" id="register-email" required placeholder="ornek@medlog.com.tr" class="w-full text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none">
         </div>
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">ŞİFRE (EN AZ 6 KARAKTER)</label>
-          <input type="password" id="register-password" required minlength="6" placeholder="••••••••" class="w-full text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+          <input type="password" id="register-password" required minlength="6" placeholder="••••••••" class="w-full text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none">
         </div>
-        <button type="submit" id="btn-register" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold p-3 rounded-lg transition-all text-sm shadow-md cursor-pointer">
+        <button type="submit" id="btn-register" class="w-full bg-[#002855] hover:bg-[#001d3d] text-[#FFCC00] font-bold p-3 rounded-lg transition-all text-sm shadow-md cursor-pointer">
           HESAP OLUŞTUR
         </button>
       </form>
@@ -73,25 +73,25 @@
   </div>
 
   <div id="app-container" class="hidden min-h-screen pb-12">
-    <header class="bg-blue-900 text-white shadow-lg p-4 sticky top-0 z-30">
+    <header class="bg-[#002855] text-white shadow-lg p-4 sticky top-0 z-30 border-b-4 border-[#FFCC00]">
       <div class="max-w-7xl mx-auto flex justify-between items-center">
         <div class="flex items-center gap-3">
-          <div class="bg-yellow-400 text-blue-950 p-2 rounded-lg font-bold text-xl">
+          <div class="bg-[#FFCC00] text-[#002855] p-2.5 rounded-lg font-bold text-xl shadow">
             <i class="fa-solid fa-ship"></i>
           </div>
           <div>
-            <h1 class="text-lg md:text-xl font-bold tracking-wide uppercase">MSC & MEDLOG GEMİ TAKİP</h1>
-            <p class="text-xs text-blue-200">Operasyon & Gümrük İzleme</p>
+            <h1 class="text-lg md:text-xl font-bold tracking-wide uppercase text-white">MSC & MEDLOG GEMİ TAKİP</h1>
+            <p class="text-xs text-yellow-300 font-medium">Operasyon & Gümrük İzleme Sistemi</p>
           </div>
         </div>
 
         <div class="flex items-center gap-3">
-          <button type="button" onclick="requestNotificationPermission()" class="bg-blue-800 hover:bg-blue-700 text-xs text-blue-100 px-3 py-2 rounded-lg border border-blue-600 flex items-center gap-2 cursor-pointer transition-all">
-            <i class="fa-solid fa-bell text-yellow-400"></i> BİLDİRİMLER
+          <button type="button" onclick="requestNotificationPermission()" class="bg-[#001d3d] hover:bg-blue-900 text-xs text-yellow-300 px-3 py-2 rounded-lg border border-yellow-400/50 flex items-center gap-2 cursor-pointer transition-all">
+            <i class="fa-solid fa-bell text-[#FFCC00]"></i> BİLDİRİMLER
           </button>
           
-          <div class="hidden sm:flex items-center gap-2 bg-blue-950 px-3 py-1.5 rounded-lg border border-blue-800 text-xs">
-            <i class="fa-solid fa-user-circle text-yellow-400"></i>
+          <div class="hidden sm:flex items-center gap-2 bg-[#001d3d] px-3 py-1.5 rounded-lg border border-blue-900 text-xs">
+            <i class="fa-solid fa-user-circle text-[#FFCC00]"></i>
             <span id="user-display-email" class="font-mono text-blue-200"></span>
           </div>
 
@@ -105,21 +105,21 @@
     <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
       
       <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-        <h2 class="text-base font-bold mb-4 text-slate-800 flex items-center gap-2 border-b pb-2 uppercase">
-          <i class="fa-solid fa-plus-circle text-blue-600"></i> YENİ GEMİ VE BEYANNAME GİRİŞİ
+        <h2 class="text-base font-bold mb-4 text-[#002855] flex items-center gap-2 border-b pb-2 uppercase">
+          <i class="fa-solid fa-plus-circle text-[#FFCC00]"></i> YENİ GEMİ VE BEYANNAME GİRİŞİ
         </h2>
         <form id="ship-form" onsubmit="addShip(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-8 gap-4">
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">GEMİ ADI</label>
-            <input type="text" id="shipName" required placeholder="ÖRN: MSC MAYA" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none uppercase">
+            <input type="text" id="shipName" required placeholder="ÖRN: MSC MAYA" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none uppercase">
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">IMO / MMSI</label>
-            <input type="text" id="imoNumber" placeholder="ÖRN: 9708679" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none uppercase">
+            <input type="text" id="imoNumber" placeholder="ÖRN: 9708679" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none uppercase">
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">VARIŞ LİMANI</label>
-            <select id="port" required class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white uppercase">
+            <select id="port" required class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none bg-white uppercase">
               <option value="İZMİR ALSANCAK">İZMİR ALSANCAK</option>
               <option value="ALİAĞA SOCAR">ALİAĞA SOCAR</option>
               <option value="MERSİN">MERSİN</option>
@@ -130,19 +130,19 @@
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">TAHMİNİ VARIŞ (ETA)</label>
-            <input type="datetime-local" id="eta" required class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+            <input type="datetime-local" id="eta" required class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none">
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">BEYANNAME</label>
-            <input type="number" id="declarations" min="1" required placeholder="Adet" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none">
+            <input type="number" id="declarations" min="1" required placeholder="Adet" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none">
           </div>
           <div class="lg:col-span-2">
             <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">EK NOT (İSTEĞE BAĞLI)</label>
-            <input type="text" id="shipNote" placeholder="Örn: Evraklar eksik..." class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none uppercase">
+            <input type="text" id="shipNote" placeholder="Örn: Evraklar eksik..." class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none uppercase">
           </div>
           <div class="flex items-end">
             <input type="hidden" id="notificationEmail">
-            <button type="submit" id="btn-submit-ship" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold p-2.5 rounded-lg transition-all text-sm flex justify-center items-center gap-2 cursor-pointer shadow-md">
+            <button type="submit" id="btn-submit-ship" class="w-full bg-[#FFCC00] hover:bg-yellow-500 text-[#002855] font-bold p-2.5 rounded-lg transition-all text-sm flex justify-center items-center gap-2 cursor-pointer shadow-md">
               <i class="fa-solid fa-check-circle"></i> EKLE
             </button>
           </div>
@@ -151,12 +151,12 @@
 
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
         <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3">
-          <h3 class="font-bold text-slate-800 flex items-center gap-2 uppercase">
-            <i class="fa-solid fa-list-check text-blue-600"></i> TAKİP EDİLEN GEMİLER
+          <h3 class="font-bold text-[#002855] flex items-center gap-2 uppercase">
+            <i class="fa-solid fa-list-check text-[#002855]"></i> TAKİP EDİLEN GEMİLER
           </h3>
           <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
-            <button onclick="exportToExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold px-3 py-2 rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer">
-              <i class="fa-solid fa-file-excel"></i> EXCEL'E AKTAR
+            <button onclick="exportToExcel()" class="bg-[#002855] hover:bg-[#001d3d] text-yellow-300 text-xs font-bold px-3 py-2 rounded-lg shadow-sm transition-all flex items-center gap-2 cursor-pointer border border-yellow-400/40">
+              <i class="fa-solid fa-file-excel text-[#FFCC00]"></i> EXCEL'E AKTAR
             </button>
             <div class="flex items-center gap-2">
               <span class="text-xs text-slate-500 font-semibold uppercase">LİMAN:</span>
@@ -229,7 +229,7 @@
             <label class="block text-xs font-semibold text-slate-600 mb-1">EK NOT</label>
             <input type="text" id="edit-note" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg outline-none uppercase">
           </div>
-          <button type="submit" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold p-3 rounded-lg text-sm shadow-md mt-2">
+          <button type="submit" class="w-full bg-[#FFCC00] hover:bg-yellow-500 text-[#002855] font-bold p-3 rounded-lg text-sm shadow-md mt-2">
             DEĞİŞİKLİKLERİ KAYDET
           </button>
         </form>
@@ -240,8 +240,8 @@
       <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-6 relative shadow-2xl">
         <div class="flex justify-between items-center border-b pb-3">
           <div>
-            <h3 id="modalTitle" class="font-bold text-lg text-slate-800 uppercase">CANLI GEMİ HARİTASI</h3>
-            <p id="modalSub" class="text-xs text-slate-500 uppercase">PLATFORM SEÇİN</p>
+            <h3 id="modalTitle" class="font-bold text-lg text-slate-800 uppercase">MSC RESMİ TAKİP</h3>
+            <p id="modalSub" class="text-xs text-slate-500 uppercase">GLOBAL SİSTEM</p>
           </div>
           <button onclick="closeMapModal()" class="text-slate-400 hover:text-red-600 text-3xl font-bold p-1 cursor-pointer">&times;</button>
         </div>
@@ -293,12 +293,12 @@
       if (tab === 'login') {
         document.getElementById('login-form').classList.remove('hidden');
         document.getElementById('register-form').classList.add('hidden');
-        document.getElementById('tab-login').className = "w-1/2 py-2 text-blue-900 border-b-2 border-blue-900 font-bold";
+        document.getElementById('tab-login').className = "w-1/2 py-2 text-[#002855] border-b-2 border-[#002855] font-bold";
         document.getElementById('tab-register').className = "w-1/2 py-2 text-slate-400 border-b-2 border-transparent";
       } else {
         document.getElementById('login-form').classList.add('hidden');
         document.getElementById('register-form').classList.remove('hidden');
-        document.getElementById('tab-register').className = "w-1/2 py-2 text-blue-900 border-b-2 border-blue-900 font-bold";
+        document.getElementById('tab-register').className = "w-1/2 py-2 text-[#002855] border-b-2 border-[#002855] font-bold";
         document.getElementById('tab-login').className = "w-1/2 py-2 text-slate-400 border-b-2 border-transparent";
       }
     }
@@ -314,7 +314,6 @@
         });
     }
 
-    // YENİ KAYITTA HOŞ GELDİNİZ MAİLİ GÖNDERME
     function handleRegister(e) {
       e.preventDefault();
       const email = document.getElementById('register-email').value.trim();
@@ -455,13 +454,19 @@
       if ('Notification' in window) Notification.requestPermission();
     }
 
+    // MSC RESMİ İZLEME VE VESSEL FINDER ENTEGRASYONU (MarineTraffic Kaldırıldı)
     function openLiveMap(shipName, imo) {
       let query = (imo !== 'BELİRTİLMEDİ' && imo !== '') ? imo : shipName;
-      document.getElementById('modalTitle').innerText = shipName + " - CANLI KONUM";
+      document.getElementById('modalTitle').innerText = shipName + " - RESMİ TAKİP";
       document.getElementById('modalSub').innerText = "IMO: " + imo;
+      
       document.getElementById('modal-map-buttons').innerHTML = `
-        <a href="https://www.marinetraffic.com/en/data/?name=${encodeURIComponent(query)}" target="_blank" class="block w-full bg-blue-600 text-white text-center py-3 rounded-xl font-bold shadow-md">MarineTraffic</a>
-        <a href="https://www.vesselfinder.com/vessels?name=${encodeURIComponent(query)}" target="_blank" class="block w-full bg-emerald-600 text-white text-center py-3 rounded-xl font-bold shadow-md">VesselFinder</a>
+        <a href="https://www.msc.com/en/track-a-ship" target="_blank" class="block w-full bg-[#002855] text-[#FFCC00] text-center py-3.5 rounded-xl font-bold shadow-md hover:bg-[#001d3d] transition-colors border border-yellow-400">
+          <i class="fa-solid fa-ship mr-2"></i> MSC Resmi Gemi Takip Sayfası
+        </a>
+        <a href="https://www.vesselfinder.com/vessels?name=${encodeURIComponent(query)}" target="_blank" class="block w-full bg-emerald-600 text-white text-center py-3.5 rounded-xl font-bold shadow-md hover:bg-emerald-700 transition-colors">
+          <i class="fa-solid fa-satellite-dish mr-2"></i> VesselFinder (Alternatif Harita)
+        </a>
       `;
       document.getElementById('mapModal').classList.remove('hidden');
     }
@@ -470,7 +475,7 @@
       document.getElementById('mapModal').classList.add('hidden');
     }
 
-    // EXCEL'E (CSV) DIŞA AKTARMA FONKSİYONU
+    // GÜÇLENDİRİLMİŞ EXCEL (CSV) DIŞA AKTARMA FONKSİYONU
     function exportToExcel() {
       const filterPort = document.getElementById('filterPort').value;
       const filteredShips = filterPort === 'ALL' ? ships : ships.filter(s => s.port === filterPort);
@@ -483,9 +488,9 @@
       let csvContent = "\uFEFFGEMI ADI,IMO NUMARASI,VARIS LIMANI,BEYANNAME ADEDI,ETA (TAHMINI VARIS),GUMRUK DURUMU,DURUMU,NOT\n";
 
       filteredShips.forEach(ship => {
-        const name = `"${ship.name || ''}"`;
-        const imo = `"${ship.imo || ''}"`;
-        const port = `"${ship.port || ''}"`;
+        const name = `"${(ship.name || '').replace(/"/g, '""')}"`;
+        const imo = `"${(ship.imo || '').replace(/"/g, '""')}"`;
+        const port = `"${(ship.port || '').replace(/"/g, '""')}"`;
         const declarations = ship.declarations || 0;
         const eta = `"${new Date(ship.eta).toLocaleString('tr-TR')}"`;
         const customs = ship.customsCleared ? `"TAMAMLANDI"` : `"BEKLİYOR"`;
@@ -495,14 +500,20 @@
         csvContent += `${name},${imo},${port},${declarations},${eta},${customs},${status},${note}\n`;
       });
 
-      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.setAttribute('href', url);
-      a.setAttribute('download', `MSC_Gemi_Takip_Raporu_${new Date().toISOString().slice(0, 10)}.csv`);
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      try {
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `MSC_Gemi_Takip_Raporu_${new Date().toISOString().slice(0, 10)}.csv`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      } catch (err) {
+        console.error("Excel indirme hatası:", err);
+        alert("Excel dışa aktarılamadı. Lütfen tarayıcınızın indirme izinlerini kontrol edin.");
+      }
     }
 
     function renderShips() {
@@ -554,12 +565,12 @@
               </button>
             </td>
             <td class="p-3 text-right space-x-1 whitespace-nowrap">
-              <button onclick="openLiveMap('${ship.name}', '${ship.imo}')" class="text-blue-600 bg-blue-50 p-2 rounded-lg border border-blue-200 cursor-pointer"><i class="fa-solid fa-location-dot"></i></button>
+              <button onclick="openLiveMap('${ship.name}', '${ship.imo}')" class="text-blue-600 bg-blue-50 p-2 rounded-lg border border-blue-200 cursor-pointer" title="MSC Resmi Takip"><i class="fa-solid fa-anchor"></i></button>
               ${ship.status !== 'COMPLETED' ? `
-                <button onclick="openEditModal('${ship.firestoreId}')" class="text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-200 cursor-pointer"><i class="fa-solid fa-pen"></i></button>
-                <button onclick="completeShip('${ship.firestoreId}')" class="text-emerald-600 bg-emerald-50 p-2 rounded-lg border border-emerald-200 cursor-pointer"><i class="fa-solid fa-check"></i></button>
+                <button onclick="openEditModal('${ship.firestoreId}')" class="text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-200 cursor-pointer" title="Düzenle"><i class="fa-solid fa-pen"></i></button>
+                <button onclick="completeShip('${ship.firestoreId}')" class="text-emerald-600 bg-emerald-50 p-2 rounded-lg border border-emerald-200 cursor-pointer" title="Tamamla"><i class="fa-solid fa-check"></i></button>
               ` : ''}
-              <button onclick="deleteShip('${ship.firestoreId}')" class="text-red-600 bg-red-50 p-2 rounded-lg border border-red-200 cursor-pointer"><i class="fa-solid fa-trash"></i></button>
+              <button onclick="deleteShip('${ship.firestoreId}')" class="text-red-600 bg-red-50 p-2 rounded-lg border border-red-200 cursor-pointer" title="Sil"><i class="fa-solid fa-trash"></i></button>
             </td>
           </tr>
         `;
