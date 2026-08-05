@@ -9,11 +9,14 @@
   <meta name="apple-mobile-web-app-title" content="MSC Takip">
   <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/MSC_crociere_logo.svg/1024px-MSC_crociere_logo.svg.png">
 
-  <title>MSC & MEDLOG Gemi Takip Paneli</title>
+  <title>MSC & MEDLOG Canlı Gemi Haritası ve Takip Paneli</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
@@ -21,6 +24,7 @@
 
   <style>
     body { font-family: 'Inter', sans-serif; }
+    #map { height: 450px; width: 100%; border-radius: 0.75rem; z-index: 10; }
   </style>
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 antialiased min-h-screen">
@@ -81,7 +85,7 @@
           </div>
           <div>
             <h1 class="text-lg md:text-xl font-bold tracking-wide uppercase text-white">MSC & MEDLOG GEMİ TAKİP</h1>
-            <p class="text-xs text-yellow-300 font-medium">Operasyon & Gümrük İzleme Sistemi</p>
+            <p class="text-xs text-yellow-300 font-medium">Canlı Harita & Operasyon Sistemi</p>
           </div>
         </div>
 
@@ -104,6 +108,16 @@
 
     <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
       
+      <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 space-y-3">
+        <div class="flex justify-between items-center border-b pb-2">
+          <h2 class="text-sm font-bold text-[#002855] uppercase flex items-center gap-2">
+            <i class="fa-solid fa-globe text-[#FFCC00]"></i> TÜRKİYE ÇEVRESİ CANLI GEMİ RADARI
+          </h2>
+          <span id="map-status" class="text-[10px] bg-yellow-100 text-yellow-800 px-2 py-0.5 rounded font-bold animate-pulse">BAĞLANTI KURULUYOR...</span>
+        </div>
+        <div id="map"></div>
+      </div>
+
       <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
         <h2 class="text-base font-bold mb-4 text-[#002855] flex items-center gap-2 border-b pb-2 uppercase">
           <i class="fa-solid fa-plus-circle text-[#FFCC00]"></i> YENİ GEMİ VE BEYANNAME GİRİŞİ
@@ -235,19 +249,6 @@
         </form>
       </div>
     </div>
-
-    <div id="mapModal" class="fixed inset-0 bg-slate-900/80 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-      <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-6 relative shadow-2xl">
-        <div class="flex justify-between items-center border-b pb-3">
-          <div>
-            <h3 id="modalTitle" class="font-bold text-lg text-slate-800 uppercase">MSC RESMİ TAKİP</h3>
-            <p id="modalSub" class="text-xs text-slate-500 uppercase">GLOBAL SİSTEM</p>
-          </div>
-          <button onclick="closeMapModal()" class="text-slate-400 hover:text-red-600 text-3xl font-bold p-1 cursor-pointer">&times;</button>
-        </div>
-        <div id="modal-map-buttons" class="space-y-4"></div>
-      </div>
-    </div>
   </div>
 
   <script>
@@ -268,6 +269,60 @@
     let currentUser = null;
     let ships = [];
     let unsubscribeFirestore = null;
+    let map = null;
+    let shipMarkers = {};
+
+    function initMap() {
+      if (map) return;
+      map = L.map('map').setView([39.0, 35.0], 6);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 18,
+        attribution: '&copy; OpenStreetMap contributors'
+      }).addTo(map);
+
+      connectAISStream();
+    }
+
+    function connectAISStream() {
+      const apiKey = "bb6cfc1718d4f9d67fea96ff1579c690efe4d157";
+      const socket = new WebSocket("wss://stream.aisstream.io/v0/stream");
+
+      socket.onopen = function () {
+        document.getElementById('map-status').innerText = "● CANLI BAĞLANTI AKTİF";
+        document.getElementById('map-status').className = "text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-bold";
+        
+        const subscriptionMessage = {
+          APIKey: apiKey,
+          BoundingBoxes: [[[34.0, 25.0], [42.0, 45.0]]]
+        };
+        socket.send(JSON.stringify(subscriptionMessage));
+      };
+
+      socket.onmessage = function (event) {
+        const parsedMessage = JSON.parse(event.data);
+        if (parsedMessage.MessageType === "PositionReport") {
+          const report = parsedMessage.Message.PositionReport;
+          const mmsi = report.UserID;
+          const lat = report.Latitude;
+          const lon = report.Longitude;
+
+          if (lat && lon) {
+            if (shipMarkers[mmsi]) {
+              shipMarkers[mmsi].setLatLng([lat, lon]);
+            } else {
+              const marker = L.marker([lat, lon]).addTo(map)
+                .bindPopup(`<b>MMSI:</b> ${mmsi}<br><b>Enlem:</b> ${lat}<br><b>Boylam:</b> ${lon}`);
+              shipMarkers[mmsi] = marker;
+            }
+          }
+        }
+      };
+
+      socket.onerror = function () {
+        document.getElementById('map-status').innerText = "❌ BAĞLANTI HATASI";
+        document.getElementById('map-status').className = "text-[10px] bg-red-100 text-red-800 px-2 py-0.5 rounded font-bold";
+      };
+    }
 
     auth.onAuthStateChanged(user => {
       currentUser = user;
@@ -280,6 +335,7 @@
         document.getElementById('user-display-email').innerText = user.email;
         document.getElementById('notificationEmail').value = user.email.toUpperCase();
         listenShipsRealtime();
+        setTimeout(initMap, 500);
       } else {
         appContainer.classList.add('hidden');
         authContainer.classList.remove('hidden');
@@ -326,19 +382,17 @@
       auth.createUserWithEmailAndPassword(email, password)
         .then(() => {
           document.getElementById('register-form').reset();
-          
           fetch("https://formsubmit.co/ajax/" + encodeURIComponent(email.toLowerCase()), {
             method: "POST",
             headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
             body: JSON.stringify({
               _subject: "🎉 HOŞ GELDİNİZ: MSC & MEDLOG GEMİ TAKİP SİSTEMİ",
               _from: "MSC & MEDLOG TAKİP",
-              MESAJ: "Gemi takip sistemine hoş geldiniz!\n\nHesabınız başarıyla oluşturuldu.\n\nKullanıcı E-postası: " + email + "\n\nArtık MSC & MEDLOG liman operasyonlarınızı ve gümrük beyannamelerinizi güvenle takip edebilirsiniz.",
+              MESAJ: "Gemi takip sistemine hoş geldiniz!\n\nHesabınız başarıyla oluşturuldu.",
               _captcha: "false"
             })
           }).catch(err => console.error("Mail hatası:", err));
-
-          alert("✅ HESABINIZ BAŞARIYLA OLUŞTURULDU!\n\nHoş geldiniz bilgilendirme e-postası " + email + " adresinize gönderildi.");
+          alert("✅ HESABINIZ BAŞARIYLA OLUŞTURULDU!");
         })
         .catch(err => {
           const errDiv = document.getElementById('auth-error');
@@ -387,9 +441,6 @@
         customsCleared: false,
         email: email,
         status: 'PENDING',
-        emailSent10h: false,
-        emailSent5h: false,
-        emailSentArrived: false,
         createdAt: new Date().toISOString()
       };
 
@@ -422,10 +473,7 @@
         eta: document.getElementById('edit-eta').value,
         declarations: parseInt(document.getElementById('edit-declarations').value),
         port: document.getElementById('edit-port').value.toUpperCase(),
-        note: document.getElementById('edit-note').value.trim().toUpperCase(),
-        emailSent10h: false,
-        emailSent5h: false,
-        emailSentArrived: false
+        note: document.getElementById('edit-note').value.trim().toUpperCase()
       }).then(() => closeEditModal());
     }
 
@@ -454,28 +502,6 @@
       if ('Notification' in window) Notification.requestPermission();
     }
 
-    // MSC RESMİ İZLEME VE VESSEL FINDER ENTEGRASYONU (MarineTraffic Kaldırıldı)
-    function openLiveMap(shipName, imo) {
-      let query = (imo !== 'BELİRTİLMEDİ' && imo !== '') ? imo : shipName;
-      document.getElementById('modalTitle').innerText = shipName + " - RESMİ TAKİP";
-      document.getElementById('modalSub').innerText = "IMO: " + imo;
-      
-      document.getElementById('modal-map-buttons').innerHTML = `
-        <a href="https://www.msc.com/en/track-a-ship" target="_blank" class="block w-full bg-[#002855] text-[#FFCC00] text-center py-3.5 rounded-xl font-bold shadow-md hover:bg-[#001d3d] transition-colors border border-yellow-400">
-          <i class="fa-solid fa-ship mr-2"></i> MSC Resmi Gemi Takip Sayfası
-        </a>
-        <a href="https://www.vesselfinder.com/vessels?name=${encodeURIComponent(query)}" target="_blank" class="block w-full bg-emerald-600 text-white text-center py-3.5 rounded-xl font-bold shadow-md hover:bg-emerald-700 transition-colors">
-          <i class="fa-solid fa-satellite-dish mr-2"></i> VesselFinder (Alternatif Harita)
-        </a>
-      `;
-      document.getElementById('mapModal').classList.remove('hidden');
-    }
-
-    function closeMapModal() {
-      document.getElementById('mapModal').classList.add('hidden');
-    }
-
-    // GÜÇLENDİRİLMİŞ EXCEL (CSV) DIŞA AKTARMA FONKSİYONU
     function exportToExcel() {
       const filterPort = document.getElementById('filterPort').value;
       const filteredShips = filterPort === 'ALL' ? ships : ships.filter(s => s.port === filterPort);
@@ -500,20 +526,15 @@
         csvContent += `${name},${imo},${port},${declarations},${eta},${customs},${status},${note}\n`;
       });
 
-      try {
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `MSC_Gemi_Takip_Raporu_${new Date().toISOString().slice(0, 10)}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      } catch (err) {
-        console.error("Excel indirme hatası:", err);
-        alert("Excel dışa aktarılamadı. Lütfen tarayıcınızın indirme izinlerini kontrol edin.");
-      }
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `MSC_Gemi_Takip_Raporu_${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
     }
 
     function renderShips() {
@@ -565,7 +586,6 @@
               </button>
             </td>
             <td class="p-3 text-right space-x-1 whitespace-nowrap">
-              <button onclick="openLiveMap('${ship.name}', '${ship.imo}')" class="text-blue-600 bg-blue-50 p-2 rounded-lg border border-blue-200 cursor-pointer" title="MSC Resmi Takip"><i class="fa-solid fa-anchor"></i></button>
               ${ship.status !== 'COMPLETED' ? `
                 <button onclick="openEditModal('${ship.firestoreId}')" class="text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-200 cursor-pointer" title="Düzenle"><i class="fa-solid fa-pen"></i></button>
                 <button onclick="completeShip('${ship.firestoreId}')" class="text-emerald-600 bg-emerald-50 p-2 rounded-lg border border-emerald-200 cursor-pointer" title="Tamamla"><i class="fa-solid fa-check"></i></button>
