@@ -43,4 +43,680 @@
       <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
         <div>
           <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">E-POSTA ADRESİ</label>
-          <input type="email" id="login-email" required placeholder="ornek@med
+          <input type="email" id="login-email" required placeholder="ornek@medlog.com.tr" class="w-full text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">ŞİFRE</label>
+          <input type="password" id="login-password" required placeholder="••••••••" class="w-full text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+        </div>
+        <button type="submit" class="w-full bg-blue-900 hover:bg-blue-800 text-white font-bold p-3 rounded-lg transition-all text-sm shadow-md cursor-pointer">
+          GİRİŞ YAP
+        </button>
+      </form>
+
+      <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4 hidden">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">E-POSTA ADRESİ</label>
+          <input type="email" id="register-email" required placeholder="ornek@medlog.com.tr" class="w-full text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">ŞİFRE (EN AZ 6 KARAKTER)</label>
+          <input type="password" id="register-password" required minlength="6" placeholder="••••••••" class="w-full text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+        </div>
+        <button type="submit" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold p-3 rounded-lg transition-all text-sm shadow-md cursor-pointer">
+          HESAP OLUŞTUR
+        </button>
+      </form>
+
+      <div id="auth-error" class="text-xs text-red-600 font-semibold text-center hidden p-2 bg-red-50 rounded-lg border border-red-200"></div>
+    </div>
+  </div>
+
+
+  <div id="app-container" class="hidden min-h-screen pb-12">
+
+    <header class="bg-blue-900 text-white shadow-lg p-4 sticky top-0 z-40">
+      <div class="max-w-7xl mx-auto flex justify-between items-center">
+        <div class="flex items-center gap-3">
+          <div class="bg-yellow-400 text-blue-950 p-2 rounded-lg font-bold text-xl">
+            <i class="fa-solid fa-ship"></i>
+          </div>
+          <div>
+            <h1 class="text-lg md:text-xl font-bold tracking-wide uppercase">MSC & MEDLOG GEMİ TAKİP</h1>
+            <p class="text-xs text-blue-200">Bulut Veritabanı (Firestore) Canlı Takip</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-3">
+          <button type="button" onclick="requestNotificationPermission()" class="bg-blue-800 hover:bg-blue-700 text-xs text-blue-100 px-3 py-2 rounded-lg border border-blue-600 flex items-center gap-2 cursor-pointer transition-all">
+            <i class="fa-solid fa-bell text-yellow-400"></i> BİLDİRİMLER
+          </button>
+          
+          <div class="hidden sm:flex items-center gap-2 bg-blue-950 px-3 py-1.5 rounded-lg border border-blue-800 text-xs">
+            <i class="fa-solid fa-user-circle text-yellow-400"></i>
+            <span id="user-display-email" class="font-mono text-blue-200"></span>
+          </div>
+
+          <button type="button" onclick="handleLogout()" title="Oturumu Kapat" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-2 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1">
+            <i class="fa-solid fa-right-from-bracket"></i> ÇIKIŞ
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+          <div>
+            <p class="text-xs text-slate-500 font-semibold uppercase">TOPLAM TAKİP</p>
+            <p id="stat-total" class="text-2xl font-bold text-slate-800 mt-1">0</p>
+          </div>
+          <div class="bg-blue-50 p-3 rounded-xl text-blue-600"><i class="fa-solid fa-anchor text-2xl"></i></div>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+          <div>
+            <p class="text-xs text-slate-500 font-semibold uppercase">5 SAAT KALA (KRİTİK)</p>
+            <p id="stat-critical" class="text-2xl font-bold text-red-600 mt-1">0</p>
+          </div>
+          <div class="bg-red-50 p-3 rounded-xl text-red-600"><i class="fa-solid fa-triangle-exclamation text-2xl"></i></div>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+          <div>
+            <p class="text-xs text-slate-500 font-semibold uppercase">YAKLAŞAN (10 SAAT)</p>
+            <p id="stat-warning" class="text-2xl font-bold text-amber-600 mt-1">0</p>
+          </div>
+          <div class="bg-amber-50 p-3 rounded-xl text-amber-600"><i class="fa-solid fa-clock text-2xl"></i></div>
+        </div>
+
+        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
+          <div>
+            <p class="text-xs text-slate-500 font-semibold uppercase">TOPLAM BEYANNAME</p>
+            <p id="stat-declarations" class="text-2xl font-bold text-emerald-600 mt-1">0</p>
+          </div>
+          <div class="bg-emerald-50 p-3 rounded-xl text-emerald-600"><i class="fa-solid fa-file-invoice text-2xl"></i></div>
+        </div>
+      </div>
+
+      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+        <h2 class="text-base font-bold mb-4 text-slate-800 flex items-center gap-2 border-b pb-2 uppercase">
+          <i class="fa-solid fa-plus-circle text-blue-600"></i> YENİ GEMİ VE BEYANNAME GİRİŞİ
+        </h2>
+        <form id="ship-form" onsubmit="addShip(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4">
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">GEMİ ADI</label>
+            <input type="text" id="shipName" required placeholder="ÖRN: MSC MAYA" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none uppercase">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">IMO / MMSI NO</label>
+            <input type="text" id="imoNumber" placeholder="ÖRN: 9708679" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none uppercase">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">VARIŞ LİMANI</label>
+            <select id="port" required class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white uppercase">
+              <option value="İZMİR ALSANCAK">İZMİR ALSANCAK</option>
+              <option value="ALİAĞA SOCAR">ALİAĞA SOCAR</option>
+              <option value="MERSİN">MERSİN</option>
+              <option value="TEKİRDAĞ">TEKİRDAĞ</option>
+              <option value="GEMLİK">GEMLİK</option>
+              <option value="AMBARLI">AMBARLI</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">TAHMİNİ VARIŞ (ETA)</label>
+            <input type="datetime-local" id="eta" required class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">BEYANNAME ADEDİ</label>
+            <input type="number" id="declarations" min="1" required placeholder="ÖRN: 15" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none">
+          </div>
+          <div>
+            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">E-POSTA ADRESİ</label>
+            <input type="email" id="notificationEmail" required placeholder="ornek@medlog.com.tr" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none uppercase">
+          </div>
+          <div class="flex items-end">
+            <button type="submit" id="btn-submit-ship" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold p-2.5 rounded-lg transition-all text-sm flex justify-center items-center gap-2 cursor-pointer shadow-md shadow-blue-200">
+              <i class="fa-solid fa-check-circle"></i> TAKİBE AL
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div class="p-4 border-b border-slate-200 flex flex-col sm:flex-row justify-between items-center gap-3">
+          <h3 class="font-bold text-slate-800 flex items-center gap-2 uppercase">
+            <i class="fa-solid fa-list-check text-blue-600"></i> TAKİP EDİLEN GEMİLER
+          </h3>
+          <div class="flex items-center gap-2 w-full sm:w-auto">
+            <span class="text-xs text-slate-500 font-semibold uppercase">LİMAN FİLTRESİ:</span>
+            <select id="filterPort" onchange="renderShips()" class="text-xs p-2 border border-slate-300 rounded-lg outline-none bg-white font-medium uppercase">
+              <option value="ALL">TÜMÜ</option>
+              <option value="İZMİR ALSANCAK">İZMİR ALSANCAK</option>
+              <option value="ALİAĞA SOCAR">ALİAĞA SOCAR</option>
+              <option value="MERSİN">MERSİN</option>
+              <option value="TEKİRDAĞ">TEKİRDAĞ</option>
+              <option value="GEMLİK">GEMLİK</option>
+              <option value="AMBARLI">AMBARLI</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50 text-slate-500 text-xs font-semibold uppercase border-b border-slate-200">
+                <th class="p-3">GEMİ ADI / IMO</th>
+                <th class="p-3">VARIŞ LİMANI</th>
+                <th class="p-3">BEYANNAME</th>
+                <th class="p-3">E-POSTA</th>
+                <th class="p-3">ETA (VARIŞ)</th>
+                <th class="p-3">KALAN SÜRE</th>
+                <th class="p-3">DURUM</th>
+                <th class="p-3 text-right">CANLI İZLE VE İŞLEM</th>
+              </tr>
+            </thead>
+            <tbody id="ship-list-body" class="divide-y divide-slate-100 text-sm">
+              </tbody>
+          </table>
+        </div>
+      </div>
+
+    </main>
+
+    <div id="mapModal" class="fixed inset-0 bg-slate-900/80 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+      <div class="bg-white rounded-2xl max-w-5xl w-full p-5 space-y-4 relative shadow-2xl">
+        <div class="flex justify-between items-center border-b pb-3">
+          <div>
+            <h3 id="modalTitle" class="font-bold text-lg text-slate-800 uppercase">CANLI GEMİ HARİTASI</h3>
+            <p id="modalSub" class="text-xs text-slate-500 uppercase">VesselFinder Canlı AIS Entegrasyonu</p>
+          </div>
+          <button onclick="closeMapModal()" class="text-slate-400 hover:text-red-600 text-2xl font-bold p-1 cursor-pointer transition-colors">&times;</button>
+        </div>
+
+        <div class="w-full h-[480px] rounded-xl overflow-hidden border border-slate-200 relative bg-slate-100">
+          <iframe id="mapIframe" class="w-full h-full border-0" src=""></iframe>
+        </div>
+
+        <div class="flex flex-wrap justify-between items-center gap-3 pt-2 border-t text-xs">
+          <span class="text-slate-500 font-medium uppercase">Haritada çıkmazsa harici platformda açın:</span>
+          <div id="externalLinks" class="flex items-center gap-2">
+            </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // FIREBASE KONFİGÜRASYONU
+    const firebaseConfig = {
+      apiKey: "AIzaSyAKAF1Tm0Ahy5kT3OW6Slc0sjTbiFvaifg",
+      authDomain: "msc-takip.firebaseapp.com",
+      projectId: "msc-takip",
+      storageBucket: "msc-takip.firebasestorage.app",
+      messagingSenderId: "688773853204",
+      appId: "1:688773853204:web:77be98f1fb28d3e2b3b701",
+      measurementId: "G-3CQTMTRFF5"
+    };
+
+    // Firebase Servislerini Başlatma
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
+    }
+    const auth = firebase.auth();
+    const db = firebase.firestore();
+
+    let currentUser = null;
+    let ships = [];
+    let unsubscribeFirestore = null;
+
+    // OTURUM DURUMU DİNLEYİCİSİ
+    auth.onAuthStateChanged(user => {
+      currentUser = user;
+      const authContainer = document.getElementById('auth-container');
+      const appContainer = document.getElementById('app-container');
+
+      if (user) {
+        authContainer.classList.add('hidden');
+        appContainer.classList.remove('hidden');
+        document.getElementById('user-display-email').innerText = user.email;
+        document.getElementById('notificationEmail').value = user.email.toUpperCase();
+
+        // Firestore Canlı Veri Dinleyicisi
+        listenShipsRealtime();
+      } else {
+        appContainer.classList.add('hidden');
+        authContainer.classList.remove('hidden');
+        if (unsubscribeFirestore) unsubscribeFirestore();
+        ships = [];
+      }
+    });
+
+    // SEKME DEĞİŞTİRME (GİRİŞ / KAYIT)
+    function switchAuthTab(tab) {
+      const loginForm = document.getElementById('login-form');
+      const registerForm = document.getElementById('register-form');
+      const tabLogin = document.getElementById('tab-login');
+      const tabRegister = document.getElementById('tab-register');
+      const authError = document.getElementById('auth-error');
+
+      authError.classList.add('hidden');
+
+      if (tab === 'login') {
+        loginForm.classList.remove('hidden');
+        registerForm.classList.add('hidden');
+        tabLogin.className = "w-1/2 py-2 text-blue-900 border-b-2 border-blue-900 font-bold";
+        tabRegister.className = "w-1/2 py-2 text-slate-400 border-b-2 border-transparent";
+      } else {
+        loginForm.classList.add('hidden');
+        registerForm.classList.remove('hidden');
+        tabRegister.className = "w-1/2 py-2 text-blue-900 border-b-2 border-blue-900 font-bold";
+        tabLogin.className = "w-1/2 py-2 text-slate-400 border-b-2 border-transparent";
+      }
+    }
+
+    // GİRİŞ YAPMA İŞLEMİ
+    function handleLogin(e) {
+      e.preventDefault();
+      const email = document.getElementById('login-email').value;
+      const password = document.getElementById('login-password').value;
+      const authError = document.getElementById('auth-error');
+
+      authError.classList.add('hidden');
+
+      auth.signInWithEmailAndPassword(email, password)
+        .then(() => {
+          document.getElementById('login-form').reset();
+        })
+        .catch(error => {
+          authError.innerText = "Giriş Hatası: " + translateAuthError(error.code);
+          authError.classList.remove('hidden');
+        });
+    }
+
+    // KAYIT OLMA İŞLEMİ
+    function handleRegister(e) {
+      e.preventDefault();
+      const email = document.getElementById('register-email').value;
+      const password = document.getElementById('register-password').value;
+      const authError = document.getElementById('auth-error');
+
+      authError.classList.add('hidden');
+
+      auth.createUserWithEmailAndPassword(email, password)
+        .then(() => {
+          document.getElementById('register-form').reset();
+        })
+        .catch(error => {
+          authError.innerText = "Kayıt Hatası: " + translateAuthError(error.code);
+          authError.classList.remove('hidden');
+        });
+    }
+
+    // OTURUMU KAPATMA İŞLEMİ
+    function handleLogout() {
+      if (confirm("Oturumu kapatmak istediğinize emin misiniz?")) {
+        auth.signOut();
+      }
+    }
+
+    function translateAuthError(code) {
+      switch(code) {
+        case 'auth/user-not-found': return "Bu e-posta adresine ait kullanıcı bulunamadı.";
+        case 'auth/wrong-password': return "Şifre hatalı.";
+        case 'auth/email-already-in-use': return "Bu e-posta adresi zaten kullanımda.";
+        case 'auth/weak-password': return "Şifre en az 6 karakter olmalıdır.";
+        case 'auth/invalid-email': return "Geçersiz e-posta adresi.";
+        default: return "Bir hata oluştu (" + code + ")";
+      }
+    }
+
+    // FIRESTORE CANLI VERİ DİNLEME (REALTIME SNAPSHOT)
+    function listenShipsRealtime() {
+      if (!currentUser) return;
+
+      unsubscribeFirestore = db.collection('ships')
+        .onSnapshot(snapshot => {
+          ships = [];
+          snapshot.forEach(doc => {
+            ships.push({
+              firestoreId: doc.id,
+              ...doc.data()
+            });
+          });
+          renderShips();
+        }, error => {
+          console.error("Firestore Hata: ", error);
+        });
+    }
+
+    // GERÇEK E-POSTA GÖNDERİM SERVİSİ (FORMSUBMIT)
+    function sendRealEmail(toEmail, subjectText, bodyText) {
+      fetch("https://formsubmit.co/ajax/" + encodeURIComponent(toEmail.toLowerCase()), {
+        method: "POST",
+        headers: { 
+          'Content-Type': 'application/json',
+          'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+          _subject: subjectText,
+          MESAJ: bodyText,
+          _captcha: "false"
+        })
+      })
+      .then(res => res.json())
+      .then(data => {
+        console.log("Mail Gönderildi: " + toEmail, data);
+      })
+      .catch(err => {
+        console.error("Mail Hatası: ", err);
+      });
+    }
+
+    // YENİ GEMİ EKLEME İŞLEMİ (FIRESTORE KAYIT)
+    function addShip(e) {
+      e.preventDefault();
+
+      if (!currentUser) {
+        alert("Oturum süreniz dolmuş. Lütfen tekrar giriş yapın.");
+        return;
+      }
+
+      const name = document.getElementById('shipName').value.trim().toUpperCase();
+      const imo = document.getElementById('imoNumber').value.trim().toUpperCase();
+      const port = document.getElementById('port').value.toUpperCase();
+      const eta = document.getElementById('eta').value;
+      const declarations = document.getElementById('declarations').value;
+      const email = document.getElementById('notificationEmail').value.trim().toUpperCase();
+
+      if (!name || !eta || !declarations || !email) {
+        alert("LÜTFEN ZORUNLU ALANLARI DOLDURUN.");
+        return;
+      }
+
+      const btnSubmit = document.getElementById('btn-submit-ship');
+      btnSubmit.disabled = true;
+      btnSubmit.innerText = "KAYDEDİLİYOR...";
+
+      const newShipData = {
+        userId: currentUser.uid,
+        name: name,
+        imo: imo || 'BELİRTİLMEDİ',
+        port: port,
+        eta: eta,
+        declarations: parseInt(declarations),
+        email: email,
+        status: 'PENDING',
+        emailSent10h: false,
+        emailSent5h: false,
+        emailSentArrived: false,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+
+      // Firestore Veritabanına Ekleme
+      db.collection('ships').add(newShipData)
+        .then(() => {
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = '<i class="fa-solid fa-check-circle"></i> TAKİBE AL';
+
+          // Takibe Alındı E-postası Gönderimi
+          const mailSubject = "✅ TAKİBE ALINDI: " + name + " GEMİSİ";
+          const mailBody = "SİSTEM AKTİF!\n\n" + name + " Gemisi takibe alındı.\nVarış Limanı: " + port + "\nBeyanname Adedi: " + declarations + "\nETA (Varış Saati): " + new Date(eta).toLocaleString('tr-TR') + "\nBildirim E-postası: " + email;
+
+          sendRealEmail(email, mailSubject, mailBody);
+
+          alert("✅ SİSTEM AKTİF & BULUTA KAYDEDİLDİ!\n\n'" + name + "' gemisi Firebase veritabanına eklendi.");
+
+          if ('Notification' in window && Notification.permission === 'granted') {
+            new Notification("✅ TAKİBE ALINDI: " + name, {
+              body: port + " LİMANI İÇİN " + declarations + " ADET BEYANNAME KAYDEDİLDİ."
+            });
+          }
+
+          document.getElementById('ship-form').reset();
+          document.getElementById('notificationEmail').value = currentUser.email.toUpperCase();
+        })
+        .catch(error => {
+          btnSubmit.disabled = false;
+          btnSubmit.innerHTML = '<i class="fa-solid fa-check-circle"></i> TAKİBE AL';
+          alert("Veri kaydedilirken hata oluştu: " + error.message);
+        });
+    }
+
+    // SİLME İŞLEMİ
+    function deleteShip(firestoreId) {
+      if(confirm("BU KAYDI BULUT VERİTABANINDAN SİLMEK İSTEDİĞİNİZE EMİN MİSİNİZ?")) {
+        db.collection('ships').doc(firestoreId).delete()
+          .catch(error => {
+            alert("Silme hatası: " + error.message);
+          });
+      }
+    }
+
+    // İŞLEMİ TAMAMLAMA İŞLEMİ
+    function completeShip(firestoreId) {
+      db.collection('ships').doc(firestoreId).update({
+        status: 'COMPLETED'
+      }).catch(error => {
+        alert("Güncelleme hatası: " + error.message);
+      });
+    }
+
+    function calculateTimeRemaining(etaString) {
+      const etaDate = new Date(etaString);
+      const now = new Date();
+      const diffMs = etaDate - now;
+      const diffHours = diffMs / (1000 * 60 * 60);
+
+      if (isNaN(diffHours)) {
+        return { totalHours: 0, formatted: 'GEÇERSİZ TARİH' };
+      }
+
+      return {
+        totalHours: diffHours,
+        formatted: diffHours > 0 
+          ? Math.floor(diffHours) + " SAAT " + Math.floor((diffHours % 1) * 60) + " DK"
+          : 'LİMANDA / SÜRE DOLDU'
+      };
+    }
+
+    function requestNotificationPermission() {
+      if ('Notification' in window) {
+        Notification.requestPermission().then(permission => {
+          if(permission === 'granted') alert("BİLDİRİMLER AKTİF HALE GETİRİLDİ!");
+        });
+      } else {
+        alert("Tarayıcınız masaüstü bildirimlerini desteklemiyor.");
+      }
+    }
+
+    // OTOMATİK MAIL VE BİLDİRİM KONTROLÜ
+    function checkNotifications() {
+      ships.forEach(ship => {
+        if (ship.status !== 'COMPLETED') {
+          const time = calculateTimeRemaining(ship.eta);
+
+          // 1. 10 SAAT KALA MAİLİ
+          if (time.totalHours <= 10 && time.totalHours > 5 && !ship.emailSent10h) {
+            const subject10h = "🚨 UYARI: " + ship.name + " VARIŞA 10 SAAT KALA!";
+            const body10h = "10 SAAT KALA UYARISI!\n\nGEMİ ADI: " + ship.name + "\nVARIŞ LİMANI: " + ship.port + "\nKALAN SÜRE: " + time.formatted + "\nBEYANNAME ADEDİ: " + ship.declarations + "\n\nBEYANNAMELERİNİZİ KONTROL EDİNİZ.";
+            
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification("🚨 10 SAAT KALA: " + ship.name, { body: body10h });
+            }
+
+            sendRealEmail(ship.email, subject10h, body10h);
+            
+            if (ship.firestoreId) {
+              db.collection('ships').doc(ship.firestoreId).update({ emailSent10h: true });
+            }
+          }
+
+          // 2. 5 SAAT KALA MAİLİ (KRİTİK)
+          if (time.totalHours <= 5 && time.totalHours > 0 && !ship.emailSent5h) {
+            const subject5h = "🔴 KRİTİK UYARI: " + ship.name + " VARIŞA 5 SAAT KALA!";
+            const body5h = "KRİTİK 5 SAAT KALA UYARISI!\n\nGEMİ ADI: " + ship.name + "\nVARIŞ LİMANI: " + ship.port + "\nKALAN SÜRE: " + time.formatted + "\nBEYANNAME ADEDİ: " + ship.declarations + "\n\nLÜTFEN BEYANNAME İŞLEMLERİNİ TAMAMLAYINIZ!";
+
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification("🔴 5 SAAT KALA (KRİTİK): " + ship.name, { body: body5h });
+            }
+
+            sendRealEmail(ship.email, subject5h, body5h);
+            
+            if (ship.firestoreId) {
+              db.collection('ships').doc(ship.firestoreId).update({ 
+                emailSent5h: true, 
+                emailSent10h: true 
+              });
+            }
+          }
+
+          // 3. TAM VARIŞ MAİLİ (0 SAAT / LİMANA ULAŞTI)
+          if (time.totalHours <= 0 && !ship.emailSentArrived) {
+            const subjectArrived = "⚓ GEMİ LİMANA VARDI: " + ship.name;
+            const bodyArrived = "GEMİ LİMANA ULAŞTI!\n\nGEMİ ADI: " + ship.name + "\nVARIŞ LİMANI: " + ship.port + "\nBEYANNAME ADEDİ: " + ship.declarations + "\n\nBEYANNAME KAPAMA İŞLEMLERİNİ BAŞLATABİLİRSİNİZ.";
+
+            if ('Notification' in window && Notification.permission === 'granted') {
+              new Notification("⚓ GEMİ LİMANA VARDI: " + ship.name, { body: bodyArrived });
+            }
+
+            sendRealEmail(ship.email, subjectArrived, bodyArrived);
+            
+            if (ship.firestoreId) {
+              db.collection('ships').doc(ship.firestoreId).update({ 
+                emailSentArrived: true,
+                emailSent5h: true, 
+                emailSent10h: true 
+              });
+            }
+          }
+        }
+      });
+    }
+
+    // CANLI HARİTA MODAL
+    function openLiveMap(shipName, imo) {
+      let query = (imo !== 'BELİRTİLMEDİ' && imo !== '') ? imo : shipName;
+      
+      document.getElementById('modalTitle').innerText = shipName + " - CANLI KONUM";
+      document.getElementById('modalSub').innerText = "IMO/MMSI: " + imo;
+
+      document.getElementById('mapIframe').src = "https://www.vesselfinder.com/aismap";
+
+      let mtUrl = "https://www.marinetraffic.com/en/ais/index/search/all/keyword:" + encodeURIComponent(query);
+      let vfUrl = "https://www.vesselfinder.com/vessels?name=" + encodeURIComponent(query);
+      let mstUrl = "https://www.myshiptracking.com/vessels?name=" + encodeURIComponent(query);
+
+      document.getElementById('externalLinks').innerHTML = `
+        <a href="${mtUrl}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors flex items-center gap-1">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> MARINETRAFFIC
+        </a>
+        <a href="${vfUrl}" target="_blank" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors flex items-center gap-1">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> VESSELFINDER
+        </a>
+        <a href="${mstUrl}" target="_blank" class="bg-slate-700 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg font-semibold text-xs transition-colors flex items-center gap-1">
+          <i class="fa-solid fa-arrow-up-right-from-square"></i> MYSHIPTRACKING
+        </a>
+      `;
+
+      document.getElementById('mapModal').classList.remove('hidden');
+    }
+
+    function closeMapModal() {
+      document.getElementById('mapIframe').src = "";
+      document.getElementById('mapModal').classList.add('hidden');
+    }
+
+    // TABLOYU EKRANA ÇİZME
+    function renderShips() {
+      const tbody = document.getElementById('ship-list-body');
+      const filterPort = document.getElementById('filterPort').value;
+      tbody.innerHTML = '';
+
+      let totalDecs = 0;
+      let criticalCount = 0;
+      let warningCount = 0;
+
+      const filteredShips = filterPort === 'ALL' 
+        ? ships 
+        : ships.filter(s => s.port === filterPort);
+
+      if (filteredShips.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="p-6 text-center text-slate-400 font-medium">HENÜZ TAKİP EDİLEN GEMİ KAYDI BULUNMUYOR.</td></tr>';
+      }
+
+      filteredShips.forEach(ship => {
+        const time = calculateTimeRemaining(ship.eta);
+        let badgeClass = '';
+        let badgeText = '';
+
+        if (ship.status === 'COMPLETED') {
+          badgeClass = 'bg-slate-100 text-slate-600 border-slate-300';
+          badgeText = 'TAMAMLANDI';
+        } else if (time.totalHours <= 0) {
+          badgeClass = 'bg-slate-800 text-white font-bold';
+          badgeText = '⚓ LİMANA VARDI';
+        } else if (time.totalHours <= 5) {
+          badgeClass = 'bg-red-100 text-red-700 border-red-300 font-bold animate-pulse';
+          badgeText = '🔴 5 SAAT KALA (KRİTİK)';
+          criticalCount++;
+        } else if (time.totalHours <= 10) {
+          badgeClass = 'bg-orange-100 text-orange-700 border-orange-300 font-bold';
+          badgeText = '🟠 10 SAAT KALA';
+          warningCount++;
+        } else if (time.totalHours <= 24) {
+          badgeClass = 'bg-amber-100 text-amber-700 border-amber-300';
+          badgeText = '🟡 24 SAAT KALA';
+          warningCount++;
+        } else {
+          badgeClass = 'bg-emerald-100 text-emerald-700 border-emerald-300';
+          badgeText = '🟢 NORMAL (> 24 SAAT)';
+        }
+
+        totalDecs += (ship.declarations || 0);
+
+        const row = `
+          <tr class="hover:bg-slate-50 transition-colors">
+            <td class="p-3">
+              <div class="font-bold text-slate-800">${ship.name}</div>
+              <div class="text-xs text-slate-400">IMO/MMSI: ${ship.imo}</div>
+            </td>
+            <td class="p-3"><span class="bg-blue-50 text-blue-700 border border-blue-200 text-xs px-2.5 py-1 rounded-full font-semibold">${ship.port}</span></td>
+            <td class="p-3 font-bold text-slate-700">${ship.declarations} ADET</td>
+            <td class="p-3 text-xs text-slate-500 font-mono">${ship.email}</td>
+            <td class="p-3 text-slate-600 text-xs font-medium">${new Date(ship.eta).toLocaleString('tr-TR')}</td>
+            <td class="p-3 font-mono text-xs font-bold text-slate-700">${time.formatted}</td>
+            <td class="p-3"><span class="text-xs px-2.5 py-1 rounded-md border ${badgeClass}">${badgeText}</span></td>
+            <td class="p-3 text-right space-x-1">
+              <button onclick="openLiveMap('${ship.name}', '${ship.imo}')" title="CANLI KONUM" class="text-blue-600 hover:text-blue-800 bg-blue-50 p-2 rounded-lg border border-blue-200 text-xs font-semibold cursor-pointer inline-flex items-center gap-1 transition-colors">
+                <i class="fa-solid fa-location-dot"></i> CANLI KONUM
+              </button>
+              ${ship.status !== 'COMPLETED' ? `
+                <button onclick="completeShip('${ship.firestoreId}')" title="TAMAMLA" class="text-emerald-600 hover:text-emerald-800 bg-emerald-50 p-2 rounded-lg border border-emerald-200 cursor-pointer inline-flex items-center gap-1 transition-colors">
+                  <i class="fa-solid fa-check"></i>
+                </button>
+              ` : ''}
+              <button onclick="deleteShip('${ship.firestoreId}')" title="SİL" class="text-red-600 hover:text-red-800 bg-red-50 p-2 rounded-lg border border-red-200 cursor-pointer inline-flex items-center gap-1 transition-colors">
+                <i class="fa-solid fa-trash"></i>
+              </button>
+            </td>
+          </tr>
+        `;
+        tbody.innerHTML += row;
+      });
+
+      document.getElementById('stat-total').innerText = ships.length;
+      document.getElementById('stat-critical').innerText = criticalCount;
+      document.getElementById('stat-warning').innerText = warningCount;
+      document.getElementById('stat-declarations').innerText = totalDecs;
+
+      checkNotifications();
+    }
+
+    // Her 1 dakikada bir süreleri kontrol et
+    setInterval(checkNotifications, 60000);
+  </script>
+</body>
+</html>
