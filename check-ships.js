@@ -62,7 +62,9 @@ async function main() {
       return;
     }
 
+    // TÜRKİYE SAATİ (UTC+3) DÜZELTMESİ
     const now = new Date();
+    now.setHours(now.getHours() + 3);
 
     for (const doc of data.documents) {
       const fields = doc.fields || {};
@@ -90,7 +92,6 @@ async function main() {
       const minsLeft = Math.floor((diffHours % 1) * 60);
       const timeFormatted = diffHours > 0 ? `${hoursLeft} SAAT ${minsLeft} DK` : 'LİMANDA';
 
-      // 10 SAAT KALA MAİLİ
       if (diffHours <= 10 && diffHours > 5 && !emailSent10h) {
         const subject = `🚨 UYARI: ${name} VARIŞA 10 SAAT KALA!`;
         const body = `10 SAAT KALA UYARISI!\n\nGEMİ ADI: ${name}\nVARIŞ LİMANI: ${port}\nKALAN SÜRE: ${timeFormatted}\nBEYANNAME ADEDİ: ${declarations}\n\nBEYANNAMELERİNİZİ KONTROL EDİNİZ.`;
@@ -98,7 +99,6 @@ async function main() {
         await updateDoc(doc.name, { emailSent10h: true });
       }
 
-      // 5 SAAT KALA MAİLİ (KRİTİK)
       if (diffHours <= 5 && diffHours > 0 && !emailSent5h) {
         const subject = `🔴 KRİTİK UYARI: ${name} VARIŞA 5 SAAT KALA!`;
         const body = `KRİTİK 5 SAAT KALA UYARISI!\n\nGEMİ ADI: ${name}\nVARIŞ LİMANI: ${port}\nKALAN SÜRE: ${timeFormatted}\nBEYANNAME ADEDİ: ${declarations}\n\nLÜTFEN BEYANNAME İŞLEMLERİNİ TAMAMLAYINIZ!`;
@@ -106,7 +106,6 @@ async function main() {
         await updateDoc(doc.name, { emailSent5h: true, emailSent10h: true });
       }
 
-      // LİMANA VARDI MAİLİ
       if (diffHours <= 0 && !emailSentArrived) {
         const subject = `⚓ GEMİ LİMANA VARDI: ${name}`;
         const body = `GEMİ LİMANA ULAŞTI!\n\nGEMİ ADI: ${name}\nVARIŞ LİMANI: ${port}\nBEYANNAME ADEDİ: ${declarations}\n\nBEYANNAME KAPAMA İŞLEMLERİNİ BAŞLATABİLİRSİNİZ.`;
