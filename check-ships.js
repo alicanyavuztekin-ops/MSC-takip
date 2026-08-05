@@ -62,7 +62,6 @@ async function main() {
       return;
     }
 
-    // TÜRKİYE SAATİ (UTC+3) DÜZELTMESİ
     const now = new Date();
     now.setHours(now.getHours() + 3);
 
@@ -77,6 +76,7 @@ async function main() {
       const etaStr = fields.eta ? fields.eta.stringValue : '';
       const declarations = fields.declarations ? (fields.declarations.integerValue || fields.declarations.stringValue) : '0';
       const email = fields.email ? fields.email.stringValue : '';
+      const note = fields.note ? fields.note.stringValue : ''; // NOT VERİSİ ÇEKİLDİ
 
       const emailSent10h = fields.emailSent10h ? fields.emailSent10h.booleanValue : false;
       const emailSent5h = fields.emailSent5h ? fields.emailSent5h.booleanValue : false;
@@ -91,24 +91,27 @@ async function main() {
       const hoursLeft = Math.floor(diffHours);
       const minsLeft = Math.floor((diffHours % 1) * 60);
       const timeFormatted = diffHours > 0 ? `${hoursLeft} SAAT ${minsLeft} DK` : 'LİMANDA';
+      
+      // EĞER NOT GİRİLMİŞSE MAİLİN SONUNA EKLENECEK KISIM
+      const noteText = note !== '' ? `\n\n📌 EK NOT: ${note}` : '';
 
       if (diffHours <= 10 && diffHours > 5 && !emailSent10h) {
         const subject = `🚨 UYARI: ${name} VARIŞA 10 SAAT KALA!`;
-        const body = `10 SAAT KALA UYARISI!\n\nGEMİ ADI: ${name}\nVARIŞ LİMANI: ${port}\nKALAN SÜRE: ${timeFormatted}\nBEYANNAME ADEDİ: ${declarations}\n\nBEYANNAMELERİNİZİ KONTROL EDİNİZ.`;
+        const body = `10 SAAT KALA UYARISI!\n\nGEMİ ADI: ${name}\nVARIŞ LİMANI: ${port}\nKALAN SÜRE: ${timeFormatted}\nBEYANNAME ADEDİ: ${declarations}\n\nBEYANNAMELERİNİZİ KONTROL EDİNİZ.${noteText}`;
         await sendEmail(email, subject, body);
         await updateDoc(doc.name, { emailSent10h: true });
       }
 
       if (diffHours <= 5 && diffHours > 0 && !emailSent5h) {
         const subject = `🔴 KRİTİK UYARI: ${name} VARIŞA 5 SAAT KALA!`;
-        const body = `KRİTİK 5 SAAT KALA UYARISI!\n\nGEMİ ADI: ${name}\nVARIŞ LİMANI: ${port}\nKALAN SÜRE: ${timeFormatted}\nBEYANNAME ADEDİ: ${declarations}\n\nLÜTFEN BEYANNAME İŞLEMLERİNİ TAMAMLAYINIZ!`;
+        const body = `KRİTİK 5 SAAT KALA UYARISI!\n\nGEMİ ADI: ${name}\nVARIŞ LİMANI: ${port}\nKALAN SÜRE: ${timeFormatted}\nBEYANNAME ADEDİ: ${declarations}\n\nLÜTFEN BEYANNAME İŞLEMLERİNİ TAMAMLAYINIZ!${noteText}`;
         await sendEmail(email, subject, body);
         await updateDoc(doc.name, { emailSent5h: true, emailSent10h: true });
       }
 
       if (diffHours <= 0 && !emailSentArrived) {
         const subject = `⚓ GEMİ LİMANA VARDI: ${name}`;
-        const body = `GEMİ LİMANA ULAŞTI!\n\nGEMİ ADI: ${name}\nVARIŞ LİMANI: ${port}\nBEYANNAME ADEDİ: ${declarations}\n\nBEYANNAME KAPAMA İŞLEMLERİNİ BAŞLATABİLİRSİNİZ.`;
+        const body = `GEMİ LİMANA ULAŞTI!\n\nGEMİ ADI: ${name}\nVARIŞ LİMANI: ${port}\nBEYANNAME ADEDİ: ${declarations}\n\nBEYANNAME KAPAMA İŞLEMLERİNİ BAŞLATABİLİRSİNİZ.${noteText}`;
         await sendEmail(email, subject, body);
         await updateDoc(doc.name, { emailSentArrived: true, emailSent5h: true, emailSent10h: true });
       }
