@@ -336,7 +336,7 @@
         });
     }
 
-    // KAYIT OLMA VE HOŞ GELDİN MAİLİ GÖNDERME
+    // KAYIT OLMA VE HOŞ GELDİN MAİLİ
     function handleRegister(e) {
       e.preventDefault();
       const email = document.getElementById('register-email').value.trim();
@@ -387,7 +387,7 @@
       }
     }
 
-    // FIRESTORE CANLI VERİ DİNLEME (KULLANICIYA ÖZEL)
+    // FIRESTORE CANLI VERİ DİNLEME 
     function listenShipsRealtime() {
       if (!currentUser) return;
 
@@ -410,7 +410,7 @@
         });
     }
 
-    // E-POSTA GÖNDERİM SERVİSİ
+    // E-POSTA GÖNDERİM SERVİSİ (GÖNDERİCİ ADI DÜZELTİLDİ)
     function sendRealEmail(toEmail, subjectText, bodyText) {
       fetch("https://formsubmit.co/ajax/" + encodeURIComponent(toEmail.toLowerCase()), {
         method: "POST",
@@ -420,6 +420,7 @@
         },
         body: JSON.stringify({
           _subject: subjectText,
+          _from: "MSC & MEDLOG TAKİP", // BURASI MAİLDEKİ GÖNDERİCİ ADINI DEĞİŞTİRİR
           MESAJ: bodyText,
           _captcha: "false"
         })
@@ -479,8 +480,6 @@
           const mailBody = "SİSTEM AKTİF!\n\n" + name + " Gemisi takibe alındı.\nVarış Limanı: " + port + "\nBeyanname Adedi: " + declarations + "\nETA (Varış Saati): " + new Date(eta).toLocaleString('tr-TR') + "\nBildirim E-postası: " + email;
 
           sendRealEmail(email, mailSubject, mailBody);
-
-          alert("✅ SİSTEM AKTİF & BULUTA KAYDEDİLDİ!\n\n'" + name + "' gemisi Firebase veritabanına eklendi.");
 
           if ('Notification' in window && Notification.permission === 'granted') {
             new Notification("✅ TAKİBE ALINDI: " + name, {
@@ -589,7 +588,7 @@
             }
           }
 
-          // TAM VARIŞ MAİLİ (0 SAAT / LİMANA ULAŞTI)
+          // TAM VARIŞ MAİLİ 
           if (time.totalHours <= 0 && !ship.emailSentArrived) {
             const subjectArrived = "⚓ GEMİ LİMANA VARDI: " + ship.name;
             const bodyArrived = "GEMİ LİMANA ULAŞTI!\n\nGEMİ ADI: " + ship.name + "\nVARIŞ LİMANI: " + ship.port + "\nBEYANNAME ADEDİ: " + ship.declarations + "\n\nBEYANNAME KAPAMA İŞLEMLERİNİ BAŞLATABİLİRSİNİZ.";
@@ -612,14 +611,15 @@
       });
     }
 
-    // YENİ CANLI HARİTA FONKSİYONU
+    // YENİ CANLI HARİTA FONKSİYONU (IMO ÖNCELİKLİ)
     function openLiveMap(shipName, imo) {
       let query = (imo !== 'BELİRTİLMEDİ' && imo !== '') ? imo : shipName;
       
       document.getElementById('modalTitle').innerText = shipName + " - CANLI KONUM";
       document.getElementById('modalSub').innerText = "IMO/MMSI: " + imo;
 
-      let mtUrl = "https://www.marinetraffic.com/en/ais/index/search/all/keyword:" + encodeURIComponent(query);
+      // IMO veya İsim ile direkt arama URL'leri oluşturuluyor
+      let mtUrl = "https://www.marinetraffic.com/en/data/?name=" + encodeURIComponent(query);
       let vfUrl = "https://www.vesselfinder.com/vessels?name=" + encodeURIComponent(query);
       let mstUrl = "https://www.myshiptracking.com/vessels?name=" + encodeURIComponent(query);
 
