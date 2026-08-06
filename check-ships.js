@@ -1,30 +1,36 @@
 const PROJECT_ID = "msc-takip";
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/ships`;
 
-// 403 ENGELİNİ AŞAN GARANTİLİ MAİL FONKSİYONU
+// EMAILJS ENTEGRASYONU (403 ENGELİNİ TAMAMEN AŞAN BULUT MAİL MOTORU)
 async function sendEmail(toEmail, subject, body) {
   try {
-    const res = await fetch("https://formsubmit.co/" + encodeURIComponent(toEmail.toLowerCase()), {
+    const data = {
+      service_id: 'service_zxj2x6h',
+      template_id: 'template_l284wkj',
+      user_id: 'zS1YyMreF0dTfNovZ',
+      template_params: {
+        to_email: toEmail,
+        subject: subject,
+        message: body
+      }
+    };
+
+    const res = await fetch("https://api.emailjs.com/v1.0/email/send", {
       method: "POST",
       headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-        'Accept': 'application/json'
+        'Content-Type': 'application/json'
       },
-      body: new URLSearchParams({
-        _subject: subject,
-        _from: "MSC & MEDLOG TAKİP",
-        MESAJ: body,
-        _captcha: "false"
-      })
+      body: JSON.stringify(data)
     });
 
     if (res.ok) {
-      console.log(`✅ [MAİL BAŞARILI] Bildirim iletildi -> Hedef: ${toEmail}`);
+      console.log(`✅ [EMAILJS BAŞARILI] Mail başarıyla fırlatıldı -> Hedef: ${toEmail}`);
     } else {
-      console.error(`❌ [MAİL REDDEDİLDİ] HTTP Kodu: ${res.status}`);
+      const errText = await res.text();
+      console.error(`❌ [EMAILJS REDDEDİLDİ] HTTP Kodu: ${res.status} | Hata: ${errText}`);
     }
   } catch (err) {
-    console.error(`💥 [MAİL HATASI]:`, err);
+    console.error(`💥 [EMAILJS KRİTİK HATA]:`, err);
   }
 }
 
@@ -53,7 +59,7 @@ async function updateDoc(docName, updateFields) {
 
 async function main() {
   console.log("=================================================");
-  console.log("⚓ MASTER CLOCK SİSTEMİ UYANDI ⚓");
+  console.log("⚓ MASTER CLOCK SİSTEMİ (EMAILJS) UYANDI ⚓");
 
   try {
     const res = await fetch(FIRESTORE_URL);
