@@ -1,31 +1,30 @@
 const PROJECT_ID = "msc-takip";
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/ships`;
 
-// FORM-SUBMIT ANTİ-BOT MAİL GÖNDERME FONKSİYONU
+// 403 ENGELİNİ AŞAN GARANTİLİ MAİL FONKSİYONU
 async function sendEmail(toEmail, subject, body) {
   try {
-    const formData = new URLSearchParams();
-    formData.append("_subject", subject);
-    formData.append("_from", "MSC & MEDLOG TAKİP");
-    formData.append("MESAJ", body);
-    formData.append("_captcha", "false");
-
-    const res = await fetch("https://formsubmit.co/ajax/" + encodeURIComponent(toEmail.toLowerCase()), {
+    const res = await fetch("https://formsubmit.co/" + encodeURIComponent(toEmail.toLowerCase()), {
       method: "POST",
       headers: {
-        'Accept': 'application/json',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Accept': 'application/json'
       },
-      body: formData
+      body: new URLSearchParams({
+        _subject: subject,
+        _from: "MSC & MEDLOG TAKİP",
+        MESAJ: body,
+        _captcha: "false"
+      })
     });
 
     if (res.ok) {
-      console.log(`✅ [MAİL BAŞARILI] Sinyal FormSubmit'e ulaştı -> Hedef: ${toEmail}`);
+      console.log(`✅ [MAİL BAŞARILI] Bildirim iletildi -> Hedef: ${toEmail}`);
     } else {
-      console.error(`❌ [MAİL REDDEDİLDİ] FormSubmit HTTP Kodu: ${res.status}`);
+      console.error(`❌ [MAİL REDDEDİLDİ] HTTP Kodu: ${res.status}`);
     }
   } catch (err) {
-    console.error(`💥 [MAİL HATASI] Ağ bağlantısı koptu -> ${toEmail}:`, err);
+    console.error(`💥 [MAİL HATASI]:`, err);
   }
 }
 
@@ -45,9 +44,7 @@ async function updateDoc(docName, updateFields) {
       body: JSON.stringify({ fields })
     });
     if (response.ok) {
-      console.log(`🔄 [VERİTABANI GÜNCELLENDİ] ${docName}`);
-    } else {
-      console.error(`⚠️ [GÜNCELLEME HATASI] Firebase HTTP Kodu: ${response.status}`);
+      console.log(`🔄 [VERİTABANI GÜNCELLENDİ]`);
     }
   } catch (err) {
     console.error("💥 [VERİTABANI HATASI]:", err);
@@ -60,18 +57,11 @@ async function main() {
 
   try {
     const res = await fetch(FIRESTORE_URL);
-    if (!res.ok) {
-      console.error(`🚨 [FİREBASE ERİŞİM ENGELİ] Hata Kodu: ${res.status}`);
-      return;
-    }
+    if (!res.ok) return;
     const data = await res.json();
-    if (!data.documents) {
-      console.log("ℹ️ [BİLGİ] Takip edilecek aktif/bekleyen gemi yok.");
-      return;
-    }
+    if (!data.documents) return;
 
     const now = new Date();
-    console.log(`⏱️ Sunucu Zamanı (UTC): ${now.toISOString()}`);
 
     for (const doc of data.documents) {
       const fields = doc.fields || {};
@@ -93,18 +83,13 @@ async function main() {
 
       if (!etaStr || !email) continue;
 
-      // ZAMAN HESAPLAMA (Türkiye Saati +03:00)
       const cleanEta = etaStr.includes('T') ? etaStr : etaStr.replace(' ', 'T');
       const etaDate = new Date(cleanEta + "+03:00");
 
       const diffMs = etaDate - now;
       const diffHours = diffMs / (1000 * 60 * 60);
 
-      console.log(`-------------------------------------------------`);
-      console.log(`🛳️ [ANALİZ] GEMİ: ${name} (Sefer: ${voyage})`);
-      console.log(`   - Kayıtlı ETA: ${cleanEta} (Türkiye Saati)`);
-      console.log(`   - Kalan Saat Hesaplandı: ${diffHours.toFixed(2)} SAAT`);
-      console.log(`   - Atılma Durumu -> 10H: ${emailSent10h}, 5H: ${emailSent5h}, Liman: ${emailSentArrived}`);
+      console.log(`🛳️ [ANALİZ] ${name} | Kalan: ${diffHours.toFixed(2)} saat | 10H Gönderildi mi?: ${emailSent10h}`);
 
       const hoursLeft = Math.floor(diffHours);
       const minsLeft = Math.floor((diffHours % 1) * 60);
@@ -113,7 +98,7 @@ async function main() {
 
       // 10 SAAT UYARISI
       if (diffHours <= 10 && diffHours > 0 && !emailSent10h) {
-        console.log(`🔥 [TETİKLEME] -> ${name} için 10 Saat kuralı çalıştı! Mail yollanıyor...`);
+        console.log(`🔥 [TETİKLEME] -> ${name} için 10 Saat maili yollanıyor...`);
         await sendEmail(
           email,
           `🚨 UYARI: ${name} VARIŞA 10 SAAT KALA!`,
@@ -123,7 +108,7 @@ async function main() {
       }
       // 5 SAAT UYARISI
       else if (diffHours <= 5 && diffHours > 0 && !emailSent5h) {
-        console.log(`🔥 [TETİKLEME] -> ${name} için 5 Saat kuralı çalıştı! Mail yollanıyor...`);
+        console.log(`🔥 [TETİKLEME] -> ${name} için 5 Saat maili yollanıyor...`);
         await sendEmail(
           email,
           `🔴 KRİTİK: ${name} VARIŞA 5 SAAT KALA!`,
@@ -133,7 +118,7 @@ async function main() {
       }
       // LİMANA VARDI
       else if (diffHours <= 0 && !emailSentArrived) {
-        console.log(`🔥 [TETİKLEME] -> ${name} için Limana Vardı kuralı çalıştı! Mail yollanıyor...`);
+        console.log(`🔥 [TETİKLEME] -> ${name} için Limana Vardı maili yollanıyor...`);
         await sendEmail(
           email,
           `⚓ LİMANA VARDI: ${name}`,
@@ -144,7 +129,7 @@ async function main() {
     }
     console.log("=================================================");
   } catch (err) {
-    console.error("💥 [KRİTİK SİSTEM ÇÖKMESİ]:", err);
+    console.error("💥 [KRİTİK HATA]:", err);
   }
 }
 
