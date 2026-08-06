@@ -15,16 +15,12 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 
   <style>
     body { font-family: 'Inter', sans-serif; }
-    #modal-map-container { height: 350px; width: 100%; border-radius: 0.75rem; z-index: 60; }
   </style>
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 antialiased min-h-screen">
@@ -200,20 +196,16 @@
     </main>
 
     <div id="mapModal" class="fixed inset-0 bg-slate-900/80 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-      <div class="bg-white rounded-2xl max-w-lg w-full p-6 space-y-4 shadow-2xl relative">
+      <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
         <div class="flex justify-between items-center border-b pb-3">
           <div>
-            <h3 id="modalShipTitle" class="font-bold text-lg text-[#002855] uppercase">GEMİ CANLI KONUMU</h3>
-            <p id="modalShipSub" class="text-xs text-slate-500 uppercase">Yükleniyor...</p>
+            <h3 id="modalShipTitle" class="font-bold text-lg text-[#002855] uppercase">CANLI GEMİ KONUMU</h3>
+            <p id="modalShipSub" class="text-xs text-slate-500 uppercase">PLATFORM SEÇİN</p>
           </div>
           <button onclick="closeMapModal()" class="text-slate-400 hover:text-red-600 text-3xl font-bold p-1 cursor-pointer">&times;</button>
         </div>
-        <div id="modal-map" class="relative">
-          <div id="modal-map-container"></div>
-        </div>
-        <div id="map-loading-text" class="text-center text-xs text-slate-500 font-medium py-2">
-          <i class="fa-solid fa-spinner fa-spin text-[#002855]"></i> Canlı uydu verisi dinleniyor...
-        </div>
+        <div id="modal-map-buttons" class="space-y-3 py-2">
+          </div>
       </div>
     </div>
 
@@ -283,7 +275,7 @@
 
     auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
-    // MEDLOG FİLOSU OTOMATİK MMSI VERİTABANI
+    // MEDLOG VE MSC GEMİLERİ OTOMATİK MMSI VERİTABANI
     const mscShipDatabase = {
       "MED TEKİRDAĞ": "271048100",
       "MED DENİZLİ": "271048200",
@@ -297,7 +289,13 @@
       "MED ÇEŞME": "271049000",
       "MED MERSİN": "271049100",
       "MED BEYKOZ": "271049200",
-      "MED ANTALYA": "271049300"
+      "MED ANTALYA": "271049300",
+      "MEDLOG HIZIR": "271043000",
+      "MEDLOG EFE": "271042000",
+      "MEDLOG CAN": "271044000",
+      "MEDLOG AYLİN": "271045000",
+      "MSC MAYA": "373178000",
+      "MSC ISTANBUL": "373187000"
     };
 
     function autoFillMmsi(shipName) {
@@ -311,9 +309,6 @@
     let currentUser = null;
     let ships = [];
     let unsubscribeFirestore = null;
-    let singleMap = null;
-    let singleMarker = null;
-    let socket = null;
 
     auth.onAuthStateChanged(user => {
       currentUser = user;
@@ -516,59 +511,23 @@
       if ('Notification' in window) Notification.requestPermission();
     }
 
-    function openShipMap(shipName, mmsi, eta) {
+    // TEK TIKLA GLOBAL RADARDA CANLI KONUM AÇMA
+    function openShipMap(shipName, mmsi) {
       document.getElementById('modalShipTitle').innerText = shipName;
-      document.getElementById('modalShipSub').innerText = "MMSI: " + mmsi + " | ETA: " + new Date(eta).toLocaleString('tr-TR');
-      document.getElementById('map-loading-text').innerHTML = '<i class="fa-solid fa-spinner fa-spin text-[#002855]"></i> MMSI (' + mmsi + ') için canlı uydu sinyali aranıyor...';
+      document.getElementById('modalShipSub').innerText = "MMSI: " + mmsi;
+      
+      document.getElementById('modal-map-buttons').innerHTML = `
+        <a href="https://www.vesselfinder.com/vessels?name=${encodeURIComponent(mmsi)}" target="_blank" class="block w-full bg-emerald-600 hover:bg-emerald-700 text-white text-center py-3.5 rounded-xl font-bold shadow-md transition-all">
+          <i class="fa-solid fa-satellite-dish mr-2"></i> VesselFinder Canlı Radarı Aç
+        </a>
+        <a href="https://www.marinetraffic.com/en/data/?name=${encodeURIComponent(mmsi)}" target="_blank" class="block w-full bg-blue-600 hover:bg-blue-700 text-white text-center py-3.5 rounded-xl font-bold shadow-md transition-all">
+          <i class="fa-solid fa-anchor mr-2"></i> MarineTraffic Konumunu Aç
+        </a>
+      `;
       document.getElementById('mapModal').classList.remove('hidden');
-
-      setTimeout(() => {
-        if (!singleMap) {
-          singleMap = L.map('modal-map-container').setView([39.0, 35.0], 6);
-          L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 18 }).addTo(singleMap);
-        } else {
-          singleMap.invalidateSize();
-        }
-
-        if (socket) socket.close();
-
-        const apiKey = "bb6cfc1718d4f9d67fea96ff1579c690efe4d157";
-        socket = new WebSocket("wss://stream.aisstream.io/v0/stream");
-
-        socket.onopen = function () {
-          const subMsg = {
-            APIKey: apiKey,
-            BoundingBoxes: [[[30.0, 19.0], [45.0, 45.0]]]
-          };
-          socket.send(JSON.stringify(subMsg));
-        };
-
-        socket.onmessage = function (event) {
-          const data = JSON.parse(event.data);
-          if (data.MessageType === "PositionReport") {
-            const rep = data.Message.PositionReport;
-            if (String(rep.UserID) === String(mmsi)) {
-              const lat = rep.Latitude;
-              const lon = rep.Longitude;
-
-              if (lat && lon) {
-                document.getElementById('map-loading-text').innerHTML = '<span class="text-emerald-600 font-bold">● Canlı Konum Alındı</span>';
-                singleMap.setView([lat, lon], 10);
-                if (singleMarker) {
-                  singleMarker.setLatLng([lat, lon]);
-                } else {
-                  singleMarker = L.marker([lat, lon]).addTo(singleMap)
-                    .bindPopup(`<b>${shipName}</b><br>MMSI: ${mmsi}<br>ETA: ${new Date(eta).toLocaleString('tr-TR')}`).openPopup();
-                }
-              }
-            }
-          }
-        };
-      }, 300);
     }
 
     function closeMapModal() {
-      if (socket) socket.close();
       document.getElementById('mapModal').classList.add('hidden');
     }
 
@@ -659,7 +618,7 @@
               </button>
             </td>
             <td class="p-3 text-right space-x-1 whitespace-nowrap">
-              <button onclick="openShipMap('${ship.name}', '${ship.mmsi}', '${ship.eta}')" class="text-blue-600 bg-blue-50 p-2 rounded-lg border border-blue-200 cursor-pointer" title="Canlı Konum Haritası"><i class="fa-solid fa-location-dot"></i></button>
+              <button onclick="openShipMap('${ship.name}', '${ship.mmsi}')" class="text-blue-600 bg-blue-50 p-2 rounded-lg border border-blue-200 cursor-pointer" title="Canlı Uydu Konumunu Aç"><i class="fa-solid fa-location-dot"></i></button>
               ${ship.status !== 'COMPLETED' ? `
                 <button onclick="openEditModal('${ship.firestoreId}')" class="text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-200 cursor-pointer" title="Düzenle"><i class="fa-solid fa-pen"></i></button>
                 <button onclick="completeShip('${ship.firestoreId}')" class="text-emerald-600 bg-emerald-50 p-2 rounded-lg border border-emerald-200 cursor-pointer" title="Tamamla"><i class="fa-solid fa-check"></i></button>
