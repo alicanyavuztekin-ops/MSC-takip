@@ -8,8 +8,8 @@ async function sendEmail(toEmail, subject, body) {
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({ _subject: subject, _from: "MSC & MEDLOG TAKİP", MESAJ: body, _captcha: "false" })
     });
-    await res.json();
-    console.log(`[SİNYAL BAŞARILI] Mail İletildi -> ${toEmail}`);
+    const data = await res.json();
+    console.log(`[SİNYAL BAŞARILI] Mail Gönderildi -> ${toEmail}`, data);
   } catch (err) {
     console.error(`[SİNYAL KESİNTİSİ] Mail İletilemedi -> ${toEmail}:`, err);
   }
@@ -25,8 +25,8 @@ async function updateDoc(docName, updateFields) {
   }
   try {
     const response = await fetch(url, { method: "PATCH", headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields }) });
-    if(response.ok) {
-        console.log(`[KAYIT BAŞARILI] Veritabanı senkronize edildi: ${docName}`);
+    if (response.ok) {
+      console.log(`[KAYIT BAŞARILI] Veritabanı senkronize edildi: ${docName}`);
     }
   } catch (err) {
     console.error("[KAYIT HATASI] Güncelleme yapılamadı:", err);
@@ -40,11 +40,10 @@ async function main() {
     if (!res.ok) return;
     const data = await res.json();
     if (!data.documents) {
-      console.log("Kanallarda (veritabanında) aktif gemi bulunamadı.");
+      console.log("Veritabanında aktif gemi bulunamadı.");
       return;
     }
 
-    // Master Clock: Sistemin o anki mutlak zamanı (Sunucu saati ne olursa olsun evrensel referans)
     const now = new Date(); 
 
     for (const doc of data.documents) {
@@ -67,9 +66,8 @@ async function main() {
 
       if (!etaStr || !email) continue;
 
-      // DELAY COMPENSATION (GECİKME TELAFİSİ): 
-      // Arayüzden gelen ETA saatini Türkiye saati (+03:00) olarak sisteme zorla tanıtıyoruz.
-      // Bu sayede faz kayması sıfırlanıyor ve matematik %100 doğru çalışıyor.
+      // Türkiye Saati Senkronizasyonu (+03:00 Offset)
+      // GitHub sunucusu hangi ülkede olursa olsun saatler Türkiye'ye göre hesaplanır.
       const etaDate = new Date(etaStr + "+03:00");
       
       const diffMs = etaDate - now;
@@ -82,25 +80,42 @@ async function main() {
       const timeFormatted = diffHours > 0 ? `${hoursLeft} SAAT ${minsLeft} DK` : 'LİMANDA';
       const noteText = note !== '' ? `\n\n📌 EK NOT: ${note}` : '';
 
-      if (diffHours <= 10 && diffHours > 5 && !emailSent10h) {
-        console.log(`>> ${name} - 10 Saat Uyarısı: Sinyal Gönderiliyor...`);
-        await sendEmail(email, `🚨 UYARI: ${name} VARIŞA 10 SAAT KALA!`, `10 SAAT KALA UYARISI!\n\nGEMİ: ${name}\nSEFER NO: ${voyage}\nROTA: ${originPort} -> ${destinationPort}\nKALAN SÜRE: ${timeFormatted}\nBEYANNAME: ${declarations} ADET${noteText}\n\nLütfen gümrük süreçlerini kontrol ediniz.`);
+      // 10 SAAT KALA KONTROLÜ (Garantili Tetikleme)
+      if (diffHours <= 10 && diffHours > 0 && !emailSent10h) {
+        console.log(`>> ${name} - 10 Saat Uyarısı Gönderiliyor...`);
+        await sendEmail(
+          email, 
+          `🚨 UYARI: ${name} VARIŞA 10 SAAT KALA!`, 
+          `10 SAAT KALA UYARISI!\n\nGEMİ: ${name}\nSEFER NO: ${voyage}\nROTA: ${originPort} -> ${destinationPort}\nKALAN SÜRE: ${timeFormatted}\nBEYANNAME: ${declarations} ADET${noteText}\n\nLütfen gümrük süreçlerini kontrol ediniz.`
+        );
         await updateDoc(doc.name, { emailSent10h: true });
       }
+
+      // 5 SAAT KALA KONTROLÜ
       if (diffHours <= 5 && diffHours > 0 && !emailSent5h) {
-        console.log(`>> ${name} - 5 Saat Uyarısı: Kritik Sinyal Gönderiliyor...`);
-        await sendEmail(email, `🔴 KRİTİK: ${name} VARIŞA 5 SAAT KALA!`, `KRİTİK 5 SAAT UYARISI!\n\nGEMİ: ${name}\nSEFER NO: ${voyage}\nROTA: ${originPort} -> ${destinationPort}\nKALAN SÜRE: ${timeFormatted}\nBEYANNAME: ${declarations} ADET${noteText}\n\nLütfen kapama işlemlerini hızlandırınız.`);
+        console.log(`>> ${name} - 5 Saat Kritik Uyarısı Gönderiliyor...`);
+        await sendEmail(
+          email, 
+          `🔴 KRİTİK: ${name} VARIŞA 5 SAAT KALA!`, 
+          `KRİTİK 5 SAAT UYARISI!\n\nGEMİ: ${name}\nSEFER NO: ${voyage}\nROTA: ${originPort} -> ${destinationPort}\nKALAN SÜRE: ${timeFormatted}\nBEYANNAME: ${declarations} ADET${noteText}\n\nLütfen kapama işlemlerini hızlandırınız.`
+        );
         await updateDoc(doc.name, { emailSent5h: true, emailSent10h: true });
       }
+
+      // LİMANA VARDI KONTROLÜ
       if (diffHours <= 0 && !emailSentArrived) {
-        console.log(`>> ${name} - Limana Vardı: Sinyal Gönderiliyor...`);
-        await sendEmail(email, `⚓ LİMANA VARDI: ${name}`, `GEMİ LİMANA ULAŞTI!\n\nGEMİ: ${name}\nSEFER NO: ${voyage}\nROTA: ${originPort} -> ${destinationPort}\nBEYANNAME: ${declarations} ADET${noteText}\n\nOperasyon sürecini başlatabilirsiniz.`);
+        console.log(`>> ${name} - Limana Vardı Uyarısı Gönderiliyor...`);
+        await sendEmail(
+          email, 
+          `⚓ LİMANA VARDI: ${name}`, 
+          `GEMİ LİMANA ULAŞTI!\n\nGEMİ: ${name}\nSEFER NO: ${voyage}\nROTA: ${originPort} -> ${destinationPort}\nBEYANNAME: ${declarations} ADET${noteText}\n\nOperasyon sürecini başlatabilirsiniz.`
+        );
         await updateDoc(doc.name, { emailSentArrived: true, emailSent5h: true, emailSent10h: true });
       }
     }
     console.log("=== MASTER CLOCK DÖNGÜSÜ TAMAMLANDI ===");
   } catch (err) { 
-    console.error("[SİSTEM CLIPPING HATASI]:", err); 
+    console.error("[SİSTEM HATASI]:", err); 
   }
 }
 main();
