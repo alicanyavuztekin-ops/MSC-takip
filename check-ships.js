@@ -1,17 +1,28 @@
 const PROJECT_ID = "msc-takip";
 const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/ships`;
 
+// FORM-SUBMIT ANTİ-BOT MASKESİ (Sunucuyu gerçek tarayıcı gibi gösterir)
 async function sendEmail(toEmail, subject, body) {
   try {
     const res = await fetch("https://formsubmit.co/ajax/" + encodeURIComponent(toEmail.toLowerCase()), {
       method: "POST",
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      headers: { 
+        'Content-Type': 'application/json', 
+        'Accept': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Origin': 'https://alicanyavuztekin-ops.github.io',
+        'Referer': 'https://alicanyavuztekin-ops.github.io/'
+      },
       body: JSON.stringify({ _subject: subject, _from: "MSC & MEDLOG TAKİP", MESAJ: body, _captcha: "false" })
     });
-    const data = await res.json();
-    console.log(`[SİNYAL BAŞARILI] Mail Gönderildi -> ${toEmail}`, data);
+    
+    if (res.ok) {
+        console.log(`✅ [MAİL BAŞARILI] Sinyal FormSubmit'e ulaştı -> Hedef: ${toEmail}`);
+    } else {
+        console.error(`❌ [MAİL REDDEDİLDİ] FormSubmit sunucuyu engelledi! HTTP Kodu: ${res.status}`);
+    }
   } catch (err) {
-    console.error(`[SİNYAL KESİNTİSİ] Mail İletilemedi -> ${toEmail}:`, err);
+    console.error(`💥 [MAİL CRASH HATASI] Ağ bağlantısı koptu -> ${toEmail}:`, err);
   }
 }
 
@@ -26,96 +37,79 @@ async function updateDoc(docName, updateFields) {
   try {
     const response = await fetch(url, { method: "PATCH", headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields }) });
     if (response.ok) {
-      console.log(`[KAYIT BAŞARILI] Veritabanı senkronize edildi: ${docName}`);
+      console.log(`🔄 [GÜNCELLEME] Veritabanı başarıyla işaretlendi.`);
+    } else {
+      console.error(`⚠️ [GÜNCELLEME HATASI] Firebase yetki vermedi! HTTP Kodu: ${response.status}`);
     }
   } catch (err) {
-    console.error("[KAYIT HATASI] Güncelleme yapılamadı:", err);
+    console.error("[VERİTABANI CRASH] Güncelleme yapılamadı:", err);
   }
 }
 
 async function main() {
-  console.log("=== MASTER CLOCK: ETA KONTROL SİSTEMİ BAŞLATILDI ===");
+  console.log("=================================================");
+  console.log("⚓ MASTER CLOCK SİSTEMİ UYANDI ⚓");
+  
   try {
     const res = await fetch(FIRESTORE_URL);
-    if (!res.ok) return;
+    if (!res.ok) {
+        console.error(`🚨 [FİREBASE ERİŞİM ENGELİ] Veritabanı okunamıyor! Hata Kodu: ${res.status}`);
+        return;
+    }
     const data = await res.json();
     if (!data.documents) {
-      console.log("Veritabanında aktif gemi bulunamadı.");
+      console.log("ℹ️ [BİLGİ] Takip edilecek aktif/bekleyen gemi yok.");
       return;
     }
 
     const now = new Date(); 
+    console.log(`⏱️ Sunucu Zamanı (UTC): ${now.toISOString()}`);
 
     for (const doc of data.documents) {
       const fields = doc.fields || {};
       if ((fields.status ? fields.status.stringValue : 'PENDING') === 'COMPLETED') continue;
 
       const name = fields.name ? fields.name.stringValue : 'GEMİ';
-      const voyage = fields.voyage ? fields.voyage.stringValue : 'BELİRTİLMEDİ';
-      const originPort = fields.originPort ? fields.originPort.stringValue : 'BELİRTİLMEDİ';
-      const destinationPort = fields.destinationPort ? fields.destinationPort.stringValue : 'BELİRTİLMEDİ';
-      
       const etaStr = fields.eta ? fields.eta.stringValue : '';
-      const declarations = fields.declarations ? (fields.declarations.integerValue || fields.declarations.stringValue) : '0';
       const email = fields.email ? fields.email.stringValue : '';
-      const note = fields.note ? fields.note.stringValue : '';
-
+      
       const emailSent10h = fields.emailSent10h ? fields.emailSent10h.booleanValue : false;
       const emailSent5h = fields.emailSent5h ? fields.emailSent5h.booleanValue : false;
       const emailSentArrived = fields.emailSentArrived ? fields.emailSentArrived.booleanValue : false;
 
       if (!etaStr || !email) continue;
 
-      // Türkiye Saati Senkronizasyonu (+03:00 Offset)
-      // GitHub sunucusu hangi ülkede olursa olsun saatler Türkiye'ye göre hesaplanır.
-      const etaDate = new Date(etaStr + "+03:00");
+      // ZAMAN HESAPLAMA MOTORU (Kesin Matematik)
+      // Örnek etaStr: "2026-08-06T19:50"
+      const cleanEta = etaStr.includes('T') ? etaStr : etaStr.replace(' ', 'T');
+      const etaDate = new Date(cleanEta + "+03:00"); 
       
       const diffMs = etaDate - now;
       const diffHours = diffMs / (1000 * 60 * 60);
 
-      console.log(`[MONİTÖR] ${name} | ETA: ${etaDate.toISOString()} | Kalan Saat: ${diffHours.toFixed(2)}`);
+      console.log(`-------------------------------------------------`);
+      console.log(`🛳️ [ANALİZ] GEMİ: ${name}`);
+      console.log(`   - Kayıtlı ETA: ${cleanEta} (Türkiye Saati)`);
+      console.log(`   - Kalan Saat Hesaplandı: ${diffHours.toFixed(2)} SAAT`);
+      console.log(`   - Atılma Durumu -> 10H: ${emailSent10h}, 5H: ${emailSent5h}, Liman: ${emailSentArrived}`);
 
-      const hoursLeft = Math.floor(diffHours);
-      const minsLeft = Math.floor((diffHours % 1) * 60);
-      const timeFormatted = diffHours > 0 ? `${hoursLeft} SAAT ${minsLeft} DK` : 'LİMANDA';
-      const noteText = note !== '' ? `\n\n📌 EK NOT: ${note}` : '';
-
-      // 10 SAAT KALA KONTROLÜ (Garantili Tetikleme)
+      // 10 SAAT TETİKLEYİCİ
       if (diffHours <= 10 && diffHours > 0 && !emailSent10h) {
-        console.log(`>> ${name} - 10 Saat Uyarısı Gönderiliyor...`);
-        await sendEmail(
-          email, 
-          `🚨 UYARI: ${name} VARIŞA 10 SAAT KALA!`, 
-          `10 SAAT KALA UYARISI!\n\nGEMİ: ${name}\nSEFER NO: ${voyage}\nROTA: ${originPort} -> ${destinationPort}\nKALAN SÜRE: ${timeFormatted}\nBEYANNAME: ${declarations} ADET${noteText}\n\nLütfen gümrük süreçlerini kontrol ediniz.`
-        );
+        console.log(`🔥 [TETİKLEME] -> ${name} için 10 Saat kuralı çalıştı! Mail yollanıyor...`);
+        await sendEmail(email, `🚨 UYARI: ${name} VARIŞA 10 SAAT KALA!`, `Sistem Otomatik Uyarısı:\n\n${name} gemisinin varışına an itibariyle 10 saatin altına inilmiştir.`);
         await updateDoc(doc.name, { emailSent10h: true });
+      } 
+      else if (diffHours <= 10 && emailSent10h) {
+        console.log(`⏩ [ATLANDI] ${name} kurala uyuyor ama 10 saat maili zaten ATILMIŞ.`);
+      }
+      else if (diffHours > 10) {
+         console.log(`⏳ [BEKLEMEDE] ${name} için 10 saat kuralına henüz girilmedi.`);
       }
 
-      // 5 SAAT KALA KONTROLÜ
-      if (diffHours <= 5 && diffHours > 0 && !emailSent5h) {
-        console.log(`>> ${name} - 5 Saat Kritik Uyarısı Gönderiliyor...`);
-        await sendEmail(
-          email, 
-          `🔴 KRİTİK: ${name} VARIŞA 5 SAAT KALA!`, 
-          `KRİTİK 5 SAAT UYARISI!\n\nGEMİ: ${name}\nSEFER NO: ${voyage}\nROTA: ${originPort} -> ${destinationPort}\nKALAN SÜRE: ${timeFormatted}\nBEYANNAME: ${declarations} ADET${noteText}\n\nLütfen kapama işlemlerini hızlandırınız.`
-        );
-        await updateDoc(doc.name, { emailSent5h: true, emailSent10h: true });
-      }
-
-      // LİMANA VARDI KONTROLÜ
-      if (diffHours <= 0 && !emailSentArrived) {
-        console.log(`>> ${name} - Limana Vardı Uyarısı Gönderiliyor...`);
-        await sendEmail(
-          email, 
-          `⚓ LİMANA VARDI: ${name}`, 
-          `GEMİ LİMANA ULAŞTI!\n\nGEMİ: ${name}\nSEFER NO: ${voyage}\nROTA: ${originPort} -> ${destinationPort}\nBEYANNAME: ${declarations} ADET${noteText}\n\nOperasyon sürecini başlatabilirsiniz.`
-        );
-        await updateDoc(doc.name, { emailSentArrived: true, emailSent5h: true, emailSent10h: true });
-      }
     }
-    console.log("=== MASTER CLOCK DÖNGÜSÜ TAMAMLANDI ===");
+    console.log("=================================================");
   } catch (err) { 
-    console.error("[SİSTEM HATASI]:", err); 
+    console.error("💥 [KRİTİK SİSTEM ÇÖKMESİ]:", err); 
   }
 }
 main();
