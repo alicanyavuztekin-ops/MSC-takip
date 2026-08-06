@@ -341,20 +341,10 @@
 
       btn.disabled = true;
       btn.innerText = "HESAP OLUŞTURULUYOR...";
-
+      
       auth.createUserWithEmailAndPassword(email, password)
         .then(() => {
           document.getElementById('register-form').reset();
-          fetch("https://formsubmit.co/ajax/" + encodeURIComponent(email.toLowerCase()), {
-            method: "POST",
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({
-              _subject: "🎉 HOŞ GELDİNİZ: MSC & MEDLOG GEMİ TAKİP SİSTEMİ",
-              _from: "MSC & MEDLOG TAKİP",
-              MESAJ: "Gemi takip sistemine hoş geldiniz!\n\nHesabınız başarıyla oluşturuldu.",
-              _captcha: "false"
-            })
-          }).catch(err => console.error("Mail hatası:", err));
           alert("✅ HESABINIZ BAŞARIYLA OLUŞTURULDU!");
         })
         .catch(err => {
@@ -375,6 +365,7 @@
     function listenShipsRealtime() {
       if (!currentUser) return;
       if (unsubscribeFirestore) unsubscribeFirestore();
+      
       unsubscribeFirestore = db.collection('ships').where('userId', '==', currentUser.uid)
         .onSnapshot(snapshot => {
           ships = [];
@@ -394,7 +385,7 @@
       const declarations = document.getElementById('declarations').value;
       const note = document.getElementById('shipNote').value.trim().toUpperCase();
       const email = document.getElementById('notificationEmail').value.trim().toLowerCase();
-
+      
       const newShipData = {
         userId: currentUser.uid,
         name: name,
@@ -408,29 +399,18 @@
         customsCleared: false,
         email: email,
         status: 'PENDING',
+        emailSentNew: false, // Yeni gemi mailinin gönderilip gönderilmediğini takip eder
         emailSent10h: false,
         emailSent5h: false,
         emailSentArrived: false,
         createdAt: new Date().toISOString()
       };
-
+      
       db.collection('ships').add(newShipData)
         .then(() => {
           document.getElementById('ship-form').reset();
           document.getElementById('notificationEmail').value = currentUser.email.toLowerCase();
-
-          fetch("https://formsubmit.co/ajax/" + encodeURIComponent(email), {
-            method: "POST",
-            headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-            body: JSON.stringify({
-              _subject: `⚓ YENİ GEMİ EKLENDİ: ${name} (SEFER: ${voyage})`,
-              _from: "MSC & MEDLOG TAKİP",
-              MESAJ: `Yeni gemi operasyon listesine eklendi!\n\nGEMİ: ${name}\nSEFER: ${voyage}\nROTA: ${originPort} -> ${destinationPort}\nBEYANNAME: ${declarations}\nETA: ${new Date(eta).toLocaleString('tr-TR')}\n\nSistem varış saatine 10 ve 5 saat kala otomatik uyaracaktır.`,
-              _captcha: "false"
-            })
-          }).catch(err => console.error("Mail hatası:", err));
-
-          alert("✅ Kayıt başarıyla eklendi ve mail gönderildi!");
+          alert("✅ Kayıt başarıyla eklendi! Mail gönderimi arka plan sunucusu tarafından yapılacak.");
         })
         .catch(error => alert("Kayıt hatası: " + error.message));
     }
@@ -502,14 +482,14 @@
     function exportToExcel() {
       const filterPort = document.getElementById('filterPort').value;
       const filteredShips = filterPort === 'ALL' ? ships : ships.filter(s => s.destinationPort === filterPort);
-
+      
       if (filteredShips.length === 0) {
         alert("Dışa aktarılacak kayıt bulunamadı!");
         return;
       }
 
       let csvContent = "\uFEFFGEMI ADI,SEFER NO,IMO NO,GELDIGI LIMAN,VARIS LIMANI,BEYANNAME ADEDI,BILDIRIM MAILI,ETA (TAHMINI VARIS),GUMRUK DURUMU,DURUMU,NOT\n";
-
+      
       filteredShips.forEach(ship => {
         const name = `"${(ship.name || '').replace(/"/g, '""')}"`;
         const voyage = `"${(ship.voyage || '').replace(/"/g, '""')}"`;
@@ -540,9 +520,10 @@
     function renderShips() {
       const tbody = document.getElementById('ship-list-body');
       const filterPort = document.getElementById('filterPort').value;
+      
       tbody.innerHTML = '';
       const filteredShips = filterPort === 'ALL' ? ships : ships.filter(s => s.destinationPort === filterPort);
-
+      
       filteredShips.forEach(ship => {
         const time = calculateTimeRemaining(ship.eta);
         let badgeClass = '';
@@ -562,9 +543,10 @@
         
         const customsBtnClass = ship.customsCleared ? 'bg-emerald-100 text-emerald-700 border-emerald-300' : 'bg-slate-100 text-slate-500 border-slate-300';
         const customsBtnIcon = ship.customsCleared ? '<i class="fa-solid fa-check-double"></i> TAMAMLANDI' : '<i class="fa-solid fa-hourglass-half"></i> BEKLİYOR';
+        
         const noteDisplay = ship.note ? `<div class="mt-1 text-[10px] text-amber-600 font-semibold bg-amber-50 p-1 rounded border border-amber-200"><i class="fa-solid fa-thumbtack"></i> ${ship.note}</div>` : '';
         const emailDisplay = `<div class="text-[10px] text-slate-500 font-mono"><i class="fa-solid fa-envelope"></i> ${ship.email || 'BELİRTİLMEDİ'}</div>`;
-
+        
         tbody.innerHTML += `
           <tr class="hover:bg-slate-50 transition-colors">
             <td class="p-3">
