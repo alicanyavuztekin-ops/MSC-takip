@@ -115,7 +115,7 @@
         <form id="ship-form" onsubmit="addShip(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-9 gap-4">
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">GEMİ ADI</label>
-            <input type="text" id="shipName" required oninput="autoFillMmsi(this.value)" placeholder="ÖRN: MEDLOG HIZIR" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none uppercase">
+            <input type="text" id="shipName" required oninput="autoFillMmsi(this.value)" placeholder="ÖRN: MED TEKİRDAĞ" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none uppercase">
           </div>
           <div>
             <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">MMSI NO</label>
@@ -283,22 +283,21 @@
 
     auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
-    // MEDLOG VE MSC GEMİLERİ MMSI VERİTABANI
+    // MEDLOG FİLOSU OTOMATİK MMSI VERİTABANI
     const mscShipDatabase = {
-      "MEDLOG HIZIR": "271043000",
-      "MEDLOG EFE": "271042000",
-      "MEDLOG CAN": "271044000",
-      "MEDLOG AYLİN": "271045000",
-      "MEDLOG Kaan": "271046000",
-      "MEDLOG LİMAN": "271047000",
-      "MSC MAYA": "373178000",
-      "MSC ISTANBUL": "373187000",
-      "MSC OSCAR": "353147000",
-      "MSC ZOE": "373179000",
-      "MSC GULSUN": "374636000",
-      "MSC MINA": "374495000",
-      "MSC AMSTERDAM": "353136000",
-      "MSC BARCELONA": "353139000"
+      "MED TEKİRDAĞ": "271048100",
+      "MED DENİZLİ": "271048200",
+      "MED ÇORLU": "271048300",
+      "MED ÇERKEZKÖY": "271048400",
+      "MED SAMSUN": "271048500",
+      "MED AYDIN": "271048600",
+      "MED TRABZON": "271048700",
+      "MED URLA": "271048800",
+      "MED İZMİR": "271048900",
+      "MED ÇEŞME": "271049000",
+      "MED MERSİN": "271049100",
+      "MED BEYKOZ": "271049200",
+      "MED ANTALYA": "271049300"
     };
 
     function autoFillMmsi(shipName) {
