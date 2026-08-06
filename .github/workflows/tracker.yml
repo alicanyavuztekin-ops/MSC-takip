@@ -2,21 +2,25 @@ name: MSC Gemi Takip Otomatik Kontrol Servisi
 
 on:
   schedule:
-    - cron: '*/1 * * * *'
-  workflow_dispatch:
+    - cron: '*/1 * * * *' # Her 1 dakikada bir çalışır
+  workflow_dispatch: # Elle (manuel) tetikleme butonu
 
 jobs:
   check-ships-job:
     runs-on: ubuntu-latest
-
     steps:
       - name: Repoyu Klonla
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Node.js Kurulumu
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: '18'
+
+      - name: Nodemailer Yükle
+        run: npm install nodemailer
 
       - name: Kontrol Kodunu Çalıştır
+        env:
+          GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
         run: node check-ships.js
