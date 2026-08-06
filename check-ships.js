@@ -1,50 +1,16 @@
-const PROJECT_ID = "msc-takip";
-const FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/ships`;
-
-async function sendEmail(toEmail, subject, body) {
-  try {
-    const response = await fetch("https://formsubmit.co/" + encodeURIComponent(toEmail.toLowerCase()), {
-      method: "POST",
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        _subject: subject,
-        _from: "MSC & MEDLOG TAKİP",
-        MESAJ: body,
-        _captcha: "false"
-      })
-    });
-    if (response.ok) {
-      console.log(`✅ [MAİL BAŞARILI] Gönderildi -> ${toEmail}`);
-    } else {
-      console.error(`❌ [MAİL HATASI] Kod: ${response.status}`);
-    }
-  } catch (err) {
-    console.error("💥 [BAĞLANTI HATASI]:", err);
-  }
-}
-
-async function updateDoc(docName, updateFields) {
-  const maskParams = Object.keys(updateFields).map(key => `updateMask.fieldPaths=${key}`).join('&');
-  const url = `https://firestore.googleapis.com/v1/${docName}?${maskParams}`;
-  const fields = {};
-  for (const [key, value] of Object.entries(updateFields)) {
-    if (typeof value === 'boolean') fields[key] = { booleanValue: value };
-    else if (typeof value === 'string') fields[key] = { stringValue: value };
-  }
-  await fetch(url, {
-    method: "PATCH",
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ fields })
-  });
-}
-
 async function main() {
   console.log("⚓ MASTER CLOCK SİSTEMİ ÇALIŞIYOR ⚓");
   try {
     const res = await fetch(FIRESTORE_URL);
-    if (!res.ok) return;
+    if (!res.ok) {
+      console.error("Firebase veri okuma hatası:", res.status);
+      return;
+    }
     const data = await res.json();
-    if (!data.documents) return;
+    if (!data.documents) {
+      console.log("Kayıtlı gemi yok.");
+      return;
+    }
 
     const now = new Date();
 
@@ -71,24 +37,33 @@ async function main() {
       const etaDate = new Date(cleanEta + "+03:00");
       const diffHours = (etaDate - now) / (1000 * 60 * 60);
 
-      console.log(`🛳️ ${name} | Kalan: ${diffHours.toFixed(2)} saat`);
+      console.log(`🛳️ ${name} | Kalan: ${diffHours.toFixed(2)} saat | 10H Gönderildi mi?: ${emailSent10h}`);
 
+      // 10 SAAT KONTROLÜ
       if (diffHours <= 10 && diffHours > 0 && !emailSent10h) {
+        console.log(`🔥 10 Saat kuralı tetiklendi, mail gönderiliyor...`);
         await sendEmail(email, `🚨 UYARI: ${name} VARIŞA 10 SAAT KALA!`, `10 SAAT UYARISI:\n\nGEMİ: ${name}\nSEFER: ${voyage}\nROTA: ${originPort} -> ${destinationPort}\nBEYANNAME: ${declarations}`);
         await updateDoc(doc.name, { emailSent10h: true });
+        console.log(`✅ 10 Saat maili başarıyla işlendi ve veritabanı güncellendi.`);
       }
+      // 5 SAAT KONTROLÜ
       else if (diffHours <= 5 && diffHours > 0 && !emailSent5h) {
+        console.log(`🔥 5 Saat kuralı tetiklendi, mail gönderiliyor...`);
         await sendEmail(email, `🔴 KRİTİK: ${name} VARIŞA 5 SAAT KALA!`, `5 SAAT UYARISI:\n\nGEMİ: ${name}\nSEFER: ${voyage}\nROTA: ${originPort} -> ${destinationPort}`);
         await updateDoc(doc.name, { emailSent5h: true, emailSent10h: true });
+        console.log(`✅ 5 Saat maili başarıyla işlendi ve veritabanı güncellendi.`);
       }
+      // LİMANA VARDI KONTROLÜ
       else if (diffHours <= 0 && !emailSentArrived) {
+        console.log(`🔥 Limana varış tetiklendi, mail gönderiliyor...`);
         await sendEmail(email, `⚓ LİMANA VARDI: ${name}`, `GEMİ LİMANA ULAŞTI:\n\nGEMİ: ${name}\nSEFER: ${voyage}`);
         await updateDoc(doc.name, { emailSentArrived: true, emailSent5h: true, emailSent10h: true });
+        console.log(`✅ Liman maili başarıyla işlendi ve veritabanı güncellendi.`);
+      } else {
+        console.log(`⏳ Henüz mail atılacak eşikte değil veya zaten atılmış.`);
       }
     }
   } catch (err) {
-    console.error("Hata:", err);
+    console.error("Ana döngü hatası:", err);
   }
 }
-
-main();
