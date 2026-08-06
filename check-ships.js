@@ -8,9 +8,10 @@ async function sendEmail(toEmail, subject, body) {
       headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
       body: JSON.stringify({ _subject: subject, _from: "MSC & MEDLOG TAKİP", MESAJ: body, _captcha: "false" })
     });
-    await res.json();
+    const data = await res.json();
+    console.log(`[BAŞARILI] Mail Gönderildi -> ${toEmail}`);
   } catch (err) {
-    console.error("Mail hatası:", err);
+    console.error(`[HATA] Mail Gönderilemedi -> ${toEmail}:`, err);
   }
 }
 
@@ -23,28 +24,38 @@ async function updateDoc(docName, updateFields) {
     else if (typeof value === 'string') fields[key] = { stringValue: value };
   }
   try {
-    await fetch(url, { method: "PATCH", headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields }) });
+    const response = await fetch(url, { method: "PATCH", headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ fields }) });
+    if(response.ok) {
+        console.log(`[BAŞARILI] Veritabanı güncellendi: ${docName}`);
+    }
   } catch (err) {
-    console.error("Güncelleme hatası:", err);
+    console.error("[HATA] Güncelleme yapılamadı:", err);
   }
 }
 
 async function main() {
+  console.log("=== GEMİ ETA KONTROL SİSTEMİ BAŞLATILDI ===");
   try {
     const res = await fetch(FIRESTORE_URL);
     if (!res.ok) return;
     const data = await res.json();
-    if (!data.documents) return;
+    if (!data.documents) {
+      console.log("Takip edilecek aktif gemi bulunamadı.");
+      return;
+    }
 
-    const now = new Date();
-    now.setHours(now.getHours() + 3);
+    const now = new Date(); // GitHub sunucusunun o anki mutlak zamanı
+    console.log("Sistem Şimdiki Zaman (UTC):", now.toISOString());
 
     for (const doc of data.documents) {
       const fields = doc.fields || {};
       if ((fields.status ? fields.status.stringValue : 'PENDING') === 'COMPLETED') continue;
 
       const name = fields.name ? fields.name.stringValue : 'GEMİ';
-      const port = fields.port ? fields.port.stringValue : '';
+      const voyage = fields.voyage ? fields.voyage.stringValue : 'BELİRTİLMEDİ';
+      const originPort = fields.originPort ? fields.originPort.stringValue : 'BELİRTİLMEDİ';
+      const destinationPort = fields.destinationPort ? fields.destinationPort.stringValue : 'BELİRTİLMEDİ';
+      
       const etaStr = fields.eta ? fields.eta.stringValue : '';
       const declarations = fields.declarations ? (fields.declarations.integerValue || fields.declarations.stringValue) : '0';
       const email = fields.email ? fields.email.stringValue : '';
@@ -56,25 +67,39 @@ async function main() {
 
       if (!etaStr || !email) continue;
 
-      const diffHours = (new Date(etaStr) - now) / (1000 * 60 * 60);
+      // EN KRİTİK NOKTA: Arayüzden gelen ETA saatini Türkiye saati (+03:00) olarak sisteme zorla tanıtıyoruz.
+      // Bu sayede GitHub Amerika'da da çalışsa saat farkı hatası ortadan kalkıyor.
+      const etaDate = new Date(etaStr + "+03:00");
+      
+      const diffMs = etaDate - now;
+      const diffHours = diffMs / (1000 * 60 * 60);
+
+      console.log(`[KONTROL EDİLİYOR] ${name} | ETA: ${etaDate.toISOString()} | Kalan Saat: ${diffHours.toFixed(2)}`);
+
       const hoursLeft = Math.floor(diffHours);
       const minsLeft = Math.floor((diffHours % 1) * 60);
       const timeFormatted = diffHours > 0 ? `${hoursLeft} SAAT ${minsLeft} DK` : 'LİMANDA';
       const noteText = note !== '' ? `\n\n📌 EK NOT: ${note}` : '';
 
       if (diffHours <= 10 && diffHours > 5 && !emailSent10h) {
-        await sendEmail(email, `🚨 UYARI: ${name} VARIŞA 10 SAAT KALA!`, `10 SAAT KALA UYARISI!\n\nGEMİ: ${name}\nLİMAN: ${port}\nKALAN: ${timeFormatted}\nBEYANNAME: ${declarations}${noteText}`);
+        console.log(`>> ${name} için 10 Saat Maili Tetikleniyor...`);
+        await sendEmail(email, `🚨 UYARI: ${name} VARIŞA 10 SAAT KALA!`, `10 SAAT KALA UYARISI!\n\nGEMİ: ${name}\nSEFER NO: ${voyage}\nROTA: ${originPort} -> ${destinationPort}\nKALAN SÜRE: ${timeFormatted}\nBEYANNAME: ${declarations} ADET${noteText}\n\nLütfen gümrük süreçlerini kontrol ediniz.`);
         await updateDoc(doc.name, { emailSent10h: true });
       }
       if (diffHours <= 5 && diffHours > 0 && !emailSent5h) {
-        await sendEmail(email, `🔴 KRİTİK: ${name} VARIŞA 5 SAAT KALA!`, `KRİTİK 5 SAAT UYARISI!\n\nGEMİ: ${name}\nLİMAN: ${port}\nKALAN: ${timeFormatted}\nBEYANNAME: ${declarations}${noteText}`);
+        console.log(`>> ${name} için 5 Saat KRİTİK Mail Tetikleniyor...`);
+        await sendEmail(email, `🔴 KRİTİK: ${name} VARIŞA 5 SAAT KALA!`, `KRİTİK 5 SAAT UYARISI!\n\nGEMİ: ${name}\nSEFER NO: ${voyage}\nROTA: ${originPort} -> ${destinationPort}\nKALAN SÜRE: ${timeFormatted}\nBEYANNAME: ${declarations} ADET${noteText}\n\nLütfen kapama işlemlerini hızlandırınız.`);
         await updateDoc(doc.name, { emailSent5h: true, emailSent10h: true });
       }
       if (diffHours <= 0 && !emailSentArrived) {
-        await sendEmail(email, `⚓ LİMANA VARDI: ${name}`, `GEMİ LİMANA ULAŞTI!\n\nGEMİ: ${name}\nLİMAN: ${port}\nBEYANNAME: ${declarations}${noteText}`);
+        console.log(`>> ${name} için Limana Vardı Maili Tetikleniyor...`);
+        await sendEmail(email, `⚓ LİMANA VARDI: ${name}`, `GEMİ LİMANA ULAŞTI!\n\nGEMİ: ${name}\nSEFER NO: ${voyage}\nROTA: ${originPort} -> ${destinationPort}\nBEYANNAME: ${declarations} ADET${noteText}\n\nOperasyon sürecini başlatabilirsiniz.`);
         await updateDoc(doc.name, { emailSentArrived: true, emailSent5h: true, emailSent10h: true });
       }
     }
-  } catch (err) { console.error(err); }
+    console.log("=== KONTROL DÖNGÜSÜ TAMAMLANDI ===");
+  } catch (err) { 
+    console.error("[SİSTEM HATASI]:", err); 
+  }
 }
 main();
