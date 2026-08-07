@@ -24,14 +24,14 @@ const db = admin.firestore();
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'mscgemitakip@gmail.com', // Kendi sistem mailin
+        user: 'mscgemitakip@gmail.com',
         pass: GMAIL_PASS
     }
 });
 
-// 4. ANA KONTROL DÖNGÜSÜ (Manuel ETA'ya göre çalışır)
+// 4. ANA KONTROL DÖNGÜSÜ
 async function checkShips() {
-    console.log("Zaman kontrolü başlıyor (Orijinal Stabil Sistem)...");
+    console.log("Zaman kontrolü başlıyor (Stabil Sistem)...");
     const now = new Date();
 
     try {
@@ -48,7 +48,6 @@ async function checkShips() {
             const eta = new Date(ship.eta);
             const email = ship.email;
 
-            // Tarih geçersizse veya mail yoksa bu gemiyi atla
             if (isNaN(eta.getTime()) || !email) continue;
             
             const diffMs = eta - now;
@@ -61,8 +60,8 @@ async function checkShips() {
 
             // Yeni Eklendi Maili
             if (!ship.emailSentNew) {
-                mailSubject = `🚢 YENİ GEMİ EKLENDİ: ${ship.name} (SEFER: ${ship.voyage})`;
-                mailText = `Yeni gemi operasyon listesine eklendi!\n\nGemi: ${ship.name}\nIMO: ${ship.imo}\nGeldiği Liman: ${ship.originPort}\nVarış Limanı: ${ship.destinationPort}\nETA: ${new Date(ship.eta).toLocaleString('tr-TR')}\nBeyanname: ${ship.declarations} Adet\nNot: ${ship.note || '-'}`;
+                mailSubject = `🚢 YENİ GEMİ EKLENDİ: ${ship.name} (SEFER: ${ship.voyage || '-'})`;
+                mailText = `Yeni gemi operasyon listesine eklendi!\n\nGemi: ${ship.name}\nIMO: ${ship.imo}\nGeldiği Liman: ${ship.originPort || '-'}\nVarış Limanı: ${ship.destinationPort || '-'}\nETA: ${new Date(ship.eta).toLocaleString('tr-TR')}\nBeyanname: ${ship.declarations || '0'} Adet\nNot: ${ship.note || '-'}`;
                 
                 await transporter.sendMail({ from: '"MSC & MEDLOG TAKİP" <mscgemitakip@gmail.com>', to: email, subject: mailSubject, text: mailText });
                 console.log(`${ship.name} için YENİ GEMİ maili atıldı.`);
@@ -73,7 +72,7 @@ async function checkShips() {
             // 10 Saat Uyarısı
             if (diffHours > 0 && diffHours <= 10 && !ship.emailSent10h && (updateData.emailSentNew || ship.emailSentNew)) {
                 mailSubject = `🚨 UYARI: ${ship.name} VARIŞA 10 SAAT KALA!`;
-                mailText = `10 SAAT UYARISI:\n\n${ship.name} isimli geminin ${ship.destinationPort} limanına tahmini varışına 10 saat veya daha az bir süre kalmıştır. Gümrük ve beyanname (${ship.declarations} adet) işlemlerini kontrol ediniz.`;
+                mailText = `10 SAAT UYARISI:\n\n${ship.name} isimli geminin limana tahmini varışına 10 saat veya daha az bir süre kalmıştır. Gümrük ve beyanname işlemlerini kontrol ediniz.`;
                 
                 await transporter.sendMail({ from: '"MSC & MEDLOG TAKİP" <mscgemitakip@gmail.com>', to: email, subject: mailSubject, text: mailText });
                 console.log(`${ship.name} için 10 SAAT maili atıldı.`);
@@ -84,7 +83,7 @@ async function checkShips() {
             // 5 Saat Uyarısı
             if (diffHours > 0 && diffHours <= 5 && !ship.emailSent5h && (updateData.emailSent10h || ship.emailSent10h)) {
                 mailSubject = `🔴 KRİTİK UYARI: ${ship.name} VARIŞA 5 SAAT KALA!`;
-                mailText = `KRİTİK 5 SAAT UYARISI:\n\n${ship.name} isimli geminin ${ship.destinationPort} limanına tahmini varışına 5 saatten az kalmıştır! Lütfen gümrük durumunu acilen teyit ediniz.`;
+                mailText = `KRİTİK 5 SAAT UYARISI:\n\n${ship.name} isimli geminin limana tahmini varışına 5 saatten az kalmıştır! Lütfen gümrük durumunu acilen teyit ediniz.`;
                 
                 await transporter.sendMail({ from: '"MSC & MEDLOG TAKİP" <mscgemitakip@gmail.com>', to: email, subject: mailSubject, text: mailText });
                 console.log(`${ship.name} için 5 SAAT maili atıldı.`);
@@ -98,3 +97,9 @@ async function checkShips() {
         }
         
         console.log("Görev başarıyla tamamlandı.");
+    } catch (error) {
+        console.error("HATA OLUŞTU:", error);
+    }
+}
+
+checkShips();
