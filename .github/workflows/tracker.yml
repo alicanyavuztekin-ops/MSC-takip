@@ -2,7 +2,7 @@ name: MSC Gemi Takip Otomatik Kontrol Servisi
 
 on:
   schedule:
-    - cron: '*/5 * * * *' # Her 5 dakikada bir çalışır (GitHub'ın gerçekçi minimum aralığı)
+    - cron: '*/15 * * * *' # Her 15 dakikada bir çalışır (GitHub sunucularını yormaz)
   workflow_dispatch: # Elle (manuel) tetikleme butonu
 
 jobs:
