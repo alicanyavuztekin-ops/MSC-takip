@@ -1,14 +1,13 @@
-name: MSC Master Clock Otomasyonu
+name: MSC Gemi Takip Otomatik Kontrol Servisi
 
 on:
   schedule:
-    - cron: '* * * * *'
-  workflow_dispatch:
+    - cron: '*/5 * * * *' # Her 5 dakikada bir çalışır (GitHub'ın gerçekçi minimum aralığı)
+  workflow_dispatch: # Elle (manuel) tetikleme butonu
 
 jobs:
-  run-master-clock:
+  check-ships-job:
     runs-on: ubuntu-latest
-
     steps:
       - name: Repoyu Klonla
         uses: actions/checkout@v3
@@ -18,7 +17,7 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Kütüphaneleri Yükle
+      - name: Bağımlılıkları Yükle
         run: npm install nodemailer firebase-admin
 
       - name: Kontrol Kodunu Çalıştır
