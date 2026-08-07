@@ -10,7 +10,7 @@ if (!GMAIL_PASS || !FIREBASE_B64) {
     process.exit(1);
 }
 
-// 2. FİREBASE BAĞLANTISINI KUR
+// 2. FIREBASE BAĞLANTISINI KUR
 const serviceAccount = JSON.parse(Buffer.from(FIREBASE_B64, 'base64').toString('utf8'));
 
 if (!admin.apps.length) {
@@ -24,7 +24,7 @@ const db = admin.firestore();
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'mscgemitakip@gmail.com', // Kendi sistem mailin
+        user: 'mscgemitakip@gmail.com',
         pass: GMAIL_PASS
     }
 });
@@ -38,36 +38,51 @@ const targetFleet = [
     "MED MERSİN", "MED MERSIN", "MED DENİZ", "MED DENIZ"
 ];
 
-// 5. ÜCRETSİZ VERİ KAZIMA (SCRAPING) FONKSİYONU
+// 5. ÜCRETSİZ VERİ KAZIMA (SCRAPING) FONKSİYONU - GELİŞMİŞ ÇİFT YÖNLÜ TARAMA
 async function getFreeShipData(imo, shipName) {
     try {
-        console.log(`[RADAR] ${shipName} (IMO: ${imo}) için ücretsiz veri aranıyor...`);
+        console.log(`[RADAR] ${shipName} (IMO: ${imo}) için ÇİFT YÖNLÜ tarama başlatıldı...`);
         
-        // MyShipTracking'in açık uç noktasından veri çekmeyi deniyoruz
-        const url = `https://www.myshiptracking.com/requests/autocomplete.php?type=0&site=1&limit=5&q=${imo}`;
-        
-        const response = await fetch(url, {
+        // Taktik 1: VesselFinder gizli mobil uç noktası
+        const vfUrl = `https://www.vesselfinder.com/api/pub/search/${imo}`;
+        const vfResponse = await fetch(vfUrl, {
             headers: {
                 "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Accept-Language": "tr-TR,tr;q=0.9,en-US;q=0.8,en;q=0.7"
+                "Accept": "application/json"
             }
         });
 
-        if (!response.ok) throw new Error("Sunucu isteği reddetti (Muhtemelen güvenlik duvarı).");
-
-        const textData = await response.text();
-        
-        // Eğer boş dönmezse ve içinde verimiz varsa
-        if (textData && textData.length > 5) {
-            console.log(`[BAŞARILI] ${shipName} için radar verisi yakalandı!`);
-            return true; // Şimdilik bağlantının koptuğunu veya başarılı olduğunu test ediyoruz
-        } else {
-            console.log(`[BAŞARISIZ] ${shipName} için güncel veri bulunamadı.`);
-            return false;
+        if (vfResponse.ok) {
+            const vfData = await vfResponse.text();
+            if (vfData && vfData.length > 15 && vfData !== "[]") {
+                console.log(`[BAŞARILI - Taktik 1] ${shipName} VesselFinder üzerinden yakalandı!`);
+                return true;
+            }
         }
 
+        // Taktik 2: MyShipTracking sistemini IMO yerine GEMİ ADI ile aratmak
+        const nameUrl = encodeURIComponent(shipName);
+        const msUrl = `https://www.myshiptracking.com/requests/autocomplete.php?type=0&site=1&limit=5&q=${nameUrl}`;
+        
+        const msResponse = await fetch(msUrl, {
+            headers: {
+                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            }
+        });
+
+        if (msResponse.ok) {
+            const msData = await msResponse.text();
+            if (msData && msData.length > 15 && msData !== "[]") {
+                console.log(`[BAŞARILI - Taktik 2] ${shipName} MyShipTracking isim aramasından yakalandı!`);
+                return true;
+            }
+        }
+
+        console.log(`[BAŞARISIZ] ${shipName} için her iki taktik de boş döndü.`);
+        return false;
+
     } catch (error) {
-        console.log(`[ENGEL] ${shipName} sorgusu engellendi veya hata aldı: ${error.message}`);
+        console.log(`[ENGEL/HATA] ${shipName} sorgusunda sorun: ${error.message}`);
         return false;
     }
 }
@@ -93,14 +108,12 @@ async function checkShips() {
             const eta = new Date(ship.eta);
             const email = ship.email;
 
-            // --- VİP FİLO KONTROLÜ VE RADAR TARAMASI ---
+            // --- VIP FİLO KONTROLÜ VE RADAR TARAMASI ---
             if (targetFleet.includes(shipName) && imo !== "" && imo !== "BELİRTİLMEDİ") {
-                // Gemi listemizde var, ücretsiz API'ye istek at!
                 await getFreeShipData(imo, shipName);
-                // Not: Eğer veri başarılı gelirse ilerleyen aşamada ETA'yı Firebase'de güncelleyeceğiz.
             }
 
-            // --- SAAT VE MAİL HESAPLAMALARI (ESKİ SİSTEM DEVAM EDİYOR) ---
+            // --- SAAT VE MAİL HESAPLAMALARI ---
             if (isNaN(eta.getTime()) || !email) continue;
             
             const diffMs = eta - now;
