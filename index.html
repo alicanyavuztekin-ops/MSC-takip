@@ -599,5 +599,68 @@
       });
     }
   </script>
+  <div style="text-align: center; margin: 30px 0;">
+    <button type="button" id="btn-toplu-yukle" style="background-color: #28a745; color: white; padding: 15px 25px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+        🚀 14 GEMİYİ SİSTEME OTOMATİK YÜKLE
+    </button>
+</div>
+
+<script>
+document.getElementById('btn-toplu-yukle').addEventListener('click', async function() {
+    // Çift tıklamayı önlemek için butonu devre dışı bırakıyoruz
+    const btn = this;
+    btn.disabled = true;
+    btn.innerText = "⏳ Veritabanına Yazılıyor, Lütfen Bekleyin...";
+
+    const fleet = [
+        { name: "MED AYDIN", imo: "9148025" },
+        { name: "MED CERKEZKOY", imo: "9147215" },
+        { name: "MED CORLU", imo: "9106479" },
+        { name: "MED DENIZLI", imo: "9106493" },
+        { name: "MED SAMSUN", imo: "9225794" },
+        { name: "MED TEKIRDAG", imo: "9265598" },
+        { name: "MED TRABZON", imo: "9141780" },
+        { name: "MED URLA", imo: "9160920" },
+        { name: "B.BAYRAKTAR", imo: "9260536" },
+        { name: "MED MERSİN", imo: "9135638" },
+        { name: "MED BEYKOZ", imo: "9064748" },
+        { name: "MED İZMİR", imo: "9143879" },
+        { name: "MED ANTALYA", imo: "9359714" },
+        { name: "MED ÇEŞME", imo: "9256365" }
+    ];
+
+    let basarili = 0;
+
+    try {
+        for (const ship of fleet) {
+            await db.collection('ships').add({
+                name: ship.name,
+                imo: ship.imo,
+                status: 'PENDING',
+                eta: "2026-08-15T12:00", // İleri bir varsayılan tarih
+                liveEta: null,
+                email: "mscgemitakip@gmail.com", 
+                emailSentNew: true, // Spama düşmemek için yeni eklendi mailini atlıyoruz
+                emailSent10h: false,
+                emailSent5h: false,
+                voyage: "Toplu Yükleme",
+                originPort: "-",
+                destinationPort: "Belirtilmedi",
+                declarations: "0",
+                note: "Otomatik Yüklendi"
+            });
+            basarili++;
+        }
+        alert("✅ HARİKA! " + basarili + " geminin tamamı veritabanına hatasız eklendi!");
+        btn.innerText = "✅ 14 GEMİ YÜKLENDİ";
+    } catch (error) {
+        console.error("Yükleme Hatası:", error);
+        alert("❌ Bir hata oluştu: " + error.message);
+        btn.disabled = false;
+        btn.innerText = "🚀 TEKRAR DENE";
+    }
+});
+</script>
+
 </body>
 </html>
