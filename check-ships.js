@@ -24,72 +24,14 @@ const db = admin.firestore();
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: 'mscgemitakip@gmail.com',
+        user: 'mscgemitakip@gmail.com', // Kendi sistem mailin
         pass: GMAIL_PASS
     }
 });
 
-// 4. VIP MED FİLOSU (Sadece bu gemiler için ücretsiz veri aranacak)
-const targetFleet = [
-    "MED AYDIN", "MED ÇEŞME", "MED CESME", "MED URLA", 
-    "MED BEYKOZ", "MED ÇERKEZKÖY", "MED CERKEZKOY", 
-    "MED ANTALYA", "MED TRABZON", "MED ÇORLU", "MED CORLU", 
-    "MED İZMİR", "MED IZMIR", "MED TEKİRDAĞ", "MED TEKIRDAG", 
-    "MED MERSİN", "MED MERSIN", "MED DENİZ", "MED DENIZ"
-];
-
-// 5. ÜCRETSİZ VERİ KAZIMA (SCRAPING) FONKSİYONU - GELİŞMİŞ ÇİFT YÖNLÜ TARAMA
-async function getFreeShipData(imo, shipName) {
-    try {
-        console.log(`[RADAR] ${shipName} (IMO: ${imo}) için ÇİFT YÖNLÜ tarama başlatıldı...`);
-        
-        // Taktik 1: VesselFinder gizli mobil uç noktası
-        const vfUrl = `https://www.vesselfinder.com/api/pub/search/${imo}`;
-        const vfResponse = await fetch(vfUrl, {
-            headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-                "Accept": "application/json"
-            }
-        });
-
-        if (vfResponse.ok) {
-            const vfData = await vfResponse.text();
-            if (vfData && vfData.length > 15 && vfData !== "[]") {
-                console.log(`[BAŞARILI - Taktik 1] ${shipName} VesselFinder üzerinden yakalandı!`);
-                return true;
-            }
-        }
-
-        // Taktik 2: MyShipTracking sistemini IMO yerine GEMİ ADI ile aratmak
-        const nameUrl = encodeURIComponent(shipName);
-        const msUrl = `https://www.myshiptracking.com/requests/autocomplete.php?type=0&site=1&limit=5&q=${nameUrl}`;
-        
-        const msResponse = await fetch(msUrl, {
-            headers: {
-                "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-            }
-        });
-
-        if (msResponse.ok) {
-            const msData = await msResponse.text();
-            if (msData && msData.length > 15 && msData !== "[]") {
-                console.log(`[BAŞARILI - Taktik 2] ${shipName} MyShipTracking isim aramasından yakalandı!`);
-                return true;
-            }
-        }
-
-        console.log(`[BAŞARISIZ] ${shipName} için her iki taktik de boş döndü.`);
-        return false;
-
-    } catch (error) {
-        console.log(`[ENGEL/HATA] ${shipName} sorgusunda sorun: ${error.message}`);
-        return false;
-    }
-}
-
-// 6. ANA KONTROL DÖNGÜSÜ (Her 15 dakikada bir çalışır)
+// 4. ANA KONTROL DÖNGÜSÜ (Manuel ETA'ya göre çalışır)
 async function checkShips() {
-    console.log("Zaman kontrolü ve radar taraması başlıyor...");
+    console.log("Zaman kontrolü başlıyor (Orijinal Stabil Sistem)...");
     const now = new Date();
 
     try {
@@ -103,17 +45,10 @@ async function checkShips() {
 
         for (const doc of snapshot.docs) {
             const ship = doc.data();
-            const shipName = (ship.name || "").toUpperCase().trim();
-            const imo = (ship.imo || "").trim();
             const eta = new Date(ship.eta);
             const email = ship.email;
 
-            // --- VIP FİLO KONTROLÜ VE RADAR TARAMASI ---
-            if (targetFleet.includes(shipName) && imo !== "" && imo !== "BELİRTİLMEDİ") {
-                await getFreeShipData(imo, shipName);
-            }
-
-            // --- SAAT VE MAİL HESAPLAMALARI ---
+            // Tarih geçersizse veya mail yoksa bu gemiyi atla
             if (isNaN(eta.getTime()) || !email) continue;
             
             const diffMs = eta - now;
@@ -163,9 +98,3 @@ async function checkShips() {
         }
         
         console.log("Görev başarıyla tamamlandı.");
-    } catch (error) {
-        console.error("HATA OLUŞTU:", error);
-    }
-}
-
-checkShips();
