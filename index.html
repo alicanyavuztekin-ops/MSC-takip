@@ -41,13 +41,23 @@
     <div class="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full space-y-6 border border-slate-200">
       <div class="text-center space-y-2">
         <div class="bg-[#111111] text-[#FFCC00] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto text-3xl font-bold shadow-md"><i class="fa-solid fa-ship"></i></div>
-        <h2 class="text-2xl font-bold text-[#111111] uppercase">MSC & MEDLOG TAKİP</h2>
+        <h2 id="auth-title" class="text-2xl font-bold text-[#111111] uppercase">MSC & MEDLOG GİRİŞ</h2>
       </div>
-      <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
-        <div><input type="email" id="login-email" placeholder="E-Posta" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-black outline-none"></div>
-        <div><input type="password" id="login-password" placeholder="Şifre" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-black outline-none"></div>
-        <button type="submit" class="w-full bg-[#111111] hover:bg-black text-[#FFCC00] font-bold p-3 rounded-lg shadow-md cursor-pointer transition-colors">GİRİŞ YAP</button>
+
+      <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-4">
+        <div><input type="email" id="auth-email" placeholder="E-Posta" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-black outline-none text-sm"></div>
+        <div><input type="password" id="auth-password" placeholder="Şifre" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-black outline-none text-sm"></div>
+        <button type="submit" id="auth-submit-btn" class="w-full bg-[#111111] hover:bg-black text-[#FFCC00] font-bold p-3 rounded-lg shadow-md cursor-pointer transition-colors text-sm">GİRİŞ YAP</button>
       </form>
+
+      <div class="text-center space-y-2 pt-2 border-t text-xs">
+        <div>
+          <button type="button" onclick="toggleAuthMode()" id="auth-toggle-mode-btn" class="text-blue-600 hover:underline font-semibold cursor-pointer">Hesabın yok mu? Kayıt ol</button>
+        </div>
+        <div>
+          <button type="button" onclick="handleForgotPassword()" class="text-slate-500 hover:underline cursor-pointer">Parolamı Unuttum</button>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -59,7 +69,7 @@
           <div><h1 class="text-lg md:text-xl font-bold uppercase text-white">MSC & MEDLOG TAKİP</h1></div>
         </div>
         <div class="flex items-center gap-3">
-          <span id="user-display-email" class="hidden md:block text-zinc-300 text-xs"></span>
+          <span id="user-display-email" class="hidden md:block text-zinc-300 text-xs font-medium"></span>
           <button type="button" onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-2 rounded-lg font-semibold flex items-center gap-1 cursor-pointer"><i class="fa-solid fa-right-from-bracket"></i> ÇIKIŞ</button>
         </div>
       </div>
@@ -86,21 +96,21 @@
           <div><label class="block text-xs font-bold mb-1">HEDEF ZAMAN</label><input type="datetime-local" id="eta" required class="w-full text-sm p-2 border rounded-lg"></div>
           <div><label class="block text-xs font-bold mb-1">BEYANNAME</label><input type="number" id="declarations" min="1" required class="w-full text-sm p-2 border rounded-lg"></div>
           <div><label class="block text-xs font-bold mb-1">EK NOT</label><input type="text" id="shipNote" class="w-full text-sm p-2 border rounded-lg uppercase" placeholder="ETB vb."></div>
-          <div class="flex items-end"><button type="submit" class="w-full bg-[#FFCC00] text-[#111111] font-bold p-2.5 rounded-lg shadow-md hover:bg-yellow-500"><i class="fa-solid fa-check-circle"></i> EKLE</button></div>
+          <div class="flex items-end"><button type="submit" class="w-full bg-[#FFCC00] text-[#111111] font-bold p-2.5 rounded-lg shadow-md hover:bg-yellow-500 cursor-pointer"><i class="fa-solid fa-check-circle"></i> EKLE</button></div>
         </form>
       </div>
 
       <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
         <div class="p-3 bg-slate-50 border-b flex flex-col sm:flex-row justify-between items-center gap-4">
             <div class="flex gap-2 w-full sm:w-auto">
-                <button onclick="setTab('ACTIVE')" id="tab-active" class="tab-active flex-1 py-2 px-4 rounded-lg font-bold text-sm shadow-sm transition-all uppercase flex items-center justify-center gap-2"><i class="fa-solid fa-satellite-dish"></i> AKTİF</button>
-                <button onclick="setTab('ARCHIVE')" id="tab-archive" class="tab-inactive flex-1 py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2"><i class="fa-solid fa-box-archive"></i> ARŞİV</button>
+                <button onclick="setTab('ACTIVE')" id="tab-active" class="tab-active flex-1 py-2 px-4 rounded-lg font-bold text-sm shadow-sm transition-all uppercase flex items-center justify-center gap-2 cursor-pointer"><i class="fa-solid fa-satellite-dish"></i> AKTİF</button>
+                <button onclick="setTab('ARCHIVE')" id="tab-archive" class="tab-inactive flex-1 py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer"><i class="fa-solid fa-box-archive"></i> ARŞİV</button>
             </div>
             
             <div class="flex items-center gap-3 w-full sm:w-auto justify-between">
                 <div class="flex bg-slate-200 p-1 rounded-lg">
-                    <button onclick="setViewMode('LIST')" id="btn-view-list" class="view-btn-active px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors"><i class="fa-solid fa-list"></i> LİSTE</button>
-                    <button onclick="setViewMode('BOARD')" id="btn-view-board" class="view-btn-inactive px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors"><i class="fa-brands fa-trello"></i> PANO</button>
+                    <button onclick="setViewMode('LIST')" id="btn-view-list" class="view-btn-active px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"><i class="fa-solid fa-list"></i> LİSTE</button>
+                    <button onclick="setViewMode('BOARD')" id="btn-view-board" class="view-btn-inactive px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"><i class="fa-brands fa-trello"></i> PANO</button>
                 </div>
                 <select id="filterPort" onchange="renderShips()" class="text-xs p-2 border rounded-lg font-medium shadow-sm"><option value="ALL">TÜM LİMANLAR</option><option value="İZMİR ALSANCAK">İZMİR ALSANCAK</option><option value="ALİAĞA SOCAR">ALİAĞA SOCAR</option></select>
             </div>
@@ -136,18 +146,18 @@
   <div id="ai-chatbot-container" class="fixed bottom-6 right-6 z-50">
     <div id="ai-chat-window" class="hidden bg-white w-80 h-[450px] rounded-2xl shadow-2xl border border-slate-200 flex flex-col mb-4 overflow-hidden">
         <div class="bg-[#111111] p-3 text-white flex justify-between items-center border-b-2 border-[#FFCC00]">
-            <div class="flex items-center gap-2 font-bold text-sm"><i class="fa-solid fa-robot text-[#FFCC00]"></i> AI AKILLI ASİSTAN</div>
-            <button onclick="toggleAIChat()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-times"></i></button>
+            <div class="flex items-center gap-2 font-bold text-sm"><i class="fa-solid fa-robot text-[#FFCC00]"></i> AI LİMAN ASİSTANI</div>
+            <button onclick="toggleAIChat()" class="text-slate-400 hover:text-white cursor-pointer"><i class="fa-solid fa-times"></i></button>
         </div>
         <div id="ai-chat-messages" class="flex-1 p-3 overflow-y-auto bg-slate-50 flex flex-col">
-            <div class="ai-message">Merhaba! Ben Operasyon Asistanın. Hem veritabanındaki gemileri takip edebilirim hem de gerekirse internetten canlı hava durumu ve deniz trafiğini tarayabilirim!</div>
+            <div class="ai-message">Merhaba! Ben MSC Lojistik Asistanın. Veritabanındaki gemi saatlerini, potansiyel gecikmeleri ve liman operasyonlarını analiz etmek için hazırım!</div>
         </div>
         <div class="p-3 bg-white border-t flex gap-2">
-            <input type="text" id="ai-chat-input" placeholder="Bir şey sor..." class="flex-1 text-sm p-2 border rounded-lg focus:outline-none focus:border-[#FFCC00]" onkeypress="handleAIChatKeyPress(event)">
-            <button onclick="sendAIMessage()" class="bg-[#111111] text-[#FFCC00] w-10 h-10 rounded-lg flex items-center justify-center hover:bg-black transition-colors"><i class="fa-solid fa-paper-plane"></i></button>
+            <input type="text" id="ai-chat-input" placeholder="Gemi veya durum sor..." class="flex-1 text-sm p-2 border rounded-lg focus:outline-none focus:border-[#FFCC00]" onkeypress="handleAIChatKeyPress(event)">
+            <button onclick="sendAIMessage()" class="bg-[#111111] text-[#FFCC00] w-10 h-10 rounded-lg flex items-center justify-center hover:bg-black transition-colors cursor-pointer"><i class="fa-solid fa-paper-plane"></i></button>
         </div>
     </div>
-    <button onclick="toggleAIChat()" id="ai-chat-toggle-btn" class="w-14 h-14 bg-[#FFCC00] text-[#111111] rounded-full shadow-2xl flex items-center justify-center text-2xl hover:scale-110 transition-transform float-right border-4 border-[#111111]">
+    <button onclick="toggleAIChat()" id="ai-chat-toggle-btn" class="w-14 h-14 bg-[#FFCC00] text-[#111111] rounded-full shadow-2xl flex items-center justify-center text-2xl hover:scale-110 transition-transform float-right border-4 border-[#111111] cursor-pointer">
         <i class="fa-solid fa-robot"></i>
     </button>
   </div>
@@ -167,7 +177,6 @@
   </div>
 
   <script>
-    // GEMİNİ API ANAHTARIN
     const GEMINI_API_KEY = "AQ.Ab8RN6JpkKZNo-rAYX0SZkmnHOF7Zdmiy5EW6KkriPodKB8wYA"; 
 
     const firebaseConfig = {
@@ -181,10 +190,12 @@
     let currentUser = null, ships = [];
     let currentViewTab = 'ACTIVE';
     let currentDisplayMode = 'LIST'; 
+    let isRegisterMode = false;
 
     auth.onAuthStateChanged(user => {
       if (user) {
         currentUser = user;
+        document.getElementById('user-display-email').innerText = user.email;
         document.getElementById('auth-container').classList.add('hidden');
         document.getElementById('app-container').classList.remove('hidden');
         document.getElementById('action-buttons-container').classList.remove('hidden');
@@ -199,7 +210,46 @@
       }
     });
 
-    function handleLogin(e) { e.preventDefault(); auth.signInWithEmailAndPassword(document.getElementById('login-email').value, document.getElementById('login-password').value); }
+    function toggleAuthMode() {
+        isRegisterMode = !isRegisterMode;
+        const title = document.getElementById('auth-title');
+        const submitBtn = document.getElementById('auth-submit-btn');
+        const toggleBtn = document.getElementById('auth-toggle-mode-btn');
+
+        if(isRegisterMode) {
+            title.innerText = "MSC & MEDLOG KAYIT";
+            submitBtn.innerText = "KAYIT OL";
+            toggleBtn.innerText = "Zaten hesabın var mı? Giriş yap";
+        } else {
+            title.innerText = "MSC & MEDLOG GİRİŞ";
+            submitBtn.innerText = "GİRİŞ YAP";
+            toggleBtn.innerText = "Hesabın yok mu? Kayıt ol";
+        }
+    }
+
+    function handleAuthSubmit(e) {
+        e.preventDefault();
+        const email = document.getElementById('auth-email').value.trim();
+        const password = document.getElementById('auth-password').value;
+
+        if(isRegisterMode) {
+            auth.createUserWithEmailAndPassword(email, password)
+                .then(() => { alert("✅ Kayıt başarılı! Giriş yapıldı."); })
+                .catch(err => { alert("❌ Kayıt Olma Hatası: " + err.message); });
+        } else {
+            auth.signInWithEmailAndPassword(email, password)
+                .catch(err => { alert("❌ Giriş Hatası: " + err.message); });
+        }
+    }
+
+    function handleForgotPassword() {
+        const email = document.getElementById('auth-email').value.trim();
+        if(!email) { alert("Lütfen önce E-Posta kutucuğuna adresini yaz!"); return; }
+        auth.sendPasswordResetEmail(email)
+            .then(() => { alert("📧 Şifre sıfırlama bağlantısı e-posta adresine gönderildi."); })
+            .catch(err => { alert("❌ Hata: " + err.message); });
+    }
+
     function handleLogout() { auth.signOut(); location.reload(); }
     function setTab(tabName) { currentViewTab = tabName; renderShips(); }
     
@@ -207,12 +257,12 @@
         currentDisplayMode = mode;
         if(mode === 'LIST') {
             document.getElementById('view-list').classList.remove('hidden'); document.getElementById('view-board').classList.add('hidden');
-            document.getElementById('btn-view-list').className = "view-btn-active px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors";
-            document.getElementById('btn-view-board').className = "view-btn-inactive border px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors";
+            document.getElementById('btn-view-list').className = "view-btn-active px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer";
+            document.getElementById('btn-view-board').className = "view-btn-inactive border px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer";
         } else {
             document.getElementById('view-list').classList.add('hidden'); document.getElementById('view-board').classList.remove('hidden');
-            document.getElementById('btn-view-board').className = "view-btn-active px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors";
-            document.getElementById('btn-view-list').className = "view-btn-inactive border px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors";
+            document.getElementById('btn-view-board').className = "view-btn-active px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer";
+            document.getElementById('btn-view-list').className = "view-btn-inactive border px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer";
         }
     }
 
@@ -252,7 +302,7 @@
     function deleteShip(id) { if(confirm("Silmek istediğinize emin misiniz?")) db.collection('ships').doc(id).delete(); }
     function openRadar(imo) { if(!imo || imo === '-' || imo === 'BELİRTİLMEDİ') { alert("IMO numarası yok."); return; } window.open(`https://www.vesselfinder.com/vessels/details/${imo}`, '_blank'); }
 
-    // --- AI CHATBOT (İNTERNET ARAMA YETENEKLİ - GOOGLE SEARCH GROUNDING) ---
+    // --- AI CHATBOT (GELİŞMİŞ LOJİSTİK UZMANI) ---
     function toggleAIChat() {
         const win = document.getElementById('ai-chat-window'); const btn = document.getElementById('ai-chat-toggle-btn');
         if(win.classList.contains('hidden')) { win.classList.remove('hidden'); btn.classList.add('hidden'); } 
@@ -267,19 +317,16 @@
         chatBox.innerHTML += `<div class="user-message">${text}</div>`; input.value = '';
         
         const typingId = 'typing-' + Date.now();
-        chatBox.innerHTML += `<div id="${typingId}" class="ai-message typing-indicator"><span></span><span></span><span></span> Analiz ediliyor ve taranıyor...</div>`;
+        chatBox.innerHTML += `<div id="${typingId}" class="ai-message typing-indicator"><span></span><span></span><span></span> Lojistik veriler analiz ediliyor...</div>`;
         chatBox.scrollTop = chatBox.scrollHeight;
 
-        const activeShips = ships.filter(s => s.status !== 'COMPLETED').map(s => `Gemi: ${s.name}, Tarih: ${s.eta}, Not: ${s.note || 'Yok'}, Liman: ${s.destinationPort}, IMO: ${s.imo}`).join(" | ");
-        const systemPrompt = `Sen profesyonel bir MSC Lojistik Operasyon Asistanısın. Kullanıcının sistemdeki kayıtlı aktif gemi verileri şunlar: [${activeShips}]. Kullanıcı dış dünya, hava durumu, güncel rota veya deniz trafiği hakkında soru sorduğunda Google Arama yeteneğini kullanarak güncel bilgileri harmanla ve net, kısa, Türkçe bir rapor sun.`;
+        const activeShips = ships.filter(s => s.status !== 'COMPLETED').map(s => `Gemi: ${s.name}, Hedef Liman: ${s.destinationPort}, ETA: ${s.eta}, Not: ${s.note || 'Yok'}, IMO: ${s.imo}`).join(" | ");
+        const systemPrompt = `Sen profesyonel bir MSC ve MEDLOG Liman Operasyon Asistanısın. Kullanıcının sistemdeki aktif gemi veritabanı: [${activeShips}]. Kullanıcı sana bir gemi veya operasyon hakkında soru sorduğunda, veritabanındaki saatleri ve notları baz alarak profesyonel, analitik, tahmine dayalı (örneğin olası gecikmeler, liman yoğunlukları ve operasyonel tavsiyeler içeren) net ve kısa bir Türkçe yanıt ver.`;
 
         try {
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    contents: [{ parts: [{ text: systemPrompt + " Soru: " + text }] }],
-                    tools: [{"googleSearch": {}}] // <-- İŞTE İNTERNETE BAĞLANMA ÖZELLİĞİ BURADA!
-                })
+                body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt + " Kullanıcı Sorusu: " + text }] }] })
             });
             const data = await response.json();
             const aiText = data.candidates[0].content.parts[0].text;
@@ -387,9 +434,9 @@
 
         let avatarBg = ship.name.includes("MED") ? "bg-[#FFCC00] text-[#111111]" : "bg-[#111111] text-[#FFCC00]"; let avatarText = ship.name.includes("MED") ? "MD" : "MS";
 
-        tbody.innerHTML += `<tr class="border-b hover:bg-zinc-50"><td class="p-3"><div class="flex items-center gap-3"><div class="${avatarBg} w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-sm">${avatarText}</div><div><div class="font-bold text-sm text-slate-800">${ship.name}</div><div class="text-[10px] text-gray-500">IMO: ${ship.imo || '-'} | SF: ${ship.voyage || '-'}</div></div></div></td><td class="p-3 text-xs"><div class="font-semibold text-slate-700 mb-1">${ship.originPort || '-'} <i class="fa-solid fa-arrow-right text-slate-400 mx-1"></i> ${ship.destinationPort}</div><span class="text-[10px] text-zinc-800 font-bold bg-[#FFCC00] px-2 py-0.5 rounded shadow-sm">${ship.note || 'NOT YOK'}</span></td><td class="p-3 text-xs font-medium"><div class="mb-1 text-slate-800">${new Date(ship.eta).toLocaleString('tr-TR')}</div><div class="text-[9px] text-slate-500 font-bold"><i class="fa-solid fa-clock-rotate-left"></i> ${ship.lastUpdated ? ship.lastUpdated : 'GÜNCELLEME YOK'}</div></td><td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${bClass}">${bText}</span></td><td class="p-3 text-right whitespace-nowrap"><button onclick="openRadar('${ship.imo}')" class="text-blue-600 bg-blue-50 w-8 h-8 rounded-lg border text-xs font-bold hover:bg-blue-100 transition-colors" title="Radarda Gör"><i class="fa-solid fa-location-dot"></i></button> ${ship.status !== 'COMPLETED' ? `<button onclick="openEditModal('${ship.firestoreId}')" class="text-[#111111] bg-yellow-100 w-8 h-8 rounded-lg border border-yellow-300 shadow-sm hover:bg-[#FFCC00] transition-colors ml-1" title="Düzenle"><i class="fa-solid fa-pen"></i></button><button onclick="completeShip('${ship.firestoreId}')" class="text-emerald-600 bg-emerald-50 w-8 h-8 rounded-lg border hover:bg-emerald-100 transition-colors ml-1" title="Tamamla"><i class="fa-solid fa-check"></i></button>` : ''} <button onclick="deleteShip('${ship.firestoreId}')" class="text-red-600 bg-red-50 w-8 h-8 rounded-lg border border-red-200 shadow-sm hover:bg-red-100 transition-colors ml-1" title="Sil"><i class="fa-solid fa-trash"></i></button></td></tr>`;
+        tbody.innerHTML += `<tr class="border-b hover:bg-zinc-50"><td class="p-3"><div class="flex items-center gap-3"><div class="${avatarBg} w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-sm">${avatarText}</div><div><div class="font-bold text-sm text-slate-800">${ship.name}</div><div class="text-[10px] text-gray-500">IMO: ${ship.imo || '-'} | SF: ${ship.voyage || '-'}</div></div></div></td><td class="p-3 text-xs"><div class="font-semibold text-slate-700 mb-1">${ship.originPort || '-'} <i class="fa-solid fa-arrow-right text-slate-400 mx-1"></i> ${ship.destinationPort}</div><span class="text-[10px] text-zinc-800 font-bold bg-[#FFCC00] px-2 py-0.5 rounded shadow-sm">${ship.note || 'NOT YOK'}</span></td><td class="p-3 text-xs font-medium"><div class="mb-1 text-slate-800">${new Date(ship.eta).toLocaleString('tr-TR')}</div><div class="text-[9px] text-slate-500 font-bold"><i class="fa-solid fa-clock-rotate-left"></i> ${ship.lastUpdated ? ship.lastUpdated : 'GÜNCELLEME YOK'}</div></td><td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${bClass}">${bText}</span></td><td class="p-3 text-right whitespace-nowrap"><button onclick="openRadar('${ship.imo}')" class="text-blue-600 bg-blue-50 w-8 h-8 rounded-lg border text-xs font-bold hover:bg-blue-100 transition-colors cursor-pointer" title="Radarda Gör"><i class="fa-solid fa-location-dot"></i></button> ${ship.status !== 'COMPLETED' ? `<button onclick="openEditModal('${ship.firestoreId}')" class="text-[#111111] bg-yellow-100 w-8 h-8 rounded-lg border border-yellow-300 shadow-sm hover:bg-[#FFCC00] transition-colors ml-1 cursor-pointer" title="Düzenle"><i class="fa-solid fa-pen"></i></button><button onclick="completeShip('${ship.firestoreId}')" class="text-emerald-600 bg-emerald-50 w-8 h-8 rounded-lg border hover:bg-emerald-100 transition-colors ml-1 cursor-pointer" title="Tamamla"><i class="fa-solid fa-check"></i></button>` : ''} <button onclick="deleteShip('${ship.firestoreId}')" class="text-red-600 bg-red-50 w-8 h-8 rounded-lg border border-red-200 shadow-sm hover:bg-red-100 transition-colors ml-1 cursor-pointer" title="Sil"><i class="fa-solid fa-trash"></i></button></td></tr>`;
 
-        targetCol.innerHTML += `<div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow relative"><div class="flex justify-between items-start mb-2"><div class="font-bold text-[#111111] text-sm flex items-center gap-1"><div class="${avatarBg} w-5 h-5 rounded-full flex items-center justify-center text-[9px] shadow-sm">${avatarText}</div> ${ship.name}</div><button onclick="openRadar('${ship.imo}')" class="text-blue-500 hover:text-blue-700" title="Haritada Gör"><i class="fa-solid fa-location-crosshairs"></i></button></div><div class="text-[10px] text-slate-500 mb-2 font-medium"><i class="fa-solid fa-arrow-right-arrow-left"></i> ${ship.originPort || '-'} > ${ship.destinationPort}</div><div class="bg-slate-50 p-1.5 rounded border text-xs font-bold text-center mb-2">${new Date(ship.eta).toLocaleString('tr-TR')}</div><div class="mb-3 text-[10px] font-bold text-zinc-800 bg-[#FFCC00] px-2 py-1 rounded shadow-sm leading-tight border border-yellow-400"><i class="fa-solid fa-clipboard"></i> ${ship.note || 'NOT YOK'}</div><div class="w-full bg-slate-200 rounded-full h-1.5 mb-2"><div class="${progressColor} h-1.5 rounded-full" style="width: ${progressWidth}"></div></div><div class="flex justify-between items-center mt-2 pt-2 border-t border-dashed"><span class="text-[9px] font-bold ${bClass} px-1.5 py-0.5 rounded">${bText}</span> ${ship.status !== 'COMPLETED' ? `<div class="flex gap-1"><button onclick="openEditModal('${ship.firestoreId}')" class="text-[10px] bg-yellow-100 text-[#111111] px-2 py-1 rounded font-bold hover:bg-[#FFCC00]">DÜZENLE</button><button onclick="completeShip('${ship.firestoreId}')" class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded font-bold hover:bg-emerald-100">TAMAMLA</button></div>` : ''} </div></div>`;
+        targetCol.innerHTML += `<div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow relative"><div class="flex justify-between items-start mb-2"><div class="font-bold text-[#111111] text-sm flex items-center gap-1"><div class="${avatarBg} w-5 h-5 rounded-full flex items-center justify-center text-[9px] shadow-sm">${avatarText}</div> ${ship.name}</div><button onclick="openRadar('${ship.imo}')" class="text-blue-500 hover:text-blue-700 cursor-pointer" title="Haritada Gör"><i class="fa-solid fa-location-crosshairs"></i></button></div><div class="text-[10px] text-slate-500 mb-2 font-medium"><i class="fa-solid fa-arrow-right-arrow-left"></i> ${ship.originPort || '-'} > ${ship.destinationPort}</div><div class="bg-slate-50 p-1.5 rounded border text-xs font-bold text-center mb-2">${new Date(ship.eta).toLocaleString('tr-TR')}</div><div class="mb-3 text-[10px] font-bold text-zinc-800 bg-[#FFCC00] px-2 py-1 rounded shadow-sm leading-tight border border-yellow-400"><i class="fa-solid fa-clipboard"></i> ${ship.note || 'NOT YOK'}</div><div class="w-full bg-slate-200 rounded-full h-1.5 mb-2"><div class="${progressColor} h-1.5 rounded-full" style="width: ${progressWidth}"></div></div><div class="flex justify-between items-center mt-2 pt-2 border-t border-dashed"><span class="text-[9px] font-bold ${bClass} px-1.5 py-0.5 rounded">${bText}</span> ${ship.status !== 'COMPLETED' ? `<div class="flex gap-1"><button onclick="openEditModal('${ship.firestoreId}')" class="text-[10px] bg-yellow-100 text-[#111111] px-2 py-1 rounded font-bold hover:bg-[#FFCC00] cursor-pointer">DÜZENLE</button><button onclick="completeShip('${ship.firestoreId}')" class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded font-bold hover:bg-emerald-100 cursor-pointer">TAMAMLA</button></div>` : ''} </div></div>`;
       });
       
       document.getElementById('stat-total').innerText = tot; document.getElementById('stat-normal').innerText = nrm; document.getElementById('stat-critical').innerText = crit; document.getElementById('stat-arrived').innerText = arr; document.getElementById('kb-count-normal').innerText = cN; document.getElementById('kb-count-12h').innerText = c12; document.getElementById('kb-count-6h').innerText = c6; document.getElementById('kb-count-arrived').innerText = cA;
