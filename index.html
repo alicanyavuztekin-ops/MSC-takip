@@ -21,6 +21,8 @@
 
   <style>
     body { font-family: 'Inter', sans-serif; }
+    .tab-active { background-color: #002855; color: #FFCC00; border-color: #002855; }
+    .tab-inactive { background-color: #f8fafc; color: #64748b; border-color: #e2e8f0; }
   </style>
 </head>
 <body class="bg-slate-100 font-sans text-slate-800 antialiased min-h-screen">
@@ -28,46 +30,26 @@
   <div id="auth-container" class="flex items-center justify-center min-h-screen p-4">
     <div class="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full space-y-6 border border-slate-200">
       <div class="text-center space-y-2">
-        <div class="bg-[#002855] text-[#FFCC00] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto text-3xl font-bold shadow-md border border-yellow-400">
+        <div class="bg-[#002855] text-[#FFCC00] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto text-3xl font-bold shadow-md">
           <i class="fa-solid fa-ship"></i>
         </div>
-        <h2 class="text-2xl font-bold text-[#002855] uppercase tracking-wide">MSC & MEDLOG TAKİP</h2>
+        <h2 class="text-2xl font-bold text-[#002855] uppercase">MSC & MEDLOG TAKİP</h2>
         <p class="text-xs text-slate-500 font-medium">Liman Operasyon Sistemine Giriş Yapın</p>
-      </div>
-
-      <div class="flex border-b border-slate-200 text-sm font-semibold">
-        <button id="tab-login" onclick="switchAuthTab('login')" class="w-1/2 py-2 text-[#002855] border-b-2 border-[#002855] font-bold transition-colors">GİRİŞ YAP</button>
-        <button id="tab-register" onclick="switchAuthTab('register')" class="w-1/2 py-2 text-slate-400 border-b-2 border-transparent transition-colors">KAYIT OL</button>
       </div>
 
       <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">E-POSTA ADRESİ</label>
-          <input type="email" id="login-email" required class="w-full text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none transition-all">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">E-POSTA ADRESİ</label>
+          <input type="email" id="login-email" required class="w-full text-sm p-3 border rounded-lg focus:ring-2 focus:ring-[#002855] outline-none">
         </div>
         <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">ŞİFRE</label>
-          <input type="password" id="login-password" required class="w-full text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none transition-all">
+          <label class="block text-xs font-semibold text-slate-600 mb-1">ŞİFRE</label>
+          <input type="password" id="login-password" required class="w-full text-sm p-3 border rounded-lg focus:ring-2 focus:ring-[#002855] outline-none">
         </div>
-        <button type="submit" id="btn-login" class="w-full bg-[#002855] hover:bg-[#001d3d] text-[#FFCC00] font-bold p-3 rounded-lg transition-all text-sm shadow-md cursor-pointer">
+        <button type="submit" class="w-full bg-[#002855] hover:bg-[#001d3d] text-[#FFCC00] font-bold p-3 rounded-lg shadow-md cursor-pointer">
           GİRİŞ YAP
         </button>
       </form>
-
-      <form id="register-form" onsubmit="handleRegister(event)" class="space-y-4 hidden">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">E-POSTA ADRESİ</label>
-          <input type="email" id="register-email" required class="w-full text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none transition-all">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">ŞİFRE (EN AZ 6 KARAKTER)</label>
-          <input type="password" id="register-password" required minlength="6" class="w-full text-sm p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none transition-all">
-        </div>
-        <button type="submit" id="btn-register" class="w-full bg-[#002855] hover:bg-[#001d3d] text-[#FFCC00] font-bold p-3 rounded-lg transition-all text-sm shadow-md cursor-pointer">
-          HESAP OLUŞTUR
-        </button>
-      </form>
-      <div id="auth-error" class="text-xs text-red-600 font-semibold text-center hidden p-2 bg-red-50 rounded-lg border border-red-200"></div>
     </div>
   </div>
 
@@ -75,20 +57,17 @@
     <header class="bg-[#002855] text-white shadow-lg p-4 sticky top-0 z-30 border-b-4 border-[#FFCC00]">
       <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-3">
         <div class="flex items-center gap-3">
-          <div class="bg-[#FFCC00] text-[#002855] p-2.5 rounded-lg font-bold text-xl shadow">
-            <i class="fa-solid fa-ship"></i>
-          </div>
+          <div class="bg-[#FFCC00] text-[#002855] p-2.5 rounded-lg font-bold text-xl"><i class="fa-solid fa-ship"></i></div>
           <div>
-            <h1 class="text-lg md:text-xl font-bold tracking-wide uppercase text-white">MSC & MEDLOG TAKİP</h1>
+            <h1 class="text-lg md:text-xl font-bold uppercase text-white">MSC & MEDLOG TAKİP</h1>
             <p class="text-xs text-yellow-300 font-medium">Operasyon & Gümrük İzleme</p>
           </div>
         </div>
         <div class="flex items-center gap-3">
           <div class="hidden md:flex items-center gap-2 bg-[#001d3d] px-3 py-1.5 rounded-lg border border-blue-900 text-xs">
-            <i class="fa-solid fa-user-circle text-[#FFCC00]"></i>
-            <span id="user-display-email" class="font-mono text-blue-200"></span>
+            <i class="fa-solid fa-user-circle text-[#FFCC00]"></i> <span id="user-display-email" class="text-blue-200"></span>
           </div>
-          <button type="button" onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-2 rounded-lg font-semibold transition-all cursor-pointer flex items-center gap-1">
+          <button type="button" onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-2 rounded-lg font-semibold flex items-center gap-1 cursor-pointer">
             <i class="fa-solid fa-right-from-bracket"></i> ÇIKIŞ
           </button>
         </div>
@@ -99,31 +78,19 @@
       
       <div id="dashboard-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-          <div>
-            <p class="text-xs font-bold text-slate-400 uppercase">Toplam Gemi</p>
-            <h4 id="stat-total" class="text-xl font-bold text-[#002855]">0</h4>
-          </div>
+          <div><p class="text-xs font-bold text-slate-400 uppercase">Aktif Gemi</p><h4 id="stat-total" class="text-xl font-bold text-[#002855]">0</h4></div>
           <div class="bg-blue-50 text-[#002855] p-3 rounded-lg"><i class="fa-solid fa-ship"></i></div>
         </div>
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-          <div>
-            <p class="text-xs font-bold text-slate-400 uppercase">Normal / Seyirde</p>
-            <h4 id="stat-normal" class="text-xl font-bold text-emerald-600">0</h4>
-          </div>
+          <div><p class="text-xs font-bold text-slate-400 uppercase">Seyirde</p><h4 id="stat-normal" class="text-xl font-bold text-emerald-600">0</h4></div>
           <div class="bg-emerald-50 text-emerald-600 p-3 rounded-lg"><i class="fa-solid fa-circle-check"></i></div>
         </div>
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-          <div>
-            <p class="text-xs font-bold text-slate-400 uppercase">Kritik (12s / 6s)</p>
-            <h4 id="stat-critical" class="text-xl font-bold text-orange-600">0</h4>
-          </div>
+          <div><p class="text-xs font-bold text-slate-400 uppercase">Kritik (12s / 6s)</p><h4 id="stat-critical" class="text-xl font-bold text-orange-600">0</h4></div>
           <div class="bg-orange-50 text-orange-600 p-3 rounded-lg"><i class="fa-solid fa-triangle-exclamation"></i></div>
         </div>
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-          <div>
-            <p class="text-xs font-bold text-slate-400 uppercase">Limana Vardı</p>
-            <h4 id="stat-arrived" class="text-xl font-bold text-slate-800">0</h4>
-          </div>
+          <div><p class="text-xs font-bold text-slate-400 uppercase">Limana Yanaştı</p><h4 id="stat-arrived" class="text-xl font-bold text-slate-800">0</h4></div>
           <div class="bg-slate-100 text-slate-700 p-3 rounded-lg"><i class="fa-solid fa-anchor"></i></div>
         </div>
       </div>
@@ -152,19 +119,29 @@
           <div><label class="block text-xs font-bold text-slate-600 mb-1">HEDEF ZAMAN (ETA/ETB)</label><input type="datetime-local" id="eta" required class="w-full text-sm p-2.5 border rounded-lg"></div>
           <div><label class="block text-xs font-bold text-slate-600 mb-1">BEYANNAME</label><input type="number" id="declarations" min="1" required class="w-full text-sm p-2.5 border rounded-lg"></div>
           <div><label class="block text-xs font-bold text-slate-600 mb-1">EK NOT</label><input type="text" id="shipNote" class="w-full text-sm p-2.5 border rounded-lg uppercase"></div>
-          <div class="flex items-end"><button type="submit" class="w-full bg-[#FFCC00] text-[#002855] font-bold p-2.5 rounded-lg flex justify-center items-center gap-2"><i class="fa-solid fa-check-circle"></i> EKLE</button></div>
+          <div class="flex items-end"><button type="submit" class="w-full bg-[#FFCC00] text-[#002855] font-bold p-2.5 rounded-lg flex justify-center items-center gap-2 cursor-pointer shadow-md"><i class="fa-solid fa-check-circle"></i> EKLE</button></div>
         </form>
       </div>
 
       <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50">
-          <h3 class="font-bold text-[#002855] flex items-center gap-2 uppercase"><i class="fa-solid fa-list-check"></i> TAKİP EDİLENLER</h3>
+        
+        <div class="flex p-3 bg-slate-50 border-b gap-2">
+            <button onclick="setTab('ACTIVE')" id="tab-active" class="tab-active flex-1 py-2 px-4 rounded-lg font-bold text-sm shadow-sm cursor-pointer transition-all uppercase flex items-center justify-center gap-2">
+                <i class="fa-solid fa-satellite-dish"></i> AKTİF OPERASYONLAR
+            </button>
+            <button onclick="setTab('ARCHIVE')" id="tab-archive" class="tab-inactive flex-1 py-2 px-4 rounded-lg font-bold text-sm shadow-sm cursor-pointer border transition-all uppercase flex items-center justify-center gap-2">
+                <i class="fa-solid fa-box-archive"></i> ARŞİV (TAMAMLANANLAR)
+            </button>
+        </div>
+
+        <div class="p-3 border-b border-slate-200 flex justify-end items-center bg-white">
           <select id="filterPort" onchange="renderShips()" class="text-xs p-2 border rounded-lg font-medium uppercase shadow-sm">
-            <option value="ALL">TÜMÜ</option>
+            <option value="ALL">TÜM LİMANLAR</option>
             <option value="İZMİR ALSANCAK">İZMİR ALSANCAK</option>
             <option value="ALİAĞA SOCAR">ALİAĞA SOCAR</option>
           </select>
         </div>
+
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse min-w-[800px]">
             <thead>
@@ -172,7 +149,7 @@
                 <th class="p-3">GEMİ / IMO</th>
                 <th class="p-3">GÜZERGAH / NOT</th>
                 <th class="p-3">HEDEF (ETA/ETB)</th>
-                <th class="p-3">KALAN SÜRE</th>
+                <th class="p-3">DURUM SÜRESİ</th>
                 <th class="p-3 text-right">İŞLEMLER</th>
               </tr>
             </thead>
@@ -180,30 +157,29 @@
           </table>
         </div>
       </div>
+
     </main>
   </div>
 
   <div id="editModal" class="fixed inset-0 bg-slate-900/80 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm">
       <div class="bg-white rounded-2xl max-w-xl w-full p-6 space-y-4 shadow-2xl relative">
         <h3 class="font-bold text-lg text-slate-800 uppercase border-b pb-3"><i class="fa-solid fa-pen text-amber-500"></i> DÜZENLE</h3>
-        <button onclick="document.getElementById('editModal').classList.add('hidden')" class="absolute top-4 right-6 text-slate-400 hover:text-red-600 text-2xl font-bold">&times;</button>
+        <button onclick="document.getElementById('editModal').classList.add('hidden')" class="absolute top-4 right-6 text-slate-400 hover:text-red-600 text-2xl font-bold cursor-pointer">&times;</button>
         <form id="edit-form" onsubmit="saveEdit(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <input type="hidden" id="edit-id">
           <div class="sm:col-span-2"><label class="block text-xs font-bold text-slate-600 mb-1">GEMİ ADI</label><input type="text" id="edit-shipName" required class="w-full text-sm p-2.5 border rounded-lg uppercase"></div>
           <div><label class="block text-xs font-bold text-slate-600 mb-1">HEDEF ZAMAN</label><input type="datetime-local" id="edit-eta" required class="w-full text-sm p-2.5 border rounded-lg"></div>
           <div><label class="block text-xs font-bold text-slate-600 mb-1">NOT</label><input type="text" id="edit-note" class="w-full text-sm p-2.5 border rounded-lg uppercase"></div>
-          <div class="sm:col-span-2"><button type="submit" class="w-full bg-[#FFCC00] font-bold p-3 rounded-lg text-sm">KAYDET</button></div>
+          <div class="sm:col-span-2"><button type="submit" class="w-full bg-[#FFCC00] font-bold p-3 rounded-lg text-sm cursor-pointer shadow">KAYDET</button></div>
         </form>
       </div>
   </div>
 
   <div id="action-buttons-container" class="hidden text-center my-8 flex justify-center gap-4 flex-wrap">
-    <button type="button" id="btn-toplu-yukle" style="background-color: #28a745; color: white; padding: 15px 25px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🚀 14 GEMİYİ YÜKLE</button>
-    
     <label for="excel-file-input" style="background-color: #002855; color: #FFCC00; padding: 15px 25px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-flex; align-items: center; gap: 8px;">
-        <span id="excel-label-text">📁 ETA EXCEL YÜKLE (.XLSM)</span>
+        <span id="excel-label-text"><i class="fa-solid fa-file-excel"></i> MANUEL EXCEL YÜKLE (.XLSM)</span>
     </label>
-    <input type="file" id="excel-file-input" accept=".xlsx, .xls, .xlsm, .csv" style="display: none;" onchange="handleDailyExcel(event)">
+    <input type="file" id="excel-file-input" accept=".xlsx, .xls, .xlsm" style="display: none;" onchange="handleDailyExcel(event)">
   </div>
 
   <script>
@@ -215,7 +191,9 @@
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth(); const db = firebase.firestore();
     auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
+    
     let currentUser = null, ships = [], unsubscribeFirestore = null;
+    let currentViewTab = 'ACTIVE';
 
     auth.onAuthStateChanged(user => {
       currentUser = user;
@@ -236,13 +214,20 @@
       }
     });
 
-    function switchAuthTab(tab) {
-      if (tab === 'login') { document.getElementById('login-form').classList.remove('hidden'); document.getElementById('register-form').classList.add('hidden'); } 
-      else { document.getElementById('login-form').classList.add('hidden'); document.getElementById('register-form').classList.remove('hidden'); }
+    function setTab(tabName) {
+        currentViewTab = tabName;
+        document.getElementById('tab-active').className = tabName === 'ACTIVE' ? "tab-active flex-1 py-2 px-4 rounded-lg font-bold text-sm shadow-sm cursor-pointer transition-all uppercase flex items-center justify-center gap-2" : "tab-inactive flex-1 py-2 px-4 rounded-lg font-bold text-sm shadow-sm cursor-pointer border transition-all uppercase flex items-center justify-center gap-2";
+        document.getElementById('tab-archive').className = tabName === 'ARCHIVE' ? "tab-active flex-1 py-2 px-4 rounded-lg font-bold text-sm shadow-sm cursor-pointer transition-all uppercase flex items-center justify-center gap-2" : "tab-inactive flex-1 py-2 px-4 rounded-lg font-bold text-sm shadow-sm cursor-pointer border transition-all uppercase flex items-center justify-center gap-2";
+        renderShips();
     }
 
     function handleLogin(e) { e.preventDefault(); auth.signInWithEmailAndPassword(document.getElementById('login-email').value, document.getElementById('login-password').value); }
     function handleLogout() { if(confirm("Çıkış yapmak istediğinize emin misiniz?")) auth.signOut(); }
+
+    function getTrDateStr() {
+        const d = new Date();
+        return d.toLocaleDateString('tr-TR') + " " + d.getHours().toString().padStart(2, '0') + ":" + d.getMinutes().toString().padStart(2, '0');
+    }
 
     function addShip(e) { 
         e.preventDefault(); 
@@ -257,14 +242,25 @@
             eta: eta, declarations: parseInt(document.getElementById('declarations').value),
             note: document.getElementById('shipNote').value.trim().toUpperCase(),
             email: document.getElementById('notificationEmail').value.trim().toLowerCase(),
-            status: 'PENDING', emailSentNew: false, 
-            emailSent12h: false, emailSent6h: false, emailSentArrived: false, // YENİ: 12 VE 6 SAAT KONTROLLERİ
+            status: 'PENDING', emailSent12h: false, emailSent6h: false, emailSentArrived: false,
+            lastUpdated: getTrDateStr(),
             createdAt: new Date().toISOString()
         };
         db.collection('ships').add(newShipData).then(() => {
             document.getElementById('ship-form').reset();
             alert("✅ Kayıt başarıyla eklendi!");
+            setTab('ACTIVE');
         });
+    }
+
+    function openEditModal(id) {
+        const ship = ships.find(s => s.firestoreId === id);
+        if(!ship) return;
+        document.getElementById('edit-id').value = ship.firestoreId;
+        document.getElementById('edit-shipName').value = ship.name || '';
+        document.getElementById('edit-eta').value = ship.eta || '';
+        document.getElementById('edit-note').value = ship.note || '';
+        document.getElementById('editModal').classList.remove('hidden');
     }
 
     function saveEdit(e) {
@@ -274,43 +270,68 @@
         name: document.getElementById('edit-shipName').value.trim().toUpperCase(),
         eta: document.getElementById('edit-eta').value,
         note: document.getElementById('edit-note').value.trim().toUpperCase(),
-        status: 'PENDING',
-        emailSent12h: false, emailSent6h: false, emailSentArrived: false // YENİ: 12 VE 6 SAAT KONTROLLERİ
+        emailSent12h: false, emailSent6h: false, emailSentArrived: false,
+        lastUpdated: getTrDateStr()
       }).then(() => {
           document.getElementById('editModal').classList.add('hidden');
       });
     }
 
     function deleteShip(id) { if(confirm("Silmek istediğinize emin misiniz?")) db.collection('ships').doc(id).delete(); }
-    function completeShip(id) { db.collection('ships').doc(id).update({ status: 'COMPLETED' }); }
+    
+    // Gemi Tamamlandığında Arşive Atar
+    function completeShip(id) { 
+        if(confirm("Gemi operasyonu bitti mi? Arşive aktarılacak.")) {
+            db.collection('ships').doc(id).update({ status: 'COMPLETED', lastUpdated: getTrDateStr() }); 
+        }
+    }
 
     function renderShips() {
       const tbody = document.getElementById('ship-list-body');
       const filterPort = document.getElementById('filterPort').value;
-      const filtered = filterPort === 'ALL' ? ships : ships.filter(s => s.destinationPort === filterPort);
       
-      let tot = filtered.length, nrm = 0, crit = 0, arr = 0;
+      let baseFilter = ships.filter(s => currentViewTab === 'ACTIVE' ? s.status !== 'COMPLETED' : s.status === 'COMPLETED');
+      let filtered = filterPort === 'ALL' ? baseFilter : baseFilter.filter(s => s.destinationPort === filterPort);
+      
+      // Dashboard Stats Sadece Aktifleri Sayar
+      let activeOnly = ships.filter(s => s.status !== 'COMPLETED');
+      let tot = activeOnly.length, nrm = 0, crit = 0, arr = 0;
+      
+      activeOnly.forEach(ship => {
+          const diffHours = (new Date(ship.eta) - new Date()) / (1000 * 60 * 60);
+          if (diffHours <= 0) arr++;
+          else if (diffHours <= 12) crit++;
+          else nrm++;
+      });
+
       tbody.innerHTML = '';
       
-      filtered.sort((a, b) => new Date(a.eta) - new Date(b.eta)).forEach(ship => {
+      filtered.sort((a, b) => currentViewTab === 'ACTIVE' ? new Date(a.eta) - new Date(b.eta) : new Date(b.eta) - new Date(a.eta)).forEach(ship => {
         const diffHours = (new Date(ship.eta) - new Date()) / (1000 * 60 * 60);
         let bClass = 'bg-emerald-100 text-emerald-700', bText = '🟢 NORMAL';
         
-        if (ship.status === 'COMPLETED') { bClass = 'bg-slate-100 text-slate-600'; bText = 'TAMAMLANDI'; }
-        else if (diffHours <= 0) { bClass = 'bg-slate-800 text-white'; bText = '⚓ LİMANA YANAŞTI'; arr++; }
-        else if (diffHours <= 6) { bClass = 'bg-red-100 text-red-700 animate-pulse'; bText = '🔴 6 SAAT KALA'; crit++; }
-        else if (diffHours <= 12) { bClass = 'bg-orange-100 text-orange-700'; bText = '🟠 12 SAAT KALA'; crit++; }
-        else { nrm++; }
+        if (ship.status === 'COMPLETED') { bClass = 'bg-slate-100 text-slate-600'; bText = 'ARŞİVLENDİ'; }
+        else if (diffHours <= 0) { bClass = 'bg-slate-800 text-white'; bText = '⚓ YANAŞTI'; }
+        else if (diffHours <= 6) { bClass = 'bg-red-100 text-red-700 animate-pulse'; bText = '🔴 6 SAAT KALA'; }
+        else if (diffHours <= 12) { bClass = 'bg-orange-100 text-orange-700'; bText = '🟠 12 SAAT KALA'; }
+        
+        const updateText = ship.lastUpdated ? `GÜNCELLENME: ${ship.lastUpdated}` : 'GÜNCELLEME YOK';
 
         tbody.innerHTML += `
-          <tr class="border-b hover:bg-slate-50">
-            <td class="p-3 font-bold">${ship.name}<br><span class="text-[10px] text-gray-500">IMO: ${ship.imo || '-'}</span></td>
+          <tr class="border-b hover:bg-slate-50 transition-colors">
+            <td class="p-3 font-bold">${ship.name}<br><span class="text-[10px] text-gray-500">IMO: ${ship.imo || '-'} | SF: ${ship.voyage || '-'}</span></td>
             <td class="p-3 text-xs">${ship.originPort} > ${ship.destinationPort}<br><span class="text-amber-600 font-bold">${ship.note || ''}</span></td>
-            <td class="p-3 text-xs font-medium">${new Date(ship.eta).toLocaleString('tr-TR')}</td>
+            <td class="p-3 text-xs font-medium">
+                ${new Date(ship.eta).toLocaleString('tr-TR')}
+                <div class="text-[9px] text-blue-600 font-bold mt-1 bg-blue-50 px-1 py-0.5 rounded border border-blue-200 inline-block"><i class="fa-solid fa-clock-rotate-left"></i> ${updateText}</div>
+            </td>
             <td class="p-3 text-xs font-bold"><span class="px-2 py-1 rounded ${bClass}">${bText}</span></td>
-            <td class="p-3 text-right">
-              ${ship.status !== 'COMPLETED' ? `<button onclick="completeShip('${ship.firestoreId}')" class="text-emerald-600 bg-emerald-50 p-2 rounded-lg border border-emerald-200 shadow-sm"><i class="fa-solid fa-check"></i></button>` : ''}
-              <button onclick="deleteShip('${ship.firestoreId}')" class="text-red-600 bg-red-50 p-2 rounded-lg border border-red-200 shadow-sm"><i class="fa-solid fa-trash"></i></button>
+            <td class="p-3 text-right whitespace-nowrap">
+              ${ship.status !== 'COMPLETED' ? `
+                <button onclick="openEditModal('${ship.firestoreId}')" class="text-amber-600 bg-amber-50 p-2 rounded-lg border border-amber-200 shadow-sm cursor-pointer hover:bg-amber-100"><i class="fa-solid fa-pen"></i></button>
+                <button onclick="completeShip('${ship.firestoreId}')" class="text-emerald-600 bg-emerald-50 p-2 rounded-lg border border-emerald-200 shadow-sm cursor-pointer hover:bg-emerald-100"><i class="fa-solid fa-check"></i></button>
+              ` : ''}
+              <button onclick="deleteShip('${ship.firestoreId}')" class="text-red-600 bg-red-50 p-2 rounded-lg border border-red-200 shadow-sm cursor-pointer hover:bg-red-100"><i class="fa-solid fa-trash"></i></button>
             </td>
           </tr>`;
       });
@@ -320,13 +341,11 @@
       document.getElementById('stat-arrived').innerText = arr;
     }
 
-    // YENİ AKILLI TARİH ÇÖZÜCÜ
     function parseCustomDate(dateStr) {
         if (!dateStr) return null;
         let str = dateStr.toString().trim();
         let parts = str.split(/[\sT]+/); 
-        let datePart = parts[0];
-        let timePart = parts[1] || "00:00";
+        let datePart = parts[0], timePart = parts[1] || "00:00";
         let dParts = datePart.split(/[\.\/\-]/);
         if (dParts.length === 3) {
             let p1 = parseInt(dParts[0]), p2 = parseInt(dParts[1]), p3 = parseInt(dParts[2]);
@@ -336,56 +355,46 @@
             let tParts = timePart.split(":");
             return new Date(year, month, day, parseInt(tParts[0]) || 0, parseInt(tParts[1]) || 0);
         }
-        let d = new Date(str);
-        return isNaN(d.getTime()) ? null : d;
+        let d = new Date(str); return isNaN(d.getTime()) ? null : d;
     }
 
-    // KUSURSUZ EXCEL YÜKLEME VE ETB/ETA OKUMA
+    // MANUEL EXCEL İŞLEME - SHUTTLE (YENİ SEFER) MANTIĞI EKLENDİ
     function handleDailyExcel(event) {
         const file = event.target.files[0];
         if (!file) return;
 
         const btnLabel = document.getElementById('excel-label-text');
-        btnLabel.innerText = "⏳ EXCEL OKUNUYOR...";
+        btnLabel.innerText = "⏳ EXCEL İŞLENİYOR...";
 
         const reader = new FileReader();
         reader.onload = async function(e) {
             try {
                 const data = new Uint8Array(e.target.result);
                 const workbook = XLSX.read(data, {type: 'array'});
-                
                 const currentMonthNames = ["OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN", "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"];
                 const currMonth = currentMonthNames[new Date().getMonth()];
                 const altMonth = currMonth.replace(/Ğ/g, 'G').replace(/Ü/g, 'U').replace(/Ş/g, 'S').replace(/İ/g, 'I').replace(/Ö/g, 'O').replace(/Ç/g, 'C');
-                
                 let targetSheet = workbook.SheetNames.find(s => s.toUpperCase().includes(currMonth) || s.toUpperCase().includes(altMonth)) || workbook.SheetNames[0];
-                
                 const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[targetSheet], {header: 1, raw: false, defval: ""});
 
                 let nameIdx = -1, etaIdx = -1, etbIdx = -1, startRow = -1;
 
-                // RADAR: İlk 20 satırı tarayıp tablonun gerçek başlıklarını bul
                 for (let i = 0; i < Math.min(aoa.length, 20); i++) {
                     const row = aoa[i];
                     if (!row || row.length === 0) continue;
-                    
                     for (let j = 0; j < row.length; j++) {
                         let val = (row[j] || '').toString().toUpperCase().trim();
-                        if (val.includes('GEMİ ADI') || val.includes('GEMI ADI') || val.includes('VESSEL')) nameIdx = j;
+                        if (val.includes('GEMİ ADI') || val.includes('VESSEL')) nameIdx = j;
                         if (val === 'ETA' || val.includes('TAHMİNİ VARIŞ') || val.includes('VARIS')) etaIdx = j;
                         if (val === 'ETB' || val.includes('TAHMİNİ YANAŞMA') || val.includes('YANASMA')) etbIdx = j;
                     }
-                    if (nameIdx !== -1 && etaIdx !== -1) {
-                        startRow = i + 1; 
-                        break;
-                    }
+                    if (nameIdx !== -1 && etaIdx !== -1) { startRow = i + 1; break; }
                 }
 
                 if (startRow === -1) throw new Error("Excel'de 'GEMİ ADI' ve 'ETA' sütunları bulunamadı!");
 
                 let futureRuns = {};
-                const rightNow = new Date();
-                rightNow.setHours(0,0,0,0); 
+                const rightNow = new Date(); rightNow.setHours(0,0,0,0); 
 
                 for (let i = startRow; i < aoa.length; i++) {
                     const row = aoa[i];
@@ -394,81 +403,73 @@
                     const excelName = row[nameIdx].toString().trim().toUpperCase();
                     const rawEta = row[etaIdx] ? row[etaIdx].toString().trim() : '';
                     const rawEtb = (etbIdx !== -1 && row[etbIdx]) ? row[etbIdx].toString().trim() : '';
-                    
                     if (!excelName || !rawEta) continue;
 
                     const etaDateObj = parseCustomDate(rawEta);
                     const etbDateObj = parseCustomDate(rawEtb);
-                    
-                    // ETB geçerli bir tarihse hedef olarak onu al, yoksa ETA'yı al
-                    let targetDateObj = null;
-                    if (etbDateObj && !isNaN(etbDateObj.getTime())) {
-                        targetDateObj = etbDateObj;
-                    } else if (etaDateObj && !isNaN(etaDateObj.getTime())) {
-                        targetDateObj = etaDateObj;
-                    }
+                    let targetDateObj = (etbDateObj && !isNaN(etbDateObj.getTime())) ? etbDateObj : etaDateObj;
 
                     if (targetDateObj && targetDateObj >= rightNow) {
                         if (!futureRuns[excelName]) futureRuns[excelName] = [];
-                        futureRuns[excelName].push({ 
-                            name: excelName, 
-                            targetDateObj: targetDateObj, 
-                            etbStr: rawEtb,
-                            etaStr: rawEta
-                        });
+                        futureRuns[excelName].push({ name: excelName, targetDateObj: targetDateObj, etbStr: rawEtb, etaStr: rawEta });
                     }
                 }
 
                 let updatedCount = 0;
+                let newCount = 0;
+                
+                let activeShips = ships.filter(s => s.status !== 'COMPLETED');
+                let archiveShips = ships.filter(s => s.status === 'COMPLETED');
 
                 for (const [shipName, runs] of Object.entries(futureRuns)) {
                     runs.sort((a, b) => a.targetDateObj - b.targetDateObj); 
                     const closestRun = runs[0]; 
-
-                    const matchedShip = ships.find(s => (s.name || '').toUpperCase() === shipName);
                     
-                    if (matchedShip) {
-                        // Eğer etb okuduysa not kısmına belirt, okumadıysa ETA belirt
-                        let noteStr = closestRun.etbStr ? `ETB BAZ ALINDI (${closestRun.etbStr})` : 'ETA BAZ ALINDI';
-                        
-                        await db.collection('ships').doc(matchedShip.firestoreId).update({
+                    const activeMatch = activeShips.find(s => (s.name || '').toUpperCase() === shipName);
+                    let noteStr = closestRun.etbStr ? `ETB BAZ ALINDI (${closestRun.etbStr})` : 'ETA BAZ ALINDI';
+
+                    if (activeMatch) {
+                        // Eğer AKTİF sekmesinde gemi varsa onu GÜNCELLE
+                        await db.collection('ships').doc(activeMatch.firestoreId).update({
                             eta: closestRun.targetDateObj.toISOString().slice(0,16), 
                             note: noteStr,
-                            emailSent12h: false, // 12 ve 6 saat mailleri için sıfırlama
-                            emailSent6h: false, 
-                            emailSentArrived: false
+                            emailSent12h: false, emailSent6h: false, emailSentArrived: false,
+                            lastUpdated: getTrDateStr()
                         });
                         updatedCount++;
+                    } else {
+                        // Eğer aktifte yoksa ARŞİVE bak, eski verilerini alıp YENİ KAYIT oluştur
+                        const archiveMatch = archiveShips.find(s => (s.name || '').toUpperCase() === shipName);
+                        
+                        let newShipData = {
+                            userId: currentUser.uid,
+                            name: shipName,
+                            status: 'PENDING',
+                            eta: closestRun.targetDateObj.toISOString().slice(0,16),
+                            note: noteStr + ' [YENİ SEFER]',
+                            emailSent12h: false, emailSent6h: false, emailSentArrived: false,
+                            lastUpdated: getTrDateStr(),
+                            createdAt: new Date().toISOString(),
+                            imo: archiveMatch ? archiveMatch.imo : 'BELİRTİLMEDİ',
+                            voyage: archiveMatch ? archiveMatch.voyage : 'YENİ',
+                            originPort: archiveMatch ? archiveMatch.originPort : '-',
+                            destinationPort: archiveMatch ? archiveMatch.destinationPort : 'ALİAĞA SOCAR',
+                            email: archiveMatch ? archiveMatch.email : currentUser.email.toLowerCase(),
+                            declarations: archiveMatch ? archiveMatch.declarations : 0
+                        };
+                        await db.collection('ships').add(newShipData);
+                        newCount++;
                     }
                 }
-                alert(`✅ İŞLEM BAŞARILI!\n📄 Okunan Sayfa: ${targetSheet}\n🚢 Güncellenen Gemi: ${updatedCount}`);
-            } catch (err) {
-                console.error("HATA:", err);
-                alert("❌ Yükleme Hatası: " + err.message);
-            }
+                alert(`✅ İŞLEM BAŞARILI!\n📄 Okunan Sayfa: ${targetSheet}\n🔄 Güncellenen Aktif Gemi: ${updatedCount}\n➕ Açılan Yeni Sefer: ${newCount}`);
+                setTab('ACTIVE');
+            } catch (err) { alert("❌ Yükleme Hatası: " + err.message); }
             
-            btnLabel.innerText = "📁 ETA EXCEL YÜKLE (.XLSM)";
+            btnLabel.innerHTML = '<i class="fa-solid fa-file-excel"></i> MANUEL EXCEL YÜKLE (.XLSM)';
             event.target.value = ''; 
         };
         reader.readAsArrayBuffer(file);
     }
-
-    document.getElementById('btn-toplu-yukle').addEventListener('click', async function() {
-        const btn = this;
-        btn.disabled = true; btn.innerText = "⏳ Yükleniyor...";
-        const fleet = [ { name: "MED AYDIN", imo: "9148025" }, { name: "MED CERKEZKOY", imo: "9147215" }, { name: "MED CORLU", imo: "9106479" }, { name: "MED DENIZLI", imo: "9106493" }, { name: "MED SAMSUN", imo: "9225794" }, { name: "MED TEKIRDAG", imo: "9265598" }, { name: "MED TRABZON", imo: "9141780" }, { name: "MED URLA", imo: "9160920" }, { name: "B.BAYRAKTAR", imo: "9260536" }, { name: "MED MERSİN", imo: "9135638" }, { name: "MED BEYKOZ", imo: "9064748" }, { name: "MED İZMİR", imo: "9143879" }, { name: "MED ANTALYA", imo: "9359714" }, { name: "MED ÇEŞME", imo: "9256365" } ];
-        try {
-            for (const ship of fleet) {
-                await db.collection('ships').add({
-                    name: ship.name, imo: ship.imo, status: 'PENDING', eta: "2026-08-30T12:00",
-                    email: "mscgemitakip@gmail.com", emailSentNew: true, emailSent12h: false, emailSent6h: false, emailSentArrived: false,
-                    voyage: "Toplu", originPort: "-", destinationPort: "İZMİR ALSANCAK", declarations: 0, note: "Sisteme Eklendi", userId: currentUser.uid
-                });
-            }
-            alert("✅ 14 GEMİ YÜKLENDİ!");
-            btn.innerText = "✅ YÜKLENDİ";
-        } catch (error) { alert("Hata: " + error.message); btn.innerText = "TEKRAR DENE"; btn.disabled = false; }
-    });
   </script>
 </body>
 </html>
