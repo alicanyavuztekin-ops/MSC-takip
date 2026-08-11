@@ -114,7 +114,7 @@
         </div>
         <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
           <div>
-            <p class="text-xs font-bold text-slate-400 uppercase">Kritik (10s / 5s)</p>
+            <p class="text-xs font-bold text-slate-400 uppercase">Kritik (12s / 6s)</p>
             <h4 id="stat-critical" class="text-xl font-bold text-orange-600">0</h4>
           </div>
           <div class="bg-orange-50 text-orange-600 p-3 rounded-lg"><i class="fa-solid fa-triangle-exclamation"></i></div>
@@ -149,7 +149,7 @@
             </select>
           </div>
           <div><label class="block text-xs font-bold text-slate-600 mb-1">MAİL</label><input type="email" id="notificationEmail" required class="w-full text-sm p-2.5 border rounded-lg"></div>
-          <div><label class="block text-xs font-bold text-slate-600 mb-1">ETA</label><input type="datetime-local" id="eta" required class="w-full text-sm p-2.5 border rounded-lg"></div>
+          <div><label class="block text-xs font-bold text-slate-600 mb-1">HEDEF ZAMAN (ETA/ETB)</label><input type="datetime-local" id="eta" required class="w-full text-sm p-2.5 border rounded-lg"></div>
           <div><label class="block text-xs font-bold text-slate-600 mb-1">BEYANNAME</label><input type="number" id="declarations" min="1" required class="w-full text-sm p-2.5 border rounded-lg"></div>
           <div><label class="block text-xs font-bold text-slate-600 mb-1">EK NOT</label><input type="text" id="shipNote" class="w-full text-sm p-2.5 border rounded-lg uppercase"></div>
           <div class="flex items-end"><button type="submit" class="w-full bg-[#FFCC00] text-[#002855] font-bold p-2.5 rounded-lg flex justify-center items-center gap-2"><i class="fa-solid fa-check-circle"></i> EKLE</button></div>
@@ -171,7 +171,7 @@
               <tr class="bg-slate-100 text-slate-600 text-[11px] font-bold uppercase border-b">
                 <th class="p-3">GEMİ / IMO</th>
                 <th class="p-3">GÜZERGAH / NOT</th>
-                <th class="p-3">ETA (VARIŞ)</th>
+                <th class="p-3">HEDEF (ETA/ETB)</th>
                 <th class="p-3">KALAN SÜRE</th>
                 <th class="p-3 text-right">İŞLEMLER</th>
               </tr>
@@ -190,7 +190,7 @@
         <form id="edit-form" onsubmit="saveEdit(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <input type="hidden" id="edit-id">
           <div class="sm:col-span-2"><label class="block text-xs font-bold text-slate-600 mb-1">GEMİ ADI</label><input type="text" id="edit-shipName" required class="w-full text-sm p-2.5 border rounded-lg uppercase"></div>
-          <div><label class="block text-xs font-bold text-slate-600 mb-1">ETA</label><input type="datetime-local" id="edit-eta" required class="w-full text-sm p-2.5 border rounded-lg"></div>
+          <div><label class="block text-xs font-bold text-slate-600 mb-1">HEDEF ZAMAN</label><input type="datetime-local" id="edit-eta" required class="w-full text-sm p-2.5 border rounded-lg"></div>
           <div><label class="block text-xs font-bold text-slate-600 mb-1">NOT</label><input type="text" id="edit-note" class="w-full text-sm p-2.5 border rounded-lg uppercase"></div>
           <div class="sm:col-span-2"><button type="submit" class="w-full bg-[#FFCC00] font-bold p-3 rounded-lg text-sm">KAYDET</button></div>
         </form>
@@ -257,13 +257,28 @@
             eta: eta, declarations: parseInt(document.getElementById('declarations').value),
             note: document.getElementById('shipNote').value.trim().toUpperCase(),
             email: document.getElementById('notificationEmail').value.trim().toLowerCase(),
-            status: 'PENDING', emailSentNew: false, emailSent10h: false, emailSent5h: false, emailSentArrived: false,
+            status: 'PENDING', emailSentNew: false, 
+            emailSent12h: false, emailSent6h: false, emailSentArrived: false, // YENİ: 12 VE 6 SAAT KONTROLLERİ
             createdAt: new Date().toISOString()
         };
         db.collection('ships').add(newShipData).then(() => {
             document.getElementById('ship-form').reset();
             alert("✅ Kayıt başarıyla eklendi!");
         });
+    }
+
+    function saveEdit(e) {
+      e.preventDefault();
+      const id = document.getElementById('edit-id').value;
+      db.collection('ships').doc(id).update({
+        name: document.getElementById('edit-shipName').value.trim().toUpperCase(),
+        eta: document.getElementById('edit-eta').value,
+        note: document.getElementById('edit-note').value.trim().toUpperCase(),
+        status: 'PENDING',
+        emailSent12h: false, emailSent6h: false, emailSentArrived: false // YENİ: 12 VE 6 SAAT KONTROLLERİ
+      }).then(() => {
+          document.getElementById('editModal').classList.add('hidden');
+      });
     }
 
     function deleteShip(id) { if(confirm("Silmek istediğinize emin misiniz?")) db.collection('ships').doc(id).delete(); }
@@ -282,8 +297,9 @@
         let bClass = 'bg-emerald-100 text-emerald-700', bText = '🟢 NORMAL';
         
         if (ship.status === 'COMPLETED') { bClass = 'bg-slate-100 text-slate-600'; bText = 'TAMAMLANDI'; }
-        else if (diffHours <= 0) { bClass = 'bg-slate-800 text-white'; bText = '⚓ LİMANA VARDI'; arr++; }
-        else if (diffHours <= 10) { bClass = 'bg-orange-100 text-orange-700'; bText = '🟠 KRİTİK'; crit++; }
+        else if (diffHours <= 0) { bClass = 'bg-slate-800 text-white'; bText = '⚓ LİMANA YANAŞTI'; arr++; }
+        else if (diffHours <= 6) { bClass = 'bg-red-100 text-red-700 animate-pulse'; bText = '🔴 6 SAAT KALA'; crit++; }
+        else if (diffHours <= 12) { bClass = 'bg-orange-100 text-orange-700'; bText = '🟠 12 SAAT KALA'; crit++; }
         else { nrm++; }
 
         tbody.innerHTML += `
@@ -324,7 +340,7 @@
         return isNaN(d.getTime()) ? null : d;
     }
 
-    // KUSURSUZ EXCEL YÜKLEME VE OKUMA
+    // KUSURSUZ EXCEL YÜKLEME VE ETB/ETA OKUMA
     function handleDailyExcel(event) {
         const file = event.target.files[0];
         if (!file) return;
@@ -344,7 +360,6 @@
                 
                 let targetSheet = workbook.SheetNames.find(s => s.toUpperCase().includes(currMonth) || s.toUpperCase().includes(altMonth)) || workbook.SheetNames[0];
                 
-                // Tabloyu bulmak için düz dizi olarak çekiyoruz
                 const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[targetSheet], {header: 1, raw: false, defval: ""});
 
                 let nameIdx = -1, etaIdx = -1, etbIdx = -1, startRow = -1;
@@ -361,7 +376,7 @@
                         if (val === 'ETB' || val.includes('TAHMİNİ YANAŞMA') || val.includes('YANASMA')) etbIdx = j;
                     }
                     if (nameIdx !== -1 && etaIdx !== -1) {
-                        startRow = i + 1; // Veriler bu başlıktan hemen sonraki satırda başlar
+                        startRow = i + 1; 
                         break;
                     }
                 }
@@ -370,7 +385,7 @@
 
                 let futureRuns = {};
                 const rightNow = new Date();
-                rightNow.setHours(0,0,0,0); // Gece 00:00 baz alınır (Bugün ve sonrası)
+                rightNow.setHours(0,0,0,0); 
 
                 for (let i = startRow; i < aoa.length; i++) {
                     const row = aoa[i];
@@ -383,29 +398,45 @@
                     if (!excelName || !rawEta) continue;
 
                     const etaDateObj = parseCustomDate(rawEta);
+                    const etbDateObj = parseCustomDate(rawEtb);
                     
-                    // Geçmiş Kırmızı Tarihleri Eleme Filtresi
-                    if (etaDateObj && etaDateObj >= rightNow) {
+                    // ETB geçerli bir tarihse hedef olarak onu al, yoksa ETA'yı al
+                    let targetDateObj = null;
+                    if (etbDateObj && !isNaN(etbDateObj.getTime())) {
+                        targetDateObj = etbDateObj;
+                    } else if (etaDateObj && !isNaN(etaDateObj.getTime())) {
+                        targetDateObj = etaDateObj;
+                    }
+
+                    if (targetDateObj && targetDateObj >= rightNow) {
                         if (!futureRuns[excelName]) futureRuns[excelName] = [];
-                        futureRuns[excelName].push({ name: excelName, etaStr: rawEta, dateObj: etaDateObj, etbStr: rawEtb });
+                        futureRuns[excelName].push({ 
+                            name: excelName, 
+                            targetDateObj: targetDateObj, 
+                            etbStr: rawEtb,
+                            etaStr: rawEta
+                        });
                     }
                 }
 
                 let updatedCount = 0;
 
-                // Shuttle (Aynı geminin birden çok seferi) kontrolü ve Güncelleme
                 for (const [shipName, runs] of Object.entries(futureRuns)) {
-                    runs.sort((a, b) => a.dateObj - b.dateObj); // En yakın tarihi en başa al
+                    runs.sort((a, b) => a.targetDateObj - b.targetDateObj); 
                     const closestRun = runs[0]; 
 
                     const matchedShip = ships.find(s => (s.name || '').toUpperCase() === shipName);
                     
                     if (matchedShip) {
-                        let noteStr = closestRun.etbStr ? `ETB: ${closestRun.etbStr}` : 'EXCEL GÜNCEL';
+                        // Eğer etb okuduysa not kısmına belirt, okumadıysa ETA belirt
+                        let noteStr = closestRun.etbStr ? `ETB BAZ ALINDI (${closestRun.etbStr})` : 'ETA BAZ ALINDI';
+                        
                         await db.collection('ships').doc(matchedShip.firestoreId).update({
-                            eta: closestRun.dateObj.toISOString().slice(0,16), 
+                            eta: closestRun.targetDateObj.toISOString().slice(0,16), 
                             note: noteStr,
-                            emailSent10h: false, emailSent5h: false, emailSentArrived: false
+                            emailSent12h: false, // 12 ve 6 saat mailleri için sıfırlama
+                            emailSent6h: false, 
+                            emailSentArrived: false
                         });
                         updatedCount++;
                     }
@@ -422,7 +453,6 @@
         reader.readAsArrayBuffer(file);
     }
 
-    // Toplu Yükleme Butonu
     document.getElementById('btn-toplu-yukle').addEventListener('click', async function() {
         const btn = this;
         btn.disabled = true; btn.innerText = "⏳ Yükleniyor...";
@@ -431,7 +461,7 @@
             for (const ship of fleet) {
                 await db.collection('ships').add({
                     name: ship.name, imo: ship.imo, status: 'PENDING', eta: "2026-08-30T12:00",
-                    email: "mscgemitakip@gmail.com", emailSentNew: true, emailSent10h: false, emailSent5h: false, emailSentArrived: false,
+                    email: "mscgemitakip@gmail.com", emailSentNew: true, emailSent12h: false, emailSent6h: false, emailSentArrived: false,
                     voyage: "Toplu", originPort: "-", destinationPort: "İZMİR ALSANCAK", declarations: 0, note: "Sisteme Eklendi", userId: currentUser.uid
                 });
             }
