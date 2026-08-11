@@ -1,12 +1,12 @@
-name: Tam Otonom ETA Botu ve Alarm Sistemi
+name: Tam Otonom ETA Botu (Sadece Excel)
 
 on:
   schedule:
-    - cron: '*/30 * * * *' 
+    - cron: '*/15 * * * *' 
   workflow_dispatch:
 
 jobs:
-  operasyon-botu:
+  excel-botu:
     runs-on: ubuntu-latest
     steps:
       - name: Python Kurulumu
@@ -25,51 +25,20 @@ jobs:
           PANEL_SIFRE: ${{ secrets.PANEL_SIFRE }}
         run: |
           cat << 'EOF' > bot.py
-          import os, sys, datetime, imaplib, email, requests, smtplib
+          import os, sys, datetime, imaplib, email, requests
           import pandas as pd
-          from email.mime.text import MIMEText
-          from email.mime.multipart import MIMEMultipart
 
           BOT_EMAIL = os.environ.get('BOT_EMAIL')
           BOT_PASSWORD = os.environ.get('BOT_PASSWORD')
           PANEL_EMAIL = os.environ.get('PANEL_EMAIL')
           PANEL_SIFRE = os.environ.get('PANEL_SIFRE')
 
-          def send_alert_email(to_addr, ship_name, status_msg, eta_str, note_str):
-              if not to_addr: return
-              subject = f"MSC OPERASYON: {ship_name} - {status_msg}"
-              body = f"""
-              <html><body style="font-family: Arial, sans-serif; color: #333;">
-              <h2 style='color:#002855; border-bottom: 2px solid #FFCC00; padding-bottom: 5px;'>LİMAN OPERASYON UYARISI</h2>
-              <p><b>Gemi Adı:</b> <span style="font-size: 16px;">{ship_name}</span></p>
-              <p><b>Durum:</b> <span style='color:red; font-size: 18px; font-weight: bold;'>{status_msg}</span></p>
-              <p><b>Hedef Zaman (ETA/ETB):</b> {eta_str}</p>
-              <p><b>Ek Not:</b> {note_str}</p>
-              <br><hr style="border: 1px solid #eee;">
-              <p><small style="color: #888;">Bu uyarı maili otomatik gonderilmistir.</small></p>
-              </body></html>
-              """
-              try:
-                  msg = MIMEMultipart()
-                  msg['From'] = BOT_EMAIL
-                  msg['To'] = to_addr
-                  msg['Subject'] = subject
-                  msg.attach(MIMEText(body, 'html'))
-                  server = smtplib.SMTP('smtp.gmail.com', 587)
-                  server.starttls()
-                  server.login(BOT_EMAIL, BOT_PASSWORD)
-                  server.send_message(msg)
-                  server.quit()
-              except Exception as e:
-                  print(f"Mail gonderme hatasi: {e}")
-
+          # Veritabanina Baglan
           API_KEY = 'AIzaSyAKAF1Tm0Ahy5kT3OW6Slc0sjTbiFvaifg'
           auth_url = f'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={API_KEY}'
           r_auth = requests.post(auth_url, json={'email': PANEL_EMAIL, 'password': PANEL_SIFRE, 'returnSecureToken': True}).json()
           
-          if 'idToken' not in r_auth:
-              print('Kimlik Hatasi:', r_auth)
-              sys.exit(1)
+          if 'idToken' not in r_auth: sys.exit(1)
 
           id_token = r_auth['idToken']
           local_id = r_auth['localId']
@@ -100,53 +69,9 @@ jobs:
           now_tr = datetime.datetime.utcnow() + datetime.timedelta(hours=3)
           now_tr_str = now_tr.strftime('%d.%m.%Y %H:%M')
 
-          # === GÖREV 1: ALARMLARI AT ===
-          for s in ships:
-              fields = s['fields']
-              status = fields.get('status', {}).get('stringValue', '')
-              if status == 'COMPLETED': continue 
-              
-              eta_str = fields.get('eta', {}).get('stringValue', '')
-              if not eta_str: continue
-              
-              try: ship_eta = datetime.datetime.strptime(eta_str, '%Y-%m-%dT%H:%M')
-              except: continue
-                  
-              diff_hours = (ship_eta - now_tr).total_seconds() / 3600
-              
-              s_name = fields.get('name', {}).get('stringValue', '')
-              s_email = fields.get('email', {}).get('stringValue', '')
-              s_note = fields.get('note', {}).get('stringValue', '')
-              
-              sent12 = fields.get('emailSent12h', {}).get('booleanValue', False)
-              sent6 = fields.get('emailSent6h', {}).get('booleanValue', False)
-              sentArr = fields.get('emailSentArrived', {}).get('booleanValue', False)
-              
-              update_flags = {}
-              alert_msg = ""
-              
-              if diff_hours <= 0 and not sentArr:
-                  alert_msg = "LİMANA YANAŞTI (0 SAAT)"
-                  update_flags = {'emailSentArrived': True, 'emailSent6h': True, 'emailSent12h': True}
-              elif 0 < diff_hours <= 6 and not sent6:
-                  alert_msg = "6 SAAT KALDI (KRİTİK UYARI)"
-                  update_flags = {'emailSent6h': True, 'emailSent12h': True}
-              elif 6 < diff_hours <= 12 and not sent12:
-                  alert_msg = "12 SAAT KALDI (YAKLAŞIYOR)"
-                  update_flags = {'emailSent12h': True}
-                  
-              if alert_msg:
-                  send_alert_email(s_email, s_name, alert_msg, ship_eta.strftime('%d.%m.%Y %H:%M'), s_note)
-                  upd_url = f'https://firestore.googleapis.com/v1/projects/msc-takip/databases/(default)/documents/ships/{s["id"]}?'
-                  paths = [f'updateMask.fieldPaths={k}' for k in update_flags.keys()]
-                  upd_url += '&'.join(paths)
-                  f_upd = {k: {'booleanValue': v} for k, v in update_flags.items()}
-                  requests.patch(upd_url, json={'fields': f_upd}, headers=headers)
-
-          # === GÖREV 2: EXCEL BOTU (YENİ SEFER MANTIĞI) ===
           active_ships = {s['fields'].get('name', {}).get('stringValue', '').upper(): s for s in ships if s['fields'].get('status', {}).get('stringValue', '') != 'COMPLETED'}
-          archive_ships = {s['fields'].get('name', {}).get('stringValue', '').upper(): s for s in ships if s['fields'].get('status', {}).get('stringValue', '') == 'COMPLETED'}
 
+          # Excel Okuma Islemi
           try:
               mail = imaplib.IMAP4_SSL('imap.gmail.com')
               mail.login(BOT_EMAIL, BOT_PASSWORD)
@@ -221,32 +146,16 @@ jobs:
                           for s_name_ex, runs in future_runs.items():
                               runs.sort(key=lambda x: x['target_date'])
                               closest = runs[0]
-                              note_str = f'ETB BAZ ALINDI ({closest["etb_str"]})' if closest['etb_str'] else 'ETA BAZ ALINDI (BOT)'
-                              new_eta_str = closest['target_date'].strftime('%Y-%m-%dT%H:%M')
-
+                              
+                              # SADECE AKTIF LISTEDE VARSA GUNCELLE.
                               if s_name_ex in active_ships:
-                                  # Aktif gemiyi guncelle
+                                  note_str = f'ETB BAZ ALINDI ({closest["etb_str"]})' if closest['etb_str'] else 'ETA BAZ ALINDI (BOT)'
+                                  new_eta_str = closest['target_date'].strftime('%Y-%m-%dT%H:%M')
+                                  
                                   matched_id = active_ships[s_name_ex]['id']
                                   upd_url = f'https://firestore.googleapis.com/v1/projects/msc-takip/databases/(default)/documents/ships/{matched_id}?updateMask.fieldPaths=eta&updateMask.fieldPaths=note&updateMask.fieldPaths=emailSent12h&updateMask.fieldPaths=emailSent6h&updateMask.fieldPaths=emailSentArrived&updateMask.fieldPaths=lastUpdated'
                                   requests.patch(upd_url, json={'fields': {'eta': {'stringValue': new_eta_str}, 'note': {'stringValue': note_str}, 'lastUpdated': {'stringValue': f"{now_tr_str} (BOT)"}, 'emailSent12h': {'booleanValue': False}, 'emailSent6h': {'booleanValue': False}, 'emailSentArrived': {'booleanValue': False}}}, headers=headers)
-                              else:
-                                  # Aktifte yoksa arsivden alip Yeni Kayit olustur
-                                  archive_match = archive_ships.get(s_name_ex, {}).get('fields', {})
-                                  new_ship = {
-                                      'fields': {
-                                          'userId': {'stringValue': local_id}, 'name': {'stringValue': s_name_ex}, 'status': {'stringValue': 'PENDING'},
-                                          'eta': {'stringValue': new_eta_str}, 'note': {'stringValue': note_str + ' [YENİ SEFER (BOT)]'},
-                                          'emailSent12h': {'booleanValue': False}, 'emailSent6h': {'booleanValue': False}, 'emailSentArrived': {'booleanValue': False},
-                                          'lastUpdated': {'stringValue': f"{now_tr_str} (BOT)"}, 'createdAt': {'stringValue': now_tr.isoformat()},
-                                          'imo': archive_match.get('imo', {'stringValue': 'BELİRTİLMEDİ'}),
-                                          'voyage': archive_match.get('voyage', {'stringValue': 'YENİ'}),
-                                          'originPort': archive_match.get('originPort', {'stringValue': '-'}),
-                                          'destinationPort': archive_match.get('destinationPort', {'stringValue': 'ALİAĞA SOCAR'}),
-                                          'email': archive_match.get('email', {'stringValue': PANEL_EMAIL}),
-                                          'declarations': archive_match.get('declarations', {'integerValue': 0})
-                                      }
-                                  }
-                                  requests.post(db_url, json=new_ship, headers=headers)
+                                  
                       except Exception as e: print(e)
           mail.logout()
           EOF
