@@ -6,18 +6,18 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="MSC Takip">
-  <link rel="apple-touch-icon" href="[https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/MSC_crociere_logo.svg/1024px-MSC_crociere_logo.svg.png](https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/MSC_crociere_logo.svg/1024px-MSC_crociere_logo.svg.png)">
+  <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/MSC_crociere_logo.svg/1024px-MSC_crociere_logo.svg.png">
 
   <title>MSC & MEDLOG Gemi ve Operasyon Paneli</title>
   
-  <script src="[https://cdn.tailwindcss.com](https://cdn.tailwindcss.com)"></script>
-  <link rel="stylesheet" href="[https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css](https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css)">
-  <link href="[https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap](https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap)" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-  <script src="[https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js](https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js)"></script>
-  <script src="[https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js](https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js)"></script>
-  <script src="[https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js](https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js)"></script>
-  <script src="[https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js](https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js)"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 
   <style>
     body { font-family: 'Inter', sans-serif; }
@@ -197,12 +197,13 @@
       </div>
   </div>
 
-  <div style="text-align: center; margin: 30px 0; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
-    <button type="button" id="btn-toplu-yukle" style="background-color: #28a745; color: white; padding: 15px 25px; font-size: 16px; font-bold; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🚀 14 GEMİYİ YÜKLE</button>
-    <label style="background-color: #002855; color: #FFCC00; padding: 15px 25px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-        📁 ETA EXCEL'İ YÜKLE
-        <input type="file" id="excel-file-input" accept=".xlsx, .xls, .xlsm" style="display: none;" onchange="handleDailyExcel(event)">
+  <div id="action-buttons-container" class="hidden text-center my-8 flex justify-center gap-4 flex-wrap">
+    <button type="button" id="btn-toplu-yukle" style="background-color: #28a745; color: white; padding: 15px 25px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">🚀 14 GEMİYİ YÜKLE</button>
+    
+    <label for="excel-file-input" style="background-color: #002855; color: #FFCC00; padding: 15px 25px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-flex; align-items: center; gap: 8px;">
+        <span id="excel-label-text">📁 ETA EXCEL YÜKLE (.XLSM)</span>
     </label>
+    <input type="file" id="excel-file-input" accept=".xlsx, .xls, .xlsm, .csv" style="display: none;" onchange="handleDailyExcel(event)">
   </div>
 
   <script>
@@ -221,6 +222,8 @@
       if (user) {
         document.getElementById('auth-container').classList.add('hidden');
         document.getElementById('app-container').classList.remove('hidden');
+        document.getElementById('action-buttons-container').classList.remove('hidden');
+        document.getElementById('action-buttons-container').style.display = 'flex';
         document.getElementById('user-display-email').innerText = user.email;
         if(unsubscribeFirestore) unsubscribeFirestore();
         unsubscribeFirestore = db.collection('ships').where('userId', '==', currentUser.uid).onSnapshot(snap => {
@@ -228,6 +231,7 @@
         });
       } else {
         document.getElementById('app-container').classList.add('hidden');
+        document.getElementById('action-buttons-container').classList.add('hidden');
         document.getElementById('auth-container').classList.remove('hidden');
       }
     });
@@ -238,10 +242,31 @@
     }
 
     function handleLogin(e) { e.preventDefault(); auth.signInWithEmailAndPassword(document.getElementById('login-email').value, document.getElementById('login-password').value); }
-    function handleLogout() { if(confirm("Çıkış?")) auth.signOut(); }
+    function handleLogout() { if(confirm("Çıkış yapmak istediğinize emin misiniz?")) auth.signOut(); }
 
-    function addShip(e) { e.preventDefault(); /* Eski kodun aynısı... */ }
-    function deleteShip(id) { if(confirm("Sil?")) db.collection('ships').doc(id).delete(); }
+    function addShip(e) { 
+        e.preventDefault(); 
+        const name = document.getElementById('shipName').value.trim().toUpperCase();
+        const eta = document.getElementById('eta').value;
+        const newShipData = {
+            userId: currentUser.uid, name: name,
+            voyage: document.getElementById('voyageNumber').value.trim().toUpperCase(),
+            imo: document.getElementById('imoNumber').value.trim().toUpperCase() || 'BELİRTİLMEDİ',
+            originPort: document.getElementById('originPort').value.trim().toUpperCase(),
+            destinationPort: document.getElementById('destinationPort').value.toUpperCase(),
+            eta: eta, declarations: parseInt(document.getElementById('declarations').value),
+            note: document.getElementById('shipNote').value.trim().toUpperCase(),
+            email: document.getElementById('notificationEmail').value.trim().toLowerCase(),
+            status: 'PENDING', emailSentNew: false, emailSent10h: false, emailSent5h: false, emailSentArrived: false,
+            createdAt: new Date().toISOString()
+        };
+        db.collection('ships').add(newShipData).then(() => {
+            document.getElementById('ship-form').reset();
+            alert("✅ Kayıt başarıyla eklendi!");
+        });
+    }
+
+    function deleteShip(id) { if(confirm("Silmek istediğinize emin misiniz?")) db.collection('ships').doc(id).delete(); }
     function completeShip(id) { db.collection('ships').doc(id).update({ status: 'COMPLETED' }); }
 
     function renderShips() {
@@ -262,13 +287,13 @@
         else { nrm++; }
 
         tbody.innerHTML += `
-          <tr class="border-b">
+          <tr class="border-b hover:bg-slate-50">
             <td class="p-3 font-bold">${ship.name}<br><span class="text-[10px] text-gray-500">IMO: ${ship.imo || '-'}</span></td>
             <td class="p-3 text-xs">${ship.originPort} > ${ship.destinationPort}<br><span class="text-amber-600 font-bold">${ship.note || ''}</span></td>
             <td class="p-3 text-xs font-medium">${new Date(ship.eta).toLocaleString('tr-TR')}</td>
             <td class="p-3 text-xs font-bold"><span class="px-2 py-1 rounded ${bClass}">${bText}</span></td>
             <td class="p-3 text-right">
-              <button onclick="completeShip('${ship.firestoreId}')" class="text-emerald-600 bg-emerald-50 p-2 rounded-lg border border-emerald-200 shadow-sm"><i class="fa-solid fa-check"></i></button>
+              ${ship.status !== 'COMPLETED' ? `<button onclick="completeShip('${ship.firestoreId}')" class="text-emerald-600 bg-emerald-50 p-2 rounded-lg border border-emerald-200 shadow-sm"><i class="fa-solid fa-check"></i></button>` : ''}
               <button onclick="deleteShip('${ship.firestoreId}')" class="text-red-600 bg-red-50 p-2 rounded-lg border border-red-200 shadow-sm"><i class="fa-solid fa-trash"></i></button>
             </td>
           </tr>`;
@@ -279,17 +304,33 @@
       document.getElementById('stat-arrived').innerText = arr;
     }
 
-    // --- GELİŞMİŞ EXCEL ETA VE ETB OKUMA MANTIĞI ---
+    // YENİ AKILLI TARİH ÇÖZÜCÜ
     function parseCustomDate(dateStr) {
         if (!dateStr) return null;
-        let p = dateStr.toString().split(/[\.\/\-]/);
-        if (p.length === 3) return new Date(p[2].length === 2 ? "20"+p[2] : p[2], parseInt(p[1])-1, p[0]);
-        return new Date(dateStr);
+        let str = dateStr.toString().trim();
+        let parts = str.split(/[\sT]+/); 
+        let datePart = parts[0];
+        let timePart = parts[1] || "00:00";
+        let dParts = datePart.split(/[\.\/\-]/);
+        if (dParts.length === 3) {
+            let p1 = parseInt(dParts[0]), p2 = parseInt(dParts[1]), p3 = parseInt(dParts[2]);
+            let day = p1 > 12 ? p1 : (p2 > 12 ? p2 : p1); 
+            let month = p1 > 12 ? p2 - 1 : (p2 > 12 ? p1 - 1 : p2 - 1); 
+            let year = p3 < 100 ? p3 + 2000 : p3;
+            let tParts = timePart.split(":");
+            return new Date(year, month, day, parseInt(tParts[0]) || 0, parseInt(tParts[1]) || 0);
+        }
+        let d = new Date(str);
+        return isNaN(d.getTime()) ? null : d;
     }
 
+    // KUSURSUZ EXCEL YÜKLEME VE OKUMA
     function handleDailyExcel(event) {
         const file = event.target.files[0];
         if (!file) return;
+
+        const btnLabel = document.getElementById('excel-label-text');
+        btnLabel.innerText = "⏳ EXCEL OKUNUYOR...";
 
         const reader = new FileReader();
         reader.onload = async function(e) {
@@ -302,23 +343,49 @@
                 const altMonth = currMonth.replace(/Ğ/g, 'G').replace(/Ü/g, 'U').replace(/Ş/g, 'S').replace(/İ/g, 'I').replace(/Ö/g, 'O').replace(/Ç/g, 'C');
                 
                 let targetSheet = workbook.SheetNames.find(s => s.toUpperCase().includes(currMonth) || s.toUpperCase().includes(altMonth)) || workbook.SheetNames[0];
-                const rows = XLSX.utils.sheet_to_json(workbook.Sheets[targetSheet], {raw: false});
+                
+                // Tabloyu bulmak için düz dizi olarak çekiyoruz
+                const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[targetSheet], {header: 1, raw: false, defval: ""});
+
+                let nameIdx = -1, etaIdx = -1, etbIdx = -1, startRow = -1;
+
+                // RADAR: İlk 20 satırı tarayıp tablonun gerçek başlıklarını bul
+                for (let i = 0; i < Math.min(aoa.length, 20); i++) {
+                    const row = aoa[i];
+                    if (!row || row.length === 0) continue;
+                    
+                    for (let j = 0; j < row.length; j++) {
+                        let val = (row[j] || '').toString().toUpperCase().trim();
+                        if (val.includes('GEMİ ADI') || val.includes('GEMI ADI') || val.includes('VESSEL')) nameIdx = j;
+                        if (val === 'ETA' || val.includes('TAHMİNİ VARIŞ') || val.includes('VARIS')) etaIdx = j;
+                        if (val === 'ETB' || val.includes('TAHMİNİ YANAŞMA') || val.includes('YANASMA')) etbIdx = j;
+                    }
+                    if (nameIdx !== -1 && etaIdx !== -1) {
+                        startRow = i + 1; // Veriler bu başlıktan hemen sonraki satırda başlar
+                        break;
+                    }
+                }
+
+                if (startRow === -1) throw new Error("Excel'de 'GEMİ ADI' ve 'ETA' sütunları bulunamadı!");
 
                 let futureRuns = {};
-                const rightNow = new Date(); // Sistem saatine bakar
+                const rightNow = new Date();
+                rightNow.setHours(0,0,0,0); // Gece 00:00 baz alınır (Bugün ve sonrası)
 
-                // 1. Verileri Topla, Geçmişi (Kırmızıları) Ele ve ETB'yi Yakala
-                for (const row of rows) {
-                    const excelName = (row['GEMI ADI'] || row['Vessel'] || '').toString().trim().toUpperCase();
-                    const rawEta = row['ETA'] || row['TAHMİNİ VARIŞ'] || '';
-                    const rawEtb = row['ETB'] || row['TAHMİNİ YANAŞMA'] || '';
+                for (let i = startRow; i < aoa.length; i++) {
+                    const row = aoa[i];
+                    if (!row || !row[nameIdx]) continue;
+
+                    const excelName = row[nameIdx].toString().trim().toUpperCase();
+                    const rawEta = row[etaIdx] ? row[etaIdx].toString().trim() : '';
+                    const rawEtb = (etbIdx !== -1 && row[etbIdx]) ? row[etbIdx].toString().trim() : '';
                     
                     if (!excelName || !rawEta) continue;
 
                     const etaDateObj = parseCustomDate(rawEta);
                     
-                    // Sadece bugünden sonraki veya bugünkü tarihleri listeye ekle
-                    if (etaDateObj && etaDateObj >= rightNow.setHours(0,0,0,0)) {
+                    // Geçmiş Kırmızı Tarihleri Eleme Filtresi
+                    if (etaDateObj && etaDateObj >= rightNow) {
                         if (!futureRuns[excelName]) futureRuns[excelName] = [];
                         futureRuns[excelName].push({ name: excelName, etaStr: rawEta, dateObj: etaDateObj, etbStr: rawEtb });
                     }
@@ -326,32 +393,52 @@
 
                 let updatedCount = 0;
 
-                // 2. Shuttle İçin En Yakın Tarihi Bulup Firestore'a Yaz
+                // Shuttle (Aynı geminin birden çok seferi) kontrolü ve Güncelleme
                 for (const [shipName, runs] of Object.entries(futureRuns)) {
-                    // Tarihe göre sırala (en yakın olan en başa gelir)
-                    runs.sort((a, b) => a.dateObj - b.dateObj); 
+                    runs.sort((a, b) => a.dateObj - b.dateObj); // En yakın tarihi en başa al
                     const closestRun = runs[0]; 
 
                     const matchedShip = ships.find(s => (s.name || '').toUpperCase() === shipName);
                     
                     if (matchedShip) {
-                        let noteStr = closestRun.etbStr ? `ETB: ${closestRun.etbStr}` : 'EXCEL İLE GÜNCELLENDİ';
+                        let noteStr = closestRun.etbStr ? `ETB: ${closestRun.etbStr}` : 'EXCEL GÜNCEL';
                         await db.collection('ships').doc(matchedShip.firestoreId).update({
                             eta: closestRun.dateObj.toISOString().slice(0,16), 
                             note: noteStr,
-                            emailSent10h: false, emailSent5h: false // Mailler tekrar çalışsın
+                            emailSent10h: false, emailSent5h: false, emailSentArrived: false
                         });
                         updatedCount++;
                     }
                 }
-                alert(`✅ ${updatedCount} geminin ETA (ve varsa ETB) verisi en yakın tarih baz alınarak güncellendi!`);
+                alert(`✅ İŞLEM BAŞARILI!\n📄 Okunan Sayfa: ${targetSheet}\n🚢 Güncellenen Gemi: ${updatedCount}`);
             } catch (err) {
-                alert("❌ Hata oluştu: " + err.message);
+                console.error("HATA:", err);
+                alert("❌ Yükleme Hatası: " + err.message);
             }
-            event.target.value = ''; // Inputu sıfırla
+            
+            btnLabel.innerText = "📁 ETA EXCEL YÜKLE (.XLSM)";
+            event.target.value = ''; 
         };
         reader.readAsArrayBuffer(file);
     }
+
+    // Toplu Yükleme Butonu
+    document.getElementById('btn-toplu-yukle').addEventListener('click', async function() {
+        const btn = this;
+        btn.disabled = true; btn.innerText = "⏳ Yükleniyor...";
+        const fleet = [ { name: "MED AYDIN", imo: "9148025" }, { name: "MED CERKEZKOY", imo: "9147215" }, { name: "MED CORLU", imo: "9106479" }, { name: "MED DENIZLI", imo: "9106493" }, { name: "MED SAMSUN", imo: "9225794" }, { name: "MED TEKIRDAG", imo: "9265598" }, { name: "MED TRABZON", imo: "9141780" }, { name: "MED URLA", imo: "9160920" }, { name: "B.BAYRAKTAR", imo: "9260536" }, { name: "MED MERSİN", imo: "9135638" }, { name: "MED BEYKOZ", imo: "9064748" }, { name: "MED İZMİR", imo: "9143879" }, { name: "MED ANTALYA", imo: "9359714" }, { name: "MED ÇEŞME", imo: "9256365" } ];
+        try {
+            for (const ship of fleet) {
+                await db.collection('ships').add({
+                    name: ship.name, imo: ship.imo, status: 'PENDING', eta: "2026-08-30T12:00",
+                    email: "mscgemitakip@gmail.com", emailSentNew: true, emailSent10h: false, emailSent5h: false, emailSentArrived: false,
+                    voyage: "Toplu", originPort: "-", destinationPort: "İZMİR ALSANCAK", declarations: 0, note: "Sisteme Eklendi", userId: currentUser.uid
+                });
+            }
+            alert("✅ 14 GEMİ YÜKLENDİ!");
+            btn.innerText = "✅ YÜKLENDİ";
+        } catch (error) { alert("Hata: " + error.message); btn.innerText = "TEKRAR DENE"; btn.disabled = false; }
+    });
   </script>
 </body>
 </html>
