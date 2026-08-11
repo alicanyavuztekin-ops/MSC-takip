@@ -27,7 +27,6 @@
     .col-6h { background-color: #fef2f2; border-top: 4px solid #ef4444; }
     .col-arrived { background-color: #f1f5f9; border-top: 4px solid #334155; }
     
-    /* YENİ AI CHATBOT STİLLERİ */
     #ai-chat-window { transition: all 0.3s ease-in-out; transform-origin: bottom right; }
     .ai-message { background-color: #f1f5f9; border-radius: 12px 12px 12px 0; padding: 10px; margin-bottom: 10px; font-size: 13px; border-left: 3px solid #FFCC00; }
     .user-message { background-color: #111111; color: #FFCC00; border-radius: 12px 12px 0 12px; padding: 10px; margin-bottom: 10px; font-size: 13px; text-align: right; }
@@ -123,17 +122,25 @@
             </div>
         </div>
       </div>
+      
+      <div id="action-buttons-container" class="hidden text-center my-8 flex justify-center gap-4 flex-wrap">
+        <label for="excel-file-input" style="background-color: #111111; color: #FFCC00; padding: 15px 25px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); display: inline-flex; align-items: center; gap: 8px; transition: background-color 0.2s;">
+            <span id="excel-label-text"><i class="fa-solid fa-file-excel"></i> MANUEL EXCEL YÜKLE (.XLSM)</span>
+        </label>
+        <input type="file" id="excel-file-input" accept=".xlsx, .xls, .xlsm" style="display: none;" onchange="handleDailyExcel(event)">
+      </div>
+
     </main>
   </div>
 
   <div id="ai-chatbot-container" class="fixed bottom-6 right-6 z-50">
     <div id="ai-chat-window" class="hidden bg-white w-80 h-[450px] rounded-2xl shadow-2xl border border-slate-200 flex flex-col mb-4 overflow-hidden">
         <div class="bg-[#111111] p-3 text-white flex justify-between items-center border-b-2 border-[#FFCC00]">
-            <div class="flex items-center gap-2 font-bold text-sm"><i class="fa-solid fa-robot text-[#FFCC00]"></i> AI OPERASYON ASİSTANI</div>
+            <div class="flex items-center gap-2 font-bold text-sm"><i class="fa-solid fa-robot text-[#FFCC00]"></i> AI ASİSTAN</div>
             <button onclick="toggleAIChat()" class="text-slate-400 hover:text-white"><i class="fa-solid fa-times"></i></button>
         </div>
         <div id="ai-chat-messages" class="flex-1 p-3 overflow-y-auto bg-slate-50 flex flex-col">
-            <div class="ai-message">Merhaba! Ben MSC Yapay Zeka Asistanın. Güncel gemi saatleri, gecikmeler veya operasyon detayları hakkında bana soru sorabilirsin.</div>
+            <div class="ai-message">Merhaba! Ben Operasyon Asistanın. Veritabanındaki güncel gemi saatleri veya durumları hakkında bana soru sorabilirsin.</div>
         </div>
         <div class="p-3 bg-white border-t flex gap-2">
             <input type="text" id="ai-chat-input" placeholder="Bir şey sor..." class="flex-1 text-sm p-2 border rounded-lg focus:outline-none focus:border-[#FFCC00]" onkeypress="handleAIChatKeyPress(event)">
@@ -160,10 +167,8 @@
   </div>
 
   <script>
-    // ----------------------------------------------------
-    // YENİ: BURAYA KENDİ GEMİNİ API ANAHTARINI YAPIŞTIRACAKSIN
-    // ----------------------------------------------------
-    const GEMINI_API_KEY = "BURAYA_API_ANAHTARI_GELECEK"; 
+    // YAPAY ZEKA (GEMINI) API ANAHTARIN
+    const GEMINI_API_KEY = "AQ.Ab8RN6JpkKZNo-rAYX0SZkmnHOF7Zdmiy5EW6KkriPodKB8wYA"; 
 
     const firebaseConfig = {
       apiKey: "AIzaSyAKAF1Tm0Ahy5kT3OW6Slc0sjTbiFvaifg", authDomain: "msc-takip.firebaseapp.com",
@@ -182,15 +187,20 @@
         currentUser = user;
         document.getElementById('auth-container').classList.add('hidden');
         document.getElementById('app-container').classList.remove('hidden');
+        document.getElementById('action-buttons-container').classList.remove('hidden');
+        document.getElementById('action-buttons-container').style.display = 'flex';
         db.collection('ships').where('userId', '==', currentUser.uid).onSnapshot(snap => {
           ships = []; snap.forEach(doc => ships.push({ firestoreId: doc.id, ...doc.data() })); renderShips();
         });
+      } else {
+        document.getElementById('app-container').classList.add('hidden');
+        document.getElementById('action-buttons-container').classList.add('hidden');
+        document.getElementById('auth-container').classList.remove('hidden');
       }
     });
 
     function handleLogin(e) { e.preventDefault(); auth.signInWithEmailAndPassword(document.getElementById('login-email').value, document.getElementById('login-password').value); }
     function handleLogout() { auth.signOut(); location.reload(); }
-
     function setTab(tabName) { currentViewTab = tabName; renderShips(); }
     
     function setViewMode(mode) {
@@ -240,12 +250,11 @@
 
     function completeShip(id) { if(confirm("Arşive aktarılacak.")) db.collection('ships').doc(id).update({ status: 'COMPLETED' }); }
     function deleteShip(id) { if(confirm("Silmek istediğinize emin misiniz?")) db.collection('ships').doc(id).delete(); }
-    function openRadar(imo) { if(!imo || imo === '-' || imo === 'BELİRTİLMEDİ') { alert("Bu geminin IMO numarası girilmediği için haritada gösterilemiyor."); return; } window.open(`https://www.vesselfinder.com/vessels/details/${imo}`, '_blank'); }
+    function openRadar(imo) { if(!imo || imo === '-' || imo === 'BELİRTİLMEDİ') { alert("IMO numarası yok."); return; } window.open(`https://www.vesselfinder.com/vessels/details/${imo}`, '_blank'); }
 
-    // --- YAPAY ZEKA MANTIĞI BAŞLANGICI ---
+    // --- YAPAY ZEKA CHATBOT MANTIĞI ---
     function toggleAIChat() {
-        const win = document.getElementById('ai-chat-window');
-        const btn = document.getElementById('ai-chat-toggle-btn');
+        const win = document.getElementById('ai-chat-window'); const btn = document.getElementById('ai-chat-toggle-btn');
         if(win.classList.contains('hidden')) { win.classList.remove('hidden'); btn.classList.add('hidden'); } 
         else { win.classList.add('hidden'); btn.classList.remove('hidden'); }
     }
@@ -253,43 +262,101 @@
     function handleAIChatKeyPress(e) { if(e.key === 'Enter') sendAIMessage(); }
 
     async function sendAIMessage() {
-        const input = document.getElementById('ai-chat-input');
-        const text = input.value.trim();
-        if(!text) return;
-
+        const input = document.getElementById('ai-chat-input'); const text = input.value.trim(); if(!text) return;
         const chatBox = document.getElementById('ai-chat-messages');
-        chatBox.innerHTML += `<div class="user-message">${text}</div>`;
-        input.value = '';
+        chatBox.innerHTML += `<div class="user-message">${text}</div>`; input.value = '';
         
         const typingId = 'typing-' + Date.now();
         chatBox.innerHTML += `<div id="${typingId}" class="ai-message typing-indicator"><span></span><span></span><span></span> Analiz ediliyor...</div>`;
         chatBox.scrollTop = chatBox.scrollHeight;
 
-        if (GEMINI_API_KEY === "BURAYA_API_ANAHTARI_GELECEK") {
-            document.getElementById(typingId).outerHTML = `<div class="ai-message text-red-600 font-bold"><i class="fa-solid fa-triangle-exclamation"></i> Hata: Gemini API Anahtarı eksik! Lütfen koda anahtarını ekle.</div>`;
-            return;
-        }
-
-        // AI'a veritabanının anlık durumunu öğretiyoruz
         const activeShips = ships.filter(s => s.status !== 'COMPLETED').map(s => `Gemi: ${s.name}, Tarih: ${s.eta}, Not: ${s.note || 'Yok'}, Liman: ${s.destinationPort}`).join(" | ");
-        const systemPrompt = `Sen MSC Lojistik Operasyon Asistanısın. Şu anki aktif gemi verileri şunlar: [${activeShips}]. Kullanıcının sorusuna sadece bu verilere dayanarak, çok kısa, net ve Türkçe cevap ver.`;
+        const systemPrompt = `Sen MSC Lojistik Operasyon Asistanısın. Şu anki aktif gemi verileri şunlar: [${activeShips}]. Kullanıcının sorusuna sadece bu verilere dayanarak kısa, net ve Türkçe cevap ver.`;
 
         try {
             const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt + " Soru: " + text }] }] })
             });
             const data = await response.json();
             const aiText = data.candidates[0].content.parts[0].text;
-            
             document.getElementById(typingId).outerHTML = `<div class="ai-message">${aiText.replace(/\n/g, '<br>')}</div>`;
             chatBox.scrollTop = chatBox.scrollHeight;
-        } catch (error) {
-            document.getElementById(typingId).outerHTML = `<div class="ai-message text-red-600">Bağlantı hatası oluştu.</div>`;
-        }
+        } catch (error) { document.getElementById(typingId).outerHTML = `<div class="ai-message text-red-600">Bağlantı hatası oluştu.</div>`; }
     }
-    // --- YAPAY ZEKA MANTIĞI BİTİŞİ ---
+
+    // --- MANUEL EXCEL İŞLEME MANTIĞI ---
+    function parseCustomDate(dateStr) {
+        if (!dateStr) return null; let str = dateStr.toString().trim(); let parts = str.split(/[\sT]+/); 
+        let datePart = parts[0], timePart = parts[1] || "00:00"; let dParts = datePart.split(/[\.\/\-]/);
+        if (dParts.length === 3) {
+            let p1 = parseInt(dParts[0]), p2 = parseInt(dParts[1]), p3 = parseInt(dParts[2]);
+            let day = p1 > 12 ? p1 : (p2 > 12 ? p2 : p1); let month = p1 > 12 ? p2 - 1 : (p2 > 12 ? p1 - 1 : p2 - 1); let year = p3 < 100 ? p3 + 2000 : p3;
+            let tParts = timePart.split(":"); return new Date(year, month, day, parseInt(tParts[0]) || 0, parseInt(tParts[1]) || 0);
+        }
+        let d = new Date(str); return isNaN(d.getTime()) ? null : d;
+    }
+
+    function handleDailyExcel(event) {
+        const file = event.target.files[0]; if (!file) return;
+        const btnLabel = document.getElementById('excel-label-text'); btnLabel.innerText = "⏳ EXCEL İŞLENİYOR...";
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                const data = new Uint8Array(e.target.result); const workbook = XLSX.read(data, {type: 'array'});
+                const currentMonthNames = ["OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN", "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"];
+                const currMonth = currentMonthNames[new Date().getMonth()]; const altMonth = currMonth.replace(/Ğ/g, 'G').replace(/Ü/g, 'U').replace(/Ş/g, 'S').replace(/İ/g, 'I').replace(/Ö/g, 'O').replace(/Ç/g, 'C');
+                let targetSheet = workbook.SheetNames.find(s => s.toUpperCase().includes(currMonth) || s.toUpperCase().includes(altMonth)) || workbook.SheetNames[0];
+                const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[targetSheet], {header: 1, raw: false, defval: ""});
+                let nameIdx = -1, etaIdx = -1, etbIdx = -1, startRow = -1;
+
+                for (let i = 0; i < Math.min(aoa.length, 20); i++) {
+                    const row = aoa[i]; if (!row || row.length === 0) continue;
+                    for (let j = 0; j < row.length; j++) {
+                        let val = (row[j] || '').toString().toUpperCase().trim();
+                        if (val.includes('GEMİ ADI') || val.includes('VESSEL')) nameIdx = j;
+                        if (val === 'ETA' || val.includes('TAHMİNİ VARIŞ') || val.includes('VARIS')) etaIdx = j;
+                        if (val === 'ETB' || val.includes('TAHMİNİ YANAŞMA') || val.includes('YANASMA')) etbIdx = j;
+                    }
+                    if (nameIdx !== -1 && etaIdx !== -1) { startRow = i + 1; break; }
+                }
+                if (startRow === -1) throw new Error("Excel'de 'GEMİ ADI' ve 'ETA' sütunları bulunamadı!");
+
+                let futureRuns = {}; const rightNow = new Date(); rightNow.setHours(0,0,0,0); 
+                for (let i = startRow; i < aoa.length; i++) {
+                    const row = aoa[i]; if (!row || !row[nameIdx]) continue;
+                    const excelName = row[nameIdx].toString().trim().toUpperCase();
+                    const rawEta = row[etaIdx] ? row[etaIdx].toString().trim() : ''; const rawEtb = (etbIdx !== -1 && row[etbIdx]) ? row[etbIdx].toString().trim() : '';
+                    if (!excelName || !rawEta) continue;
+                    const etaDateObj = parseCustomDate(rawEta); const etbDateObj = parseCustomDate(rawEtb);
+                    let targetDateObj = (etbDateObj && !isNaN(etbDateObj.getTime())) ? etbDateObj : etaDateObj;
+
+                    if (targetDateObj && targetDateObj >= rightNow) {
+                        if (!futureRuns[excelName]) futureRuns[excelName] = [];
+                        futureRuns[excelName].push({ name: excelName, targetDateObj: targetDateObj, etbStr: rawEtb, etaStr: rawEta });
+                    }
+                }
+
+                let updatedCount = 0; let activeShips = ships.filter(s => s.status !== 'COMPLETED');
+                for (const [shipName, runs] of Object.entries(futureRuns)) {
+                    runs.sort((a, b) => a.targetDateObj - b.targetDateObj); const closestRun = runs[0]; 
+                    const activeMatch = activeShips.find(s => (s.name || '').toUpperCase() === shipName);
+                    if (activeMatch) {
+                        let noteStr = closestRun.etbStr ? `ETB BAZ ALINDI (${closestRun.etbStr})` : 'ETA BAZ ALINDI';
+                        await db.collection('ships').doc(activeMatch.firestoreId).update({
+                            eta: closestRun.targetDateObj.toISOString().slice(0,16), note: noteStr,
+                            emailSent12h: false, emailSent6h: false, emailSentArrived: false, lastUpdated: getTrDateStr()
+                        });
+                        updatedCount++;
+                    }
+                }
+                alert(`✅ İŞLEM BAŞARILI!\n📄 Okunan Sayfa: ${targetSheet}\n🔄 Güncellenen Aktif Gemi: ${updatedCount}`);
+                setTab('ACTIVE');
+            } catch (err) { alert("❌ Yükleme Hatası: " + err.message); }
+            btnLabel.innerHTML = '<i class="fa-solid fa-file-excel"></i> MANUEL EXCEL YÜKLE (.XLSM)'; event.target.value = ''; 
+        };
+        reader.readAsArrayBuffer(file);
+    }
 
     function renderShips() {
       const tbody = document.getElementById('ship-list-body');
@@ -315,8 +382,7 @@
         } else if (diffHours <= 12) { bClass = 'bg-orange-100 text-orange-700'; bText = '🟠 12 SAAT KALA'; progressWidth = '75%'; progressColor = 'bg-orange-500'; targetCol = kb12h; c12++;
         } else { cN++; }
 
-        let avatarBg = ship.name.includes("MED") ? "bg-[#FFCC00] text-[#111111]" : "bg-[#111111] text-[#FFCC00]";
-        let avatarText = ship.name.includes("MED") ? "MD" : "MS";
+        let avatarBg = ship.name.includes("MED") ? "bg-[#FFCC00] text-[#111111]" : "bg-[#111111] text-[#FFCC00]"; let avatarText = ship.name.includes("MED") ? "MD" : "MS";
 
         tbody.innerHTML += `<tr class="border-b hover:bg-zinc-50"><td class="p-3"><div class="flex items-center gap-3"><div class="${avatarBg} w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-sm">${avatarText}</div><div><div class="font-bold text-sm text-slate-800">${ship.name}</div><div class="text-[10px] text-gray-500">IMO: ${ship.imo || '-'} | SF: ${ship.voyage || '-'}</div></div></div></td><td class="p-3 text-xs"><div class="font-semibold text-slate-700 mb-1">${ship.originPort || '-'} <i class="fa-solid fa-arrow-right text-slate-400 mx-1"></i> ${ship.destinationPort}</div><span class="text-[10px] text-zinc-800 font-bold bg-[#FFCC00] px-2 py-0.5 rounded shadow-sm">${ship.note || 'NOT YOK'}</span></td><td class="p-3 text-xs font-medium"><div class="mb-1 text-slate-800">${new Date(ship.eta).toLocaleString('tr-TR')}</div><div class="text-[9px] text-slate-500 font-bold"><i class="fa-solid fa-clock-rotate-left"></i> ${ship.lastUpdated ? ship.lastUpdated : 'GÜNCELLEME YOK'}</div></td><td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${bClass}">${bText}</span></td><td class="p-3 text-right whitespace-nowrap"><button onclick="openRadar('${ship.imo}')" class="text-blue-600 bg-blue-50 w-8 h-8 rounded-lg border text-xs font-bold hover:bg-blue-100 transition-colors" title="Radarda Gör"><i class="fa-solid fa-location-dot"></i></button> ${ship.status !== 'COMPLETED' ? `<button onclick="openEditModal('${ship.firestoreId}')" class="text-[#111111] bg-yellow-100 w-8 h-8 rounded-lg border border-yellow-300 shadow-sm hover:bg-[#FFCC00] transition-colors ml-1" title="Düzenle"><i class="fa-solid fa-pen"></i></button><button onclick="completeShip('${ship.firestoreId}')" class="text-emerald-600 bg-emerald-50 w-8 h-8 rounded-lg border hover:bg-emerald-100 transition-colors ml-1" title="Tamamla"><i class="fa-solid fa-check"></i></button>` : ''} <button onclick="deleteShip('${ship.firestoreId}')" class="text-red-600 bg-red-50 w-8 h-8 rounded-lg border border-red-200 shadow-sm hover:bg-red-100 transition-colors ml-1" title="Sil"><i class="fa-solid fa-trash"></i></button></td></tr>`;
 
