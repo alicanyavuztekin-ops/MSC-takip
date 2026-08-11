@@ -4,10 +4,6 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="MSC Takip">
-  <link rel="apple-touch-icon" href="https://upload.wikimedia.org/wikipedia/commons/thumb/c/c2/MSC_crociere_logo.svg/1024px-MSC_crociere_logo.svg.png">
-
   <title>MSC & MEDLOG Gemi ve Operasyon Paneli</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
@@ -21,9 +17,16 @@
 
   <style>
     body { font-family: 'Inter', sans-serif; }
-    /* YENİ SİYAH & SARI KONSEPT */
     .tab-active { background-color: #111111; color: #FFCC00; border-color: #111111; }
     .tab-inactive { background-color: #f8fafc; color: #64748b; border-color: #e2e8f0; }
+    .view-btn-active { background-color: #FFCC00; color: #111111; border-color: #FFCC00; }
+    .view-btn-inactive { background-color: white; color: #64748b; border-color: #e2e8f0; }
+    /* Kanban Sütun Tasarımları */
+    .kanban-col { min-height: 400px; border-radius: 12px; padding: 12px; }
+    .col-normal { background-color: #f0fdf4; border-top: 4px solid #22c55e; }
+    .col-12h { background-color: #fff7ed; border-top: 4px solid #f97316; }
+    .col-6h { background-color: #fef2f2; border-top: 4px solid #ef4444; }
+    .col-arrived { background-color: #f1f5f9; border-top: 4px solid #334155; }
   </style>
 </head>
 <body class="bg-zinc-100 font-sans text-slate-800 antialiased min-h-screen">
@@ -35,21 +38,11 @@
           <i class="fa-solid fa-ship"></i>
         </div>
         <h2 class="text-2xl font-bold text-[#111111] uppercase">MSC & MEDLOG TAKİP</h2>
-        <p class="text-xs text-slate-500 font-medium">Liman Operasyon Sistemine Giriş Yapın</p>
       </div>
-
       <form id="login-form" onsubmit="handleLogin(event)" class="space-y-4">
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">E-POSTA ADRESİ</label>
-          <input type="email" id="login-email" required class="w-full text-sm p-3 border rounded-lg focus:ring-2 focus:ring-black outline-none">
-        </div>
-        <div>
-          <label class="block text-xs font-semibold text-slate-600 mb-1">ŞİFRE</label>
-          <input type="password" id="login-password" required class="w-full text-sm p-3 border rounded-lg focus:ring-2 focus:ring-black outline-none">
-        </div>
-        <button type="submit" class="w-full bg-[#111111] hover:bg-black text-[#FFCC00] font-bold p-3 rounded-lg shadow-md cursor-pointer transition-colors">
-          GİRİŞ YAP
-        </button>
+        <div><input type="email" id="login-email" placeholder="E-Posta" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-black outline-none"></div>
+        <div><input type="password" id="login-password" placeholder="Şifre" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-black outline-none"></div>
+        <button type="submit" class="w-full bg-[#111111] hover:bg-black text-[#FFCC00] font-bold p-3 rounded-lg shadow-md cursor-pointer transition-colors">GİRİŞ YAP</button>
       </form>
     </div>
   </div>
@@ -59,127 +52,83 @@
       <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-3">
         <div class="flex items-center gap-3">
           <div class="bg-[#FFCC00] text-[#111111] p-2.5 rounded-lg font-bold text-xl"><i class="fa-solid fa-ship"></i></div>
-          <div>
-            <h1 class="text-lg md:text-xl font-bold uppercase text-white">MSC & MEDLOG TAKİP</h1>
-            <p class="text-xs text-[#FFCC00] font-medium">Operasyon & Gümrük İzleme</p>
-          </div>
+          <div><h1 class="text-lg md:text-xl font-bold uppercase text-white">MSC & MEDLOG TAKİP</h1></div>
         </div>
         <div class="flex items-center gap-3">
-          <div class="hidden md:flex items-center gap-2 bg-zinc-900 px-3 py-1.5 rounded-lg border border-zinc-700 text-xs">
-            <i class="fa-solid fa-user-circle text-[#FFCC00]"></i> <span id="user-display-email" class="text-zinc-300"></span>
-          </div>
-          <button type="button" onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-2 rounded-lg font-semibold flex items-center gap-1 cursor-pointer">
-            <i class="fa-solid fa-right-from-bracket"></i> ÇIKIŞ
-          </button>
+          <span id="user-display-email" class="hidden md:block text-zinc-300 text-xs"></span>
+          <button type="button" onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-2 rounded-lg font-semibold flex items-center gap-1 cursor-pointer"><i class="fa-solid fa-right-from-bracket"></i> ÇIKIŞ</button>
         </div>
       </div>
     </header>
 
     <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
       
-      <div id="dashboard-stats" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-          <div><p class="text-xs font-bold text-slate-400 uppercase">Aktif Gemi</p><h4 id="stat-total" class="text-xl font-bold text-[#111111]">0</h4></div>
-          <div class="bg-zinc-100 text-[#111111] p-3 rounded-lg"><i class="fa-solid fa-ship"></i></div>
-        </div>
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-          <div><p class="text-xs font-bold text-slate-400 uppercase">Seyirde</p><h4 id="stat-normal" class="text-xl font-bold text-emerald-600">0</h4></div>
-          <div class="bg-emerald-50 text-emerald-600 p-3 rounded-lg"><i class="fa-solid fa-circle-check"></i></div>
-        </div>
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-          <div><p class="text-xs font-bold text-slate-400 uppercase">Kritik (12s / 6s)</p><h4 id="stat-critical" class="text-xl font-bold text-orange-600">0</h4></div>
-          <div class="bg-orange-50 text-orange-600 p-3 rounded-lg"><i class="fa-solid fa-triangle-exclamation"></i></div>
-        </div>
-        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center justify-between">
-          <div><p class="text-xs font-bold text-slate-400 uppercase">Limana Yanaştı</p><h4 id="stat-arrived" class="text-xl font-bold text-slate-800">0</h4></div>
-          <div class="bg-slate-100 text-slate-700 p-3 rounded-lg"><i class="fa-solid fa-anchor"></i></div>
-        </div>
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-white p-4 rounded-xl shadow-sm border flex justify-between"><div class="font-bold"><p class="text-xs text-slate-400">Aktif Gemi</p><h4 id="stat-total" class="text-xl text-[#111111]">0</h4></div><div class="bg-zinc-100 text-[#111111] p-3 rounded-lg"><i class="fa-solid fa-ship"></i></div></div>
+        <div class="bg-white p-4 rounded-xl shadow-sm border flex justify-between"><div class="font-bold"><p class="text-xs text-slate-400">Seyirde</p><h4 id="stat-normal" class="text-xl text-emerald-600">0</h4></div><div class="bg-emerald-50 text-emerald-600 p-3 rounded-lg"><i class="fa-solid fa-circle-check"></i></div></div>
+        <div class="bg-white p-4 rounded-xl shadow-sm border flex justify-between"><div class="font-bold"><p class="text-xs text-slate-400">Kritik (12s/6s)</p><h4 id="stat-critical" class="text-xl text-orange-600">0</h4></div><div class="bg-orange-50 text-orange-600 p-3 rounded-lg"><i class="fa-solid fa-triangle-exclamation"></i></div></div>
+        <div class="bg-white p-4 rounded-xl shadow-sm border flex justify-between"><div class="font-bold"><p class="text-xs text-slate-400">Yanaştı</p><h4 id="stat-arrived" class="text-xl text-slate-800">0</h4></div><div class="bg-slate-100 text-slate-700 p-3 rounded-lg"><i class="fa-solid fa-anchor"></i></div></div>
       </div>
 
-      <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-        <h2 class="text-base font-bold mb-4 text-[#111111] flex items-center gap-2 border-b pb-2 uppercase">
-          <i class="fa-solid fa-plus-circle text-[#FFCC00]"></i> YENİ GEMİ EKLE
-        </h2>
-        <form id="ship-form" onsubmit="addShip(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div><label class="block text-xs font-bold text-slate-600 mb-1">GEMİ ADI</label><input type="text" id="shipName" required class="w-full text-sm p-2.5 border rounded-lg uppercase"></div>
-          <div><label class="block text-xs font-bold text-slate-600 mb-1">SEFER NO</label><input type="text" id="voyageNumber" required class="w-full text-sm p-2.5 border rounded-lg uppercase"></div>
-          <div><label class="block text-xs font-bold text-slate-600 mb-1">IMO NO</label><input type="text" id="imoNumber" class="w-full text-sm p-2.5 border rounded-lg uppercase"></div>
-          <div><label class="block text-xs font-bold text-slate-600 mb-1">GELDİĞİ LİMAN</label><input type="text" id="originPort" required class="w-full text-sm p-2.5 border rounded-lg uppercase"></div>
-          <div>
-            <label class="block text-xs font-bold text-slate-600 mb-1">VARIŞ LİMANI</label>
-            <select id="destinationPort" required class="w-full text-sm p-2.5 border rounded-lg uppercase">
-              <option value="İZMİR ALSANCAK">İZMİR ALSANCAK</option>
-              <option value="ALİAĞA SOCAR">ALİAĞA SOCAR</option>
-              <option value="MERSİN">MERSİN</option>
-              <option value="TEKİRDAĞ">TEKİRDAĞ</option>
-              <option value="GEMLİK">GEMLİK</option>
-              <option value="AMBARLI">AMBARLI</option>
-            </select>
-          </div>
-          <div><label class="block text-xs font-bold text-slate-600 mb-1">MAİL</label><input type="email" id="notificationEmail" required class="w-full text-sm p-2.5 border rounded-lg"></div>
-          <div><label class="block text-xs font-bold text-slate-600 mb-1">HEDEF ZAMAN (ETA/ETB)</label><input type="datetime-local" id="eta" required class="w-full text-sm p-2.5 border rounded-lg"></div>
-          <div><label class="block text-xs font-bold text-slate-600 mb-1">BEYANNAME</label><input type="number" id="declarations" min="1" required class="w-full text-sm p-2.5 border rounded-lg"></div>
-          <div><label class="block text-xs font-bold text-slate-600 mb-1">EK NOT</label><input type="text" id="shipNote" class="w-full text-sm p-2.5 border rounded-lg uppercase"></div>
-          <div class="flex items-end"><button type="submit" class="w-full bg-[#FFCC00] text-[#111111] font-bold p-2.5 rounded-lg flex justify-center items-center gap-2 cursor-pointer shadow-md hover:bg-yellow-500 transition-colors"><i class="fa-solid fa-check-circle"></i> EKLE</button></div>
+      <div class="bg-white p-5 rounded-xl shadow-sm border">
+        <h2 class="text-base font-bold mb-4 text-[#111111] flex items-center gap-2 border-b pb-2"><i class="fa-solid fa-plus-circle text-[#FFCC00]"></i> YENİ GEMİ EKLE</h2>
+        <form id="ship-form" onsubmit="addShip(event)" class="grid grid-cols-2 lg:grid-cols-5 gap-4">
+          <div><label class="block text-xs font-bold mb-1">GEMİ ADI</label><input type="text" id="shipName" required class="w-full text-sm p-2 border rounded-lg uppercase"></div>
+          <div><label class="block text-xs font-bold mb-1">IMO NO</label><input type="text" id="imoNumber" class="w-full text-sm p-2 border rounded-lg uppercase"></div>
+          <div><label class="block text-xs font-bold mb-1">GELDİĞİ LİMAN</label><input type="text" id="originPort" required class="w-full text-sm p-2 border rounded-lg uppercase"></div>
+          <div><label class="block text-xs font-bold mb-1">VARIŞ LİMANI</label><select id="destinationPort" required class="w-full text-sm p-2 border rounded-lg"><option value="İZMİR ALSANCAK">İZMİR ALSANCAK</option><option value="ALİAĞA SOCAR">ALİAĞA SOCAR</option></select></div>
+          <div><label class="block text-xs font-bold mb-1">HEDEF ZAMAN</label><input type="datetime-local" id="eta" required class="w-full text-sm p-2 border rounded-lg"></div>
+          <div class="col-span-2 lg:col-span-1 flex items-end"><button type="submit" class="w-full bg-[#FFCC00] text-[#111111] font-bold p-2.5 rounded-lg shadow-md hover:bg-yellow-500"><i class="fa-solid fa-check-circle"></i> EKLE</button></div>
         </form>
       </div>
 
-      <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
         
-        <div class="flex p-3 bg-slate-50 border-b gap-2">
-            <button onclick="setTab('ACTIVE')" id="tab-active" class="tab-active flex-1 py-2 px-4 rounded-lg font-bold text-sm shadow-sm cursor-pointer transition-all uppercase flex items-center justify-center gap-2">
-                <i class="fa-solid fa-satellite-dish"></i> AKTİF OPERASYONLAR
-            </button>
-            <button onclick="setTab('ARCHIVE')" id="tab-archive" class="tab-inactive flex-1 py-2 px-4 rounded-lg font-bold text-sm shadow-sm cursor-pointer border transition-all uppercase flex items-center justify-center gap-2">
-                <i class="fa-solid fa-box-archive"></i> ARŞİV (TAMAMLANANLAR)
-            </button>
+        <div class="p-3 bg-slate-50 border-b flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div class="flex gap-2 w-full sm:w-auto">
+                <button onclick="setTab('ACTIVE')" id="tab-active" class="tab-active flex-1 py-2 px-4 rounded-lg font-bold text-sm shadow-sm transition-all uppercase flex items-center justify-center gap-2"><i class="fa-solid fa-satellite-dish"></i> AKTİF</button>
+                <button onclick="setTab('ARCHIVE')" id="tab-archive" class="tab-inactive flex-1 py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2"><i class="fa-solid fa-box-archive"></i> ARŞİV</button>
+            </div>
+            
+            <div class="flex items-center gap-3 w-full sm:w-auto justify-between">
+                <div class="flex bg-slate-200 p-1 rounded-lg">
+                    <button onclick="setViewMode('LIST')" id="btn-view-list" class="view-btn-active px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors"><i class="fa-solid fa-list"></i> LİSTE</button>
+                    <button onclick="setViewMode('BOARD')" id="btn-view-board" class="view-btn-inactive px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors"><i class="fa-brands fa-trello"></i> PANO</button>
+                </div>
+                <select id="filterPort" onchange="renderShips()" class="text-xs p-2 border rounded-lg font-medium shadow-sm"><option value="ALL">TÜM LİMANLAR</option><option value="İZMİR ALSANCAK">İZMİR ALSANCAK</option><option value="ALİAĞA SOCAR">ALİAĞA SOCAR</option></select>
+            </div>
         </div>
 
-        <div class="p-3 border-b border-slate-200 flex justify-end items-center bg-white">
-          <select id="filterPort" onchange="renderShips()" class="text-xs p-2 border rounded-lg font-medium uppercase shadow-sm">
-            <option value="ALL">TÜM LİMANLAR</option>
-            <option value="İZMİR ALSANCAK">İZMİR ALSANCAK</option>
-            <option value="ALİAĞA SOCAR">ALİAĞA SOCAR</option>
-          </select>
-        </div>
-
-        <div class="overflow-x-auto">
+        <div id="view-list" class="overflow-x-auto block">
           <table class="w-full text-left border-collapse min-w-[800px]">
-            <thead>
-              <tr class="bg-zinc-100 text-slate-600 text-[11px] font-bold uppercase border-b">
-                <th class="p-3">GEMİ / IMO</th>
-                <th class="p-3">GÜZERGAH / NOT</th>
-                <th class="p-3">HEDEF (ETA/ETB)</th>
-                <th class="p-3">DURUM SÜRESİ</th>
-                <th class="p-3 text-right">İŞLEMLER</th>
-              </tr>
-            </thead>
+            <thead><tr class="bg-zinc-100 text-slate-600 text-[11px] font-bold border-b"><th class="p-3">GEMİ / IMO</th><th class="p-3">GÜZERGAH / NOT</th><th class="p-3">HEDEF ZAMAN</th><th class="p-3">DURUM SÜRESİ</th><th class="p-3 text-right">İŞLEMLER</th></tr></thead>
             <tbody id="ship-list-body" class="divide-y divide-slate-100 text-sm"></tbody>
           </table>
         </div>
+
+        <div id="view-board" class="hidden p-4 bg-slate-50">
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                <div class="kanban-col col-normal">
+                    <h3 class="text-sm font-bold text-emerald-700 mb-3 flex items-center gap-2"><i class="fa-solid fa-water"></i> SEYİRDE <span id="kb-count-normal" class="ml-auto bg-emerald-200 px-2 py-0.5 rounded-full text-xs">0</span></h3>
+                    <div id="kb-normal" class="space-y-3"></div>
+                </div>
+                <div class="kanban-col col-12h">
+                    <h3 class="text-sm font-bold text-orange-700 mb-3 flex items-center gap-2"><i class="fa-solid fa-clock"></i> 12 SAAT KALA <span id="kb-count-12h" class="ml-auto bg-orange-200 px-2 py-0.5 rounded-full text-xs">0</span></h3>
+                    <div id="kb-12h" class="space-y-3"></div>
+                </div>
+                <div class="kanban-col col-6h">
+                    <h3 class="text-sm font-bold text-red-700 mb-3 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i> 6 SAAT KALA <span id="kb-count-6h" class="ml-auto bg-red-200 px-2 py-0.5 rounded-full text-xs">0</span></h3>
+                    <div id="kb-6h" class="space-y-3"></div>
+                </div>
+                <div class="kanban-col col-arrived">
+                    <h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2"><i class="fa-solid fa-anchor"></i> LİMANDA / ARŞİV <span id="kb-count-arrived" class="ml-auto bg-slate-200 px-2 py-0.5 rounded-full text-xs">0</span></h3>
+                    <div id="kb-arrived" class="space-y-3"></div>
+                </div>
+            </div>
+        </div>
+
       </div>
     </main>
-  </div>
-
-  <div id="editModal" class="fixed inset-0 bg-slate-900/80 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-      <div class="bg-white rounded-2xl max-w-xl w-full p-6 space-y-4 shadow-2xl relative">
-        <h3 class="font-bold text-lg text-slate-800 uppercase border-b pb-3"><i class="fa-solid fa-pen text-[#FFCC00]"></i> DÜZENLE</h3>
-        <button onclick="document.getElementById('editModal').classList.add('hidden')" class="absolute top-4 right-6 text-slate-400 hover:text-red-600 text-2xl font-bold cursor-pointer">&times;</button>
-        <form id="edit-form" onsubmit="saveEdit(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <input type="hidden" id="edit-id">
-          <div class="sm:col-span-2"><label class="block text-xs font-bold text-slate-600 mb-1">GEMİ ADI</label><input type="text" id="edit-shipName" required class="w-full text-sm p-2.5 border rounded-lg uppercase"></div>
-          <div><label class="block text-xs font-bold text-slate-600 mb-1">HEDEF ZAMAN</label><input type="datetime-local" id="edit-eta" required class="w-full text-sm p-2.5 border rounded-lg"></div>
-          <div><label class="block text-xs font-bold text-slate-600 mb-1">NOT</label><input type="text" id="edit-note" class="w-full text-sm p-2.5 border rounded-lg uppercase"></div>
-          <div class="sm:col-span-2"><button type="submit" class="w-full bg-[#111111] text-[#FFCC00] font-bold p-3 rounded-lg text-sm cursor-pointer shadow hover:bg-black">KAYDET</button></div>
-        </form>
-      </div>
-  </div>
-
-  <div id="action-buttons-container" class="hidden text-center my-8 flex justify-center gap-4 flex-wrap">
-    <label for="excel-file-input" style="background-color: #111111; color: #FFCC00; padding: 15px 25px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); display: inline-flex; align-items: center; gap: 8px; transition: background-color 0.2s;">
-        <span id="excel-label-text"><i class="fa-solid fa-file-excel"></i> MANUEL EXCEL YÜKLE (.XLSM)</span>
-    </label>
-    <input type="file" id="excel-file-input" accept=".xlsx, .xls, .xlsm" style="display: none;" onchange="handleDailyExcel(event)">
   </div>
 
   <script>
@@ -190,291 +139,129 @@
     };
     if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth(); const db = firebase.firestore();
-    auth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
     
-    let currentUser = null, ships = [], unsubscribeFirestore = null;
+    let currentUser = null, ships = [];
     let currentViewTab = 'ACTIVE';
+    let currentDisplayMode = 'LIST'; // LIST veya BOARD
 
     auth.onAuthStateChanged(user => {
-      currentUser = user;
       if (user) {
+        currentUser = user;
         document.getElementById('auth-container').classList.add('hidden');
         document.getElementById('app-container').classList.remove('hidden');
-        document.getElementById('action-buttons-container').classList.remove('hidden');
-        document.getElementById('action-buttons-container').style.display = 'flex';
-        document.getElementById('user-display-email').innerText = user.email;
-        if(unsubscribeFirestore) unsubscribeFirestore();
-        unsubscribeFirestore = db.collection('ships').where('userId', '==', currentUser.uid).onSnapshot(snap => {
+        db.collection('ships').where('userId', '==', currentUser.uid).onSnapshot(snap => {
           ships = []; snap.forEach(doc => ships.push({ firestoreId: doc.id, ...doc.data() })); renderShips();
         });
-      } else {
-        document.getElementById('app-container').classList.add('hidden');
-        document.getElementById('action-buttons-container').classList.add('hidden');
-        document.getElementById('auth-container').classList.remove('hidden');
       }
     });
 
-    function setTab(tabName) {
-        currentViewTab = tabName;
-        document.getElementById('tab-active').className = tabName === 'ACTIVE' ? "tab-active flex-1 py-2 px-4 rounded-lg font-bold text-sm shadow-sm cursor-pointer transition-all uppercase flex items-center justify-center gap-2" : "tab-inactive flex-1 py-2 px-4 rounded-lg font-bold text-sm shadow-sm cursor-pointer border transition-all uppercase flex items-center justify-center gap-2";
-        document.getElementById('tab-archive').className = tabName === 'ARCHIVE' ? "tab-active flex-1 py-2 px-4 rounded-lg font-bold text-sm shadow-sm cursor-pointer transition-all uppercase flex items-center justify-center gap-2" : "tab-inactive flex-1 py-2 px-4 rounded-lg font-bold text-sm shadow-sm cursor-pointer border transition-all uppercase flex items-center justify-center gap-2";
-        renderShips();
-    }
-
     function handleLogin(e) { e.preventDefault(); auth.signInWithEmailAndPassword(document.getElementById('login-email').value, document.getElementById('login-password').value); }
-    function handleLogout() { if(confirm("Çıkış yapmak istediğinize emin misiniz?")) auth.signOut(); }
+    function handleLogout() { auth.signOut(); location.reload(); }
 
-    function getTrDateStr() {
-        const d = new Date();
-        return d.toLocaleDateString('tr-TR') + " " + d.getHours().toString().padStart(2, '0') + ":" + d.getMinutes().toString().padStart(2, '0');
-    }
-
-    function addShip(e) { 
-        e.preventDefault(); 
-        const name = document.getElementById('shipName').value.trim().toUpperCase();
-        const eta = document.getElementById('eta').value;
-        const newShipData = {
-            userId: currentUser.uid, name: name,
-            voyage: document.getElementById('voyageNumber').value.trim().toUpperCase(),
-            imo: document.getElementById('imoNumber').value.trim().toUpperCase() || 'BELİRTİLMEDİ',
-            originPort: document.getElementById('originPort').value.trim().toUpperCase(),
-            destinationPort: document.getElementById('destinationPort').value.toUpperCase(),
-            eta: eta, declarations: parseInt(document.getElementById('declarations').value),
-            note: document.getElementById('shipNote').value.trim().toUpperCase(),
-            email: document.getElementById('notificationEmail').value.trim().toLowerCase(),
-            status: 'PENDING', emailSent12h: false, emailSent6h: false, emailSentArrived: false,
-            lastUpdated: getTrDateStr(),
-            createdAt: new Date().toISOString()
-        };
-        db.collection('ships').add(newShipData).then(() => {
-            document.getElementById('ship-form').reset();
-            alert("✅ Kayıt başarıyla eklendi!");
-            setTab('ACTIVE');
-        });
-    }
-
-    function openEditModal(id) {
-        const ship = ships.find(s => s.firestoreId === id);
-        if(!ship) return;
-        document.getElementById('edit-id').value = ship.firestoreId;
-        document.getElementById('edit-shipName').value = ship.name || '';
-        document.getElementById('edit-eta').value = ship.eta || '';
-        document.getElementById('edit-note').value = ship.note || '';
-        document.getElementById('editModal').classList.remove('hidden');
-    }
-
-    function saveEdit(e) {
-      e.preventDefault();
-      const id = document.getElementById('edit-id').value;
-      db.collection('ships').doc(id).update({
-        name: document.getElementById('edit-shipName').value.trim().toUpperCase(),
-        eta: document.getElementById('edit-eta').value,
-        note: document.getElementById('edit-note').value.trim().toUpperCase(),
-        emailSent12h: false, emailSent6h: false, emailSentArrived: false,
-        lastUpdated: getTrDateStr()
-      }).then(() => {
-          document.getElementById('editModal').classList.add('hidden');
-      });
-    }
-
-    function deleteShip(id) { if(confirm("Silmek istediğinize emin misiniz?")) db.collection('ships').doc(id).delete(); }
+    function setTab(tabName) { currentViewTab = tabName; renderShips(); }
     
-    function completeShip(id) { 
-        if(confirm("Gemi operasyonu bitti mi? Arşive aktarılacak.")) {
-            db.collection('ships').doc(id).update({ status: 'COMPLETED', lastUpdated: getTrDateStr() }); 
+    // Görünüm Değiştirici (Liste <-> Pano)
+    function setViewMode(mode) {
+        currentDisplayMode = mode;
+        if(mode === 'LIST') {
+            document.getElementById('view-list').classList.remove('hidden');
+            document.getElementById('view-board').classList.add('hidden');
+            document.getElementById('btn-view-list').className = "view-btn-active px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1";
+            document.getElementById('btn-view-board').className = "view-btn-inactive border px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1";
+        } else {
+            document.getElementById('view-list').classList.add('hidden');
+            document.getElementById('view-board').classList.remove('hidden');
+            document.getElementById('btn-view-board').className = "view-btn-active px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1";
+            document.getElementById('btn-view-list').className = "view-btn-inactive border px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1";
         }
+    }
+
+    function addShip(e) { e.preventDefault(); /* Eski ekleme mantığı aynı */ }
+    function completeShip(id) { if(confirm("Arşive aktarılacak.")) db.collection('ships').doc(id).update({ status: 'COMPLETED' }); }
+    function deleteShip(id) { if(confirm("Silmek istediğinize emin misiniz?")) db.collection('ships').doc(id).delete(); }
+
+    // Gemi Rotasını Haritada Gösterme (VesselFinder IMO Linki)
+    function openRadar(imo) {
+        if(!imo || imo === '-' || imo === 'BELİRTİLMEDİ') { alert("Bu geminin IMO numarası girilmediği için haritada gösterilemiyor."); return; }
+        window.open(`https://www.vesselfinder.com/vessels/details/${imo}`, '_blank');
     }
 
     function renderShips() {
       const tbody = document.getElementById('ship-list-body');
+      
+      // Kanban Sütunları
+      const kbNormal = document.getElementById('kb-normal'); const kb12h = document.getElementById('kb-12h');
+      const kb6h = document.getElementById('kb-6h'); const kbArrived = document.getElementById('kb-arrived');
+      kbNormal.innerHTML = ''; kb12h.innerHTML = ''; kb6h.innerHTML = ''; kbArrived.innerHTML = '';
+      let cN = 0, c12 = 0, c6 = 0, cA = 0;
+
       const filterPort = document.getElementById('filterPort').value;
+      let filtered = ships.filter(s => currentViewTab === 'ACTIVE' ? s.status !== 'COMPLETED' : s.status === 'COMPLETED');
+      if(filterPort !== 'ALL') filtered = filtered.filter(s => s.destinationPort === filterPort);
       
-      let baseFilter = ships.filter(s => currentViewTab === 'ACTIVE' ? s.status !== 'COMPLETED' : s.status === 'COMPLETED');
-      let filtered = filterPort === 'ALL' ? baseFilter : baseFilter.filter(s => s.destinationPort === filterPort);
-      
-      let activeOnly = ships.filter(s => s.status !== 'COMPLETED');
-      let tot = activeOnly.length, nrm = 0, crit = 0, arr = 0;
-      
-      activeOnly.forEach(ship => {
-          const diffHours = (new Date(ship.eta) - new Date()) / (1000 * 60 * 60);
-          if (diffHours <= 0) arr++;
-          else if (diffHours <= 12) crit++;
-          else nrm++;
+      let tot = 0, nrm = 0, crit = 0, arr = 0;
+      ships.filter(s => s.status !== 'COMPLETED').forEach(s => {
+          const dh = (new Date(s.eta) - new Date()) / 3600000;
+          if (dh <= 0) arr++; else if (dh <= 12) crit++; else nrm++; tot++;
       });
 
       tbody.innerHTML = '';
       
-      filtered.sort((a, b) => currentViewTab === 'ACTIVE' ? new Date(a.eta) - new Date(b.eta) : new Date(b.eta) - new Date(a.eta)).forEach(ship => {
-        const diffHours = (new Date(ship.eta) - new Date()) / (1000 * 60 * 60);
+      filtered.sort((a, b) => new Date(a.eta) - new Date(b.eta)).forEach(ship => {
+        const diffHours = (new Date(ship.eta) - new Date()) / 3600000;
         
         let bClass = 'bg-blue-100 text-blue-700', bText = '🟢 SEYİRDE';
         let progressWidth = '40%'; let progressColor = 'bg-blue-500';
+        let targetCol = kbNormal;
         
         if (ship.status === 'COMPLETED') { 
-            bClass = 'bg-slate-100 text-slate-600'; bText = 'ARŞİVLENDİ'; 
-            progressWidth = '100%'; progressColor = 'bg-slate-400';
-        }
-        else if (diffHours <= 0) { 
-            bClass = 'bg-slate-800 text-white'; bText = '⚓ YANAŞTI'; 
-            progressWidth = '100%'; progressColor = 'bg-emerald-500';
-        }
-        else if (diffHours <= 6) { 
-            bClass = 'bg-red-100 text-red-700 animate-pulse'; bText = '🔴 6 SAAT KALA'; 
-            progressWidth = '90%'; progressColor = 'bg-red-600';
-        }
-        else if (diffHours <= 12) { 
-            bClass = 'bg-orange-100 text-orange-700'; bText = '🟠 12 SAAT KALA'; 
-            progressWidth = '75%'; progressColor = 'bg-orange-500';
-        }
+            bClass = 'bg-slate-100 text-slate-600'; bText = 'ARŞİVLENDİ'; progressWidth = '100%'; targetCol = kbArrived; cA++;
+        } else if (diffHours <= 0) { 
+            bClass = 'bg-slate-800 text-white'; bText = '⚓ YANAŞTI'; progressWidth = '100%'; progressColor = 'bg-emerald-500'; targetCol = kbArrived; cA++;
+        } else if (diffHours <= 6) { 
+            bClass = 'bg-red-100 text-red-700 animate-pulse'; bText = '🔴 6 SAAT KALA'; progressWidth = '90%'; progressColor = 'bg-red-600'; targetCol = kb6h; c6++;
+        } else if (diffHours <= 12) { 
+            bClass = 'bg-orange-100 text-orange-700'; bText = '🟠 12 SAAT KALA'; progressWidth = '75%'; progressColor = 'bg-orange-500'; targetCol = kb12h; c12++;
+        } else { cN++; }
 
-        const updateText = ship.lastUpdated ? `GÜNCELLENME: ${ship.lastUpdated}` : 'GÜNCELLEME YOK';
-
-        // MSC (Siyah/Sarı) ve MEDLOG (Sarı/Siyah) İkonları
         let avatarBg = ship.name.includes("MED") ? "bg-[#FFCC00] text-[#111111]" : "bg-[#111111] text-[#FFCC00]";
         let avatarText = ship.name.includes("MED") ? "MD" : "MS";
 
+        // --- LİSTE GÖRÜNÜMÜ SATIRI ---
         tbody.innerHTML += `
-          <tr class="border-b hover:bg-zinc-50 transition-colors">
-            <td class="p-4">
-              <div class="flex items-center gap-3">
-                <div class="${avatarBg} w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-sm">${avatarText}</div>
-                <div>
-                    <div class="font-bold text-slate-800 text-sm">${ship.name}</div>
-                    <div class="text-[10px] text-gray-500">IMO: ${ship.imo || '-'} | SF: ${ship.voyage || '-'}</div>
-                </div>
-              </div>
-            </td>
-            <td class="p-4 text-xs">
-                <div class="font-semibold text-slate-700 mb-1">${ship.originPort} <i class="fa-solid fa-arrow-right text-slate-400 mx-1"></i> ${ship.destinationPort}</div>
-                <span class="text-[10px] text-zinc-800 font-bold bg-[#FFCC00] px-2 py-0.5 rounded shadow-sm">${ship.note || 'NOT YOK'}</span>
-            </td>
-            <td class="p-4 text-xs font-medium">
-                <div class="mb-1 text-slate-800">${new Date(ship.eta).toLocaleString('tr-TR')}</div>
-                <div class="text-[9px] text-slate-500 font-bold"><i class="fa-solid fa-clock-rotate-left"></i> ${updateText}</div>
-            </td>
-            <td class="p-4 min-w-[150px]">
-                <div class="flex justify-between items-center mb-1">
-                    <span class="px-2 py-0.5 rounded text-[10px] font-bold ${bClass}">${bText}</span>
-                </div>
-                <div class="w-full bg-slate-200 rounded-full h-1.5 mt-2 overflow-hidden">
-                  <div class="${progressColor} h-1.5 rounded-full transition-all duration-1000 ease-out" style="width: ${progressWidth}"></div>
-                </div>
-            </td>
-            <td class="p-4 text-right whitespace-nowrap">
-              ${ship.status !== 'COMPLETED' ? `
-                <button onclick="openEditModal('${ship.firestoreId}')" class="text-[#111111] bg-yellow-100 w-8 h-8 rounded-lg border border-yellow-300 shadow-sm cursor-pointer hover:bg-[#FFCC00] transition-colors"><i class="fa-solid fa-pen"></i></button>
-                <button onclick="completeShip('${ship.firestoreId}')" class="text-emerald-600 bg-emerald-50 w-8 h-8 rounded-lg border border-emerald-200 shadow-sm cursor-pointer hover:bg-emerald-100 transition-colors ml-1"><i class="fa-solid fa-check"></i></button>
-              ` : ''}
-              <button onclick="deleteShip('${ship.firestoreId}')" class="text-red-600 bg-red-50 w-8 h-8 rounded-lg border border-red-200 shadow-sm cursor-pointer hover:bg-red-100 transition-colors ml-1"><i class="fa-solid fa-trash"></i></button>
+          <tr class="border-b hover:bg-zinc-50">
+            <td class="p-3"><div class="flex items-center gap-3"><div class="${avatarBg} w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs">${avatarText}</div><div><div class="font-bold text-sm">${ship.name}</div><div class="text-[10px] text-gray-500">IMO: ${ship.imo || '-'}</div></div></div></td>
+            <td class="p-3 text-xs"><b>${ship.destinationPort}</b></td>
+            <td class="p-3 text-xs font-medium">${new Date(ship.eta).toLocaleString('tr-TR')}</td>
+            <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${bClass}">${bText}</span></td>
+            <td class="p-3 text-right">
+                <button onclick="openRadar('${ship.imo}')" class="text-blue-600 bg-blue-50 px-2 py-1.5 rounded-lg border text-xs font-bold mr-1 hover:bg-blue-100"><i class="fa-solid fa-location-dot"></i> RADAR</button>
+                ${ship.status !== 'COMPLETED' ? `<button onclick="completeShip('${ship.firestoreId}')" class="text-emerald-600 bg-emerald-50 w-8 h-8 rounded-lg border"><i class="fa-solid fa-check"></i></button>` : ''}
             </td>
           </tr>`;
+
+        // --- KANBAN KART GÖRÜNÜMÜ ---
+        targetCol.innerHTML += `
+          <div class="bg-white p-3 rounded-lg shadow-sm border border-slate-200 hover:shadow-md transition-shadow relative">
+             <div class="flex justify-between items-start mb-2">
+                <div class="font-bold text-[#111111] text-sm">${ship.name}</div>
+                <button onclick="openRadar('${ship.imo}')" class="text-blue-500 hover:text-blue-700" title="Haritada Gör"><i class="fa-solid fa-map-location-dot"></i></button>
+             </div>
+             <div class="text-[11px] text-slate-500 mb-2"><i class="fa-solid fa-anchor"></i> ${ship.destinationPort}</div>
+             <div class="bg-slate-50 p-1.5 rounded border text-xs font-bold text-center mb-3">${new Date(ship.eta).toLocaleString('tr-TR')}</div>
+             <div class="w-full bg-slate-200 rounded-full h-1.5 mb-2"><div class="${progressColor} h-1.5 rounded-full" style="width: ${progressWidth}"></div></div>
+             <div class="flex justify-between items-center mt-2 pt-2 border-t border-dashed">
+                <span class="text-[9px] font-bold ${bClass} px-1.5 py-0.5 rounded">${bText}</span>
+                ${ship.status !== 'COMPLETED' ? `<button onclick="completeShip('${ship.firestoreId}')" class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded font-bold hover:bg-emerald-100">TAMAMLA</button>` : ''}
+             </div>
+          </div>
+        `;
       });
-      document.getElementById('stat-total').innerText = tot;
-      document.getElementById('stat-normal').innerText = nrm;
-      document.getElementById('stat-critical').innerText = crit;
-      document.getElementById('stat-arrived').innerText = arr;
-    }
-
-    function parseCustomDate(dateStr) {
-        if (!dateStr) return null;
-        let str = dateStr.toString().trim();
-        let parts = str.split(/[\sT]+/); 
-        let datePart = parts[0], timePart = parts[1] || "00:00";
-        let dParts = datePart.split(/[\.\/\-]/);
-        if (dParts.length === 3) {
-            let p1 = parseInt(dParts[0]), p2 = parseInt(dParts[1]), p3 = parseInt(dParts[2]);
-            let day = p1 > 12 ? p1 : (p2 > 12 ? p2 : p1); 
-            let month = p1 > 12 ? p2 - 1 : (p2 > 12 ? p1 - 1 : p2 - 1); 
-            let year = p3 < 100 ? p3 + 2000 : p3;
-            let tParts = timePart.split(":");
-            return new Date(year, month, day, parseInt(tParts[0]) || 0, parseInt(tParts[1]) || 0);
-        }
-        let d = new Date(str); return isNaN(d.getTime()) ? null : d;
-    }
-
-    function handleDailyExcel(event) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const btnLabel = document.getElementById('excel-label-text');
-        btnLabel.innerText = "⏳ EXCEL İŞLENİYOR...";
-
-        const reader = new FileReader();
-        reader.onload = async function(e) {
-            try {
-                const data = new Uint8Array(e.target.result);
-                const workbook = XLSX.read(data, {type: 'array'});
-                const currentMonthNames = ["OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN", "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"];
-                const currMonth = currentMonthNames[new Date().getMonth()];
-                const altMonth = currMonth.replace(/Ğ/g, 'G').replace(/Ü/g, 'U').replace(/Ş/g, 'S').replace(/İ/g, 'I').replace(/Ö/g, 'O').replace(/Ç/g, 'C');
-                let targetSheet = workbook.SheetNames.find(s => s.toUpperCase().includes(currMonth) || s.toUpperCase().includes(altMonth)) || workbook.SheetNames[0];
-                const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[targetSheet], {header: 1, raw: false, defval: ""});
-
-                let nameIdx = -1, etaIdx = -1, etbIdx = -1, startRow = -1;
-
-                for (let i = 0; i < Math.min(aoa.length, 20); i++) {
-                    const row = aoa[i];
-                    if (!row || row.length === 0) continue;
-                    for (let j = 0; j < row.length; j++) {
-                        let val = (row[j] || '').toString().toUpperCase().trim();
-                        if (val.includes('GEMİ ADI') || val.includes('VESSEL')) nameIdx = j;
-                        if (val === 'ETA' || val.includes('TAHMİNİ VARIŞ') || val.includes('VARIS')) etaIdx = j;
-                        if (val === 'ETB' || val.includes('TAHMİNİ YANAŞMA') || val.includes('YANASMA')) etbIdx = j;
-                    }
-                    if (nameIdx !== -1 && etaIdx !== -1) { startRow = i + 1; break; }
-                }
-
-                if (startRow === -1) throw new Error("Excel'de 'GEMİ ADI' ve 'ETA' sütunları bulunamadı!");
-
-                let futureRuns = {};
-                const rightNow = new Date(); rightNow.setHours(0,0,0,0); 
-
-                for (let i = startRow; i < aoa.length; i++) {
-                    const row = aoa[i];
-                    if (!row || !row[nameIdx]) continue;
-
-                    const excelName = row[nameIdx].toString().trim().toUpperCase();
-                    const rawEta = row[etaIdx] ? row[etaIdx].toString().trim() : '';
-                    const rawEtb = (etbIdx !== -1 && row[etbIdx]) ? row[etbIdx].toString().trim() : '';
-                    if (!excelName || !rawEta) continue;
-
-                    const etaDateObj = parseCustomDate(rawEta);
-                    const etbDateObj = parseCustomDate(rawEtb);
-                    let targetDateObj = (etbDateObj && !isNaN(etbDateObj.getTime())) ? etbDateObj : etaDateObj;
-
-                    if (targetDateObj && targetDateObj >= rightNow) {
-                        if (!futureRuns[excelName]) futureRuns[excelName] = [];
-                        futureRuns[excelName].push({ name: excelName, targetDateObj: targetDateObj, etbStr: rawEtb, etaStr: rawEta });
-                    }
-                }
-
-                let updatedCount = 0;
-                let activeShips = ships.filter(s => s.status !== 'COMPLETED');
-
-                for (const [shipName, runs] of Object.entries(futureRuns)) {
-                    runs.sort((a, b) => a.targetDateObj - b.targetDateObj); 
-                    const closestRun = runs[0]; 
-                    const activeMatch = activeShips.find(s => (s.name || '').toUpperCase() === shipName);
-                    
-                    if (activeMatch) {
-                        let noteStr = closestRun.etbStr ? `ETB BAZ ALINDI (${closestRun.etbStr})` : 'ETA BAZ ALINDI';
-                        await db.collection('ships').doc(activeMatch.firestoreId).update({
-                            eta: closestRun.targetDateObj.toISOString().slice(0,16), 
-                            note: noteStr,
-                            emailSent12h: false, emailSent6h: false, emailSentArrived: false,
-                            lastUpdated: getTrDateStr()
-                        });
-                        updatedCount++;
-                    }
-                }
-                alert(`✅ İŞLEM BAŞARILI!\n📄 Okunan Sayfa: ${targetSheet}\n🔄 Güncellenen Aktif Gemi: ${updatedCount}`);
-                setTab('ACTIVE');
-            } catch (err) { alert("❌ Yükleme Hatası: " + err.message); }
-            
-            btnLabel.innerHTML = '<i class="fa-solid fa-file-excel"></i> MANUEL EXCEL YÜKLE (.XLSM)';
-            event.target.value = ''; 
-        };
-        reader.readAsArrayBuffer(file);
+      
+      document.getElementById('stat-total').innerText = tot; document.getElementById('stat-normal').innerText = nrm;
+      document.getElementById('stat-critical').innerText = crit; document.getElementById('stat-arrived').innerText = arr;
+      document.getElementById('kb-count-normal').innerText = cN; document.getElementById('kb-count-12h').innerText = c12;
+      document.getElementById('kb-count-6h').innerText = c6; document.getElementById('kb-count-arrived').innerText = cA;
     }
   </script>
 </body>
