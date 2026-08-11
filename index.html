@@ -109,7 +109,7 @@
         </h2>
         <form id="ship-form" onsubmit="addShip(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
-            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">GEMİ ADİ</label>
+            <label class="block text-xs font-semibold text-slate-600 mb-1 uppercase">GEMİ ADI</label>
             <input type="text" id="shipName" required placeholder="ÖRN: MEDLOG HIZIR" class="w-full text-sm p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-[#002855] outline-none uppercase transition-all">
           </div>
           <div>
@@ -213,7 +213,7 @@
           <input type="hidden" id="edit-id">
           
           <div class="sm:col-span-1">
-            <label class="block text-xs font-semibold text-slate-600 mb-1">GEMİ ADİ</label>
+            <label class="block text-xs font-semibold text-slate-600 mb-1">GEMİ ADI</label>
             <input type="text" id="edit-shipName" required class="w-full text-sm p-2.5 border border-slate-300 rounded-lg outline-none uppercase transition-all focus:ring-2 focus:ring-amber-400">
           </div>
           <div>
@@ -579,12 +579,19 @@
     }
   </script>
 
-  <div style="text-align: center; margin: 30px 0;">
+  <div style="text-align: center; margin: 30px 0; display: flex; justify-content: center; gap: 15px; flex-wrap: wrap;">
     <button type="button" id="btn-toplu-yukle" style="background-color: #28a745; color: white; padding: 15px 25px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
         🚀 14 GEMİYİ SİSTEME OTOMATİK YÜKLE
     </button>
+    
+    <label style="background-color: #002855; color: #FFCC00; padding: 15px 25px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.1); display: inline-flex; align-items: center; gap: 8px;">
+        📁 GÜNLÜK ETA EXCEL'İNİ YÜKLE
+        <input type="file" id="excel-file-input" accept=".xlsx, .xls" style="display: none;" onchange="handleDailyExcel(event)">
+    </label>
   </div>
 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  
   <script>
     document.getElementById('btn-toplu-yukle').addEventListener('click', async function() {
         const btn = this;
@@ -638,6 +645,60 @@
             btn.innerText = "🚀 TEKRAR DENE";
         }
     });
+
+    // GÜNLÜK EXCEL DOSYASINDAN İSME GÖRE ETA GÜNCELLEME
+    function handleDailyExcel(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                // Excel dosyasını ArrayBuffer olarak oku ve SheetJS ile çözümle
+                const data = new Uint8Array(e.target.result);
+                const workbook = XLSX.read(data, {type: 'array'});
+                const firstSheetName = workbook.SheetNames[0]; // İlk çalışma sayfasını al
+                const worksheet = workbook.Sheets[firstSheetName];
+                
+                // Excel sayfasını JSON nesnesine dönüştür (tarihleri düzgün okuması için raw:false)
+                const rows = XLSX.utils.sheet_to_json(worksheet, {raw: false});
+
+                let guncellenenSayisi = 0;
+
+                for (const row of rows) {
+                    // Sütun isimleri farklı yazılmış olabilir, tüm yaygın ihtimalleri arıyoruz
+                    const excelShipName = (row['GEMI ADI'] || row['Gemi Adi'] || row['Name'] || row['GEMİ ADI'] || row['Vessel'] || '').toString().trim().toUpperCase();
+                    const excelEta = row['ETA'] || row['Tarih'] || row['Varis'] || row['TAHMİNİ VARIŞ'] || row['ETA Date'] || '';
+
+                    if (!excelShipName || !excelEta) continue;
+
+                    // Veritabanında bu isimle eşleşen gemiyi bulalım
+                    const matchedShip = ships.find(s => (s.name || '').toUpperCase() === excelShipName);
+
+                    if (matchedShip) {
+                        // ETA saatini güncelliyoruz ve bildirimleri baştan başlatsın diye sıfırlıyoruz
+                        await db.collection('ships').doc(matchedShip.firestoreId).update({
+                            eta: excelEta,
+                            emailSent10h: false,
+                            emailSent5h: false
+                        });
+                        guncellenenSayisi++;
+                    }
+                }
+
+                alert(`✅ İşlem Tamam! ${guncellenenSayisi} geminin ETA tarihi Excel'den başarıyla güncellendi.`);
+            } catch (err) {
+                console.error("Güncelleme hatası:", err);
+                alert("❌ Excel dosyası işlenirken bir hata oluştu: " + err.message);
+            }
+
+            // Input'u sıfırlıyoruz ki aynı dosya daha sonra tekrar seçilebilsin
+            event.target.value = '';
+        };
+
+        // Dosyayı okumayı başlat
+        reader.readAsArrayBuffer(file);
+    }
   </script>
 
 </body>
