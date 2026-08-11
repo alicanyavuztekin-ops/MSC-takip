@@ -1,12 +1,13 @@
-name: Tam Otonom ETA Botu
+name: Tam Otonom ETA Botu ve Alarm Sistemi
 
 on:
   schedule:
-    - cron: '0 * * * *' # Botu her saat başı otomatik uyanacak şekilde programlar
-  workflow_dispatch: # Test için senin manuel olarak tetiklemene izin verir
+    # Uyarıları kaçırmamak için botu her 1 saat yerine her YARIM SAATTE BİR (*/30) uyandırıyoruz
+    - cron: '*/30 * * * *' 
+  workflow_dispatch:
 
 jobs:
-  mail-okuyucu:
+  operasyon-botu:
     runs-on: ubuntu-latest
     steps:
       - name: Python Kurulumu
@@ -14,10 +15,10 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Lojistik ve Veri Kütüphanelerini Yükle
+      - name: Gerekli Kütüphaneleri Yükle
         run: pip install pandas openpyxl requests
 
-      - name: Otonom Bot Kodunu Oluştur ve Çalıştır
+      - name: Otonom Bot Kodunu Çalıştır
         env:
           BOT_EMAIL: ${{ secrets.BOT_EMAIL }}
           BOT_PASSWORD: ${{ secrets.BOT_PASSWORD }}
@@ -25,15 +26,47 @@ jobs:
           PANEL_SIFRE: ${{ secrets.PANEL_SIFRE }}
         run: |
           cat << 'EOF' > bot.py
-          import os, sys, datetime, imaplib, email, requests
+          import os, sys, datetime, imaplib, email, requests, smtplib
           import pandas as pd
+          from email.mime.text import MIMEText
+          from email.mime.multipart import MIMEMultipart
 
           BOT_EMAIL = os.environ.get('BOT_EMAIL')
           BOT_PASSWORD = os.environ.get('BOT_PASSWORD')
           PANEL_EMAIL = os.environ.get('PANEL_EMAIL')
           PANEL_SIFRE = os.environ.get('PANEL_SIFRE')
 
-          # 1. Firebase Veritabanina Guvenli Giris
+          # === GÖREV 1: UYARI MAİLİ GÖNDERME FONKSİYONU ===
+          def send_alert_email(to_addr, ship_name, status_msg, eta_str, note_str):
+              if not to_addr: return
+              subject = f"MSC OPERASYON: {ship_name} - {status_msg}"
+              body = f"""
+              <html><body style="font-family: Arial, sans-serif; color: #333;">
+              <h2 style='color:#002855; border-bottom: 2px solid #FFCC00; padding-bottom: 5px;'>MSC & MEDLOG LİMAN OPERASYON UYARISI</h2>
+              <p><b>Gemi Adı:</b> <span style="font-size: 16px;">{ship_name}</span></p>
+              <p><b>Durum:</b> <span style='color:red; font-size: 18px; font-weight: bold;'>{status_msg}</span></p>
+              <p><b>Hedef Zaman (ETA/ETB):</b> {eta_str}</p>
+              <p><b>Ek Not:</b> {note_str}</p>
+              <br><hr style="border: 1px solid #eee;">
+              <p><small style="color: #888;">Bu uyarı maili, MSC Operasyon Botu tarafından otomatik olarak gönderilmiştir.</small></p>
+              </body></html>
+              """
+              try:
+                  msg = MIMEMultipart()
+                  msg['From'] = BOT_EMAIL
+                  msg['To'] = to_addr
+                  msg['Subject'] = subject
+                  msg.attach(MIMEText(body, 'html'))
+                  server = smtplib.SMTP('smtp.gmail.com', 587)
+                  server.starttls()
+                  server.login(BOT_EMAIL, BOT_PASSWORD)
+                  server.send_message(msg)
+                  server.quit()
+              except Exception as e:
+                  print(f"Mail gonderme hatasi ({ship_name}):", e)
+
+
+          # === GÖREV 2: VERİTABANINA GÜVENLİ GİRİŞ ===
           API_KEY = 'AIzaSyAKAF1Tm0Ahy5kT3OW6Slc0sjTbiFvaifg'
           auth_url = f'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={API_KEY}'
           r_auth = requests.post(auth_url, json={'email': PANEL_EMAIL, 'password': PANEL_SIFRE, 'returnSecureToken': True}).json()
@@ -44,8 +77,9 @@ jobs:
 
           id_token = r_auth['idToken']
           local_id = r_auth['localId']
+          headers = {'Authorization': f'Bearer {id_token}'}
 
-          # 2. Sistemdeki Mevcut Gemileri Cek
+          # Sistemdeki Mevcut Gemileri Çek
           db_url = 'https://firestore.googleapis.com/v1/projects/msc-takip/databases/(default)/documents/ships'
           query = {
               'structuredQuery': {
@@ -59,7 +93,6 @@ jobs:
                   }
               }
           }
-          headers = {'Authorization': f'Bearer {id_token}'}
           r_docs = requests.post(db_url + ':runQuery', json=query, headers=headers).json()
 
           ships = []
@@ -67,10 +100,62 @@ jobs:
               if 'document' in d:
                   doc = d['document']
                   doc_id = doc['name'].split('/')[-1]
-                  name = doc.get('fields', {}).get('name', {}).get('stringValue', '').upper()
-                  ships.append({'id': doc_id, 'name': name})
+                  ships.append({'id': doc_id, 'fields': doc.get('fields', {})})
 
-          # 3. IMAP Uzerinden Yeni Gelen Kutusuna Baglan
+          now_tr = datetime.datetime.utcnow() + datetime.timedelta(hours=3) # Turkiye Saati
+
+
+          # === GÖREV 3: GEMİ SAATLERİNİ KONTROL ET VE MAİL AT ===
+          print(">>> 1. ALARM KONTROLU BASLIYOR...")
+          for s in ships:
+              fields = s['fields']
+              status = fields.get('status', {}).get('stringValue', '')
+              if status == 'COMPLETED': continue # Tamamlananlari es gec
+              
+              eta_str = fields.get('eta', {}).get('stringValue', '')
+              if not eta_str: continue
+              
+              try: ship_eta = datetime.datetime.strptime(eta_str, '%Y-%m-%dT%H:%M')
+              except: continue
+                  
+              diff_hours = (ship_eta - now_tr).total_seconds() / 3600
+              
+              s_name = fields.get('name', {}).get('stringValue', '')
+              s_email = fields.get('email', {}).get('stringValue', '')
+              s_note = fields.get('note', {}).get('stringValue', '')
+              
+              sent12 = fields.get('emailSent12h', {}).get('booleanValue', False)
+              sent6 = fields.get('emailSent6h', {}).get('booleanValue', False)
+              sentArr = fields.get('emailSentArrived', {}).get('booleanValue', False)
+              
+              update_flags = {}
+              alert_msg = ""
+              
+              if diff_hours <= 0 and not sentArr:
+                  alert_msg = "LİMANA YANAŞTI (0 SAAT)"
+                  update_flags = {'emailSentArrived': True, 'emailSent6h': True, 'emailSent12h': True}
+              elif 0 < diff_hours <= 6 and not sent6:
+                  alert_msg = "6 SAAT KALDI (KRİTİK UYARI)"
+                  update_flags = {'emailSent6h': True, 'emailSent12h': True}
+              elif 6 < diff_hours <= 12 and not sent12:
+                  alert_msg = "12 SAAT KALDI (YAKLAŞIYOR)"
+                  update_flags = {'emailSent12h': True}
+                  
+              if alert_msg:
+                  print(f"[{s_name}] Alarm Tetiklendi: {alert_msg}")
+                  send_alert_email(s_email, s_name, alert_msg, ship_eta.strftime('%d.%m.%Y %H:%M'), s_note)
+                  
+                  # Sadece mail gonderildi etiketlerini degistir
+                  upd_url = f'https://firestore.googleapis.com/v1/projects/msc-takip/databases/(default)/documents/ships/{s["id"]}?'
+                  paths = [f'updateMask.fieldPaths={k}' for k in update_flags.keys()]
+                  upd_url += '&'.join(paths)
+                  
+                  f_upd = {k: {'booleanValue': v} for k, v in update_flags.items()}
+                  requests.patch(upd_url, json={'fields': f_upd}, headers=headers)
+
+
+          # === GÖREV 4: EXCEL DOSYASI (GELEN KUTUSU) KONTROLÜ ===
+          print(">>> 2. EXCEL GELEN KUTUSU KONTROLU BASLIYOR...")
           try:
               mail = imaplib.IMAP4_SSL('imap.gmail.com')
               mail.login(BOT_EMAIL, BOT_PASSWORD)
@@ -82,12 +167,11 @@ jobs:
               sys.exit(1)
 
           if not mail_ids:
-              print('Okunmamis yeni ETA/ETB maili yok. Bot uyku moduna geciyor.')
+              print('Okunmamis yeni ETA maili yok. Bot uyku moduna geciyor.')
               sys.exit(0)
 
-          now = datetime.datetime.now()
           aylar = ['OCAK', 'ŞUBAT', 'MART', 'NİSAN', 'MAYIS', 'HAZİRAN', 'TEMMUZ', 'AĞUSTOS', 'EYLÜL', 'EKİM', 'KASIM', 'ARALIK']
-          curr_month = aylar[now.month - 1]
+          curr_month = aylar[now_tr.month - 1]
           alt_month = curr_month.replace('Ğ','G').replace('Ü','U').replace('Ş','S').replace('İ','I').replace('Ö','O').replace('Ç','C')
 
           for m_id in mail_ids:
@@ -107,17 +191,15 @@ jobs:
                       try:
                           xls = pd.ExcelFile(filename)
                           target_sheet = xls.sheet_names[0]
-                          for s in xls.sheet_names:
-                              su = s.upper()
+                          for s_name in xls.sheet_names:
+                              su = s_name.upper()
                               if curr_month in su or alt_month in su:
-                                  target_sheet = s
+                                  target_sheet = s_name
                                   break
                           
                           df = pd.read_excel(xls, sheet_name=target_sheet, header=None)
-                          name_idx, eta_idx, etb_idx = -1, -1, -1
-                          start_row = -1
+                          name_idx, eta_idx, etb_idx, start_row = -1, -1, -1, -1
                           
-                          # Radar: Ilk 20 satiri tara tablonun gercek basligini bul
                           for i in range(min(len(df), 20)):
                               row = df.iloc[i].fillna('').astype(str).str.upper().str.strip()
                               for j, val in enumerate(row):
@@ -131,7 +213,7 @@ jobs:
                           if start_row == -1: continue
                           
                           future_runs = {}
-                          today_start = now.replace(hour=0, minute=0, second=0, microsecond=0)
+                          today_start = now_tr.replace(hour=0, minute=0, second=0, microsecond=0)
                           
                           for i in range(start_row, len(df)):
                               row = df.iloc[i]
@@ -151,10 +233,8 @@ jobs:
                               
                               eta_date = parse_d(raw_eta)
                               etb_date = parse_d(raw_etb)
-                              
                               target_date = etb_date if (etb_date and not pd.isna(etb_date)) else eta_date
                               
-                              # Gecmis (Kirmizi) tarihleri atla, ileri tarihlileri al
                               if target_date and not pd.isna(target_date) and target_date >= today_start:
                                   if excel_name not in future_runs: future_runs[excel_name] = []
                                   future_runs[excel_name].append({
@@ -162,31 +242,30 @@ jobs:
                                       'etb_str': etb_date.strftime('%d.%m.%Y %H:%M') if (etb_date and not pd.isna(etb_date)) else ''
                                   })
                           
-                          # Shuttle ve Guncelleme Islemleri
-                          for s_name, runs in future_runs.items():
+                          for s_name_ex, runs in future_runs.items():
                               runs.sort(key=lambda x: x['target_date'])
                               closest = runs[0]
-                              matched = next((s for s in ships if s['name'] == s_name), None)
+                              
+                              matched = next((sh for sh in ships if sh['fields'].get('name', {}).get('stringValue', '').upper() == s_name_ex), None)
                               
                               if matched:
                                   note_str = f'ETB BAZ ALINDI ({closest["etb_str"]})' if closest['etb_str'] else 'ETA BAZ ALINDI (BOT)'
+                                  
                                   update_url = f'https://firestore.googleapis.com/v1/projects/msc-takip/databases/(default)/documents/ships/{matched["id"]}?updateMask.fieldPaths=eta&updateMask.fieldPaths=note&updateMask.fieldPaths=emailSent12h&updateMask.fieldPaths=emailSent6h&updateMask.fieldPaths=emailSentArrived'
                                   update_data = {
                                       'fields': {
                                           'eta': {'stringValue': closest['target_date'].strftime('%Y-%m-%dT%H:%M')},
                                           'note': {'stringValue': note_str},
-                                          'emailSent12h': {'booleanValue': False}, # Yeni 12 Saat alarmlarini tekrar aktif et
-                                          'emailSent6h': {'booleanValue': False},  # Yeni 6 Saat alarmlarini tekrar aktif et
+                                          'emailSent12h': {'booleanValue': False},
+                                          'emailSent6h': {'booleanValue': False},
                                           'emailSentArrived': {'booleanValue': False}
                                       }
                                   }
                                   requests.patch(update_url, json=update_data, headers=headers)
-                                  print(f'Basariyla Guncellendi: {s_name}')
+                                  print(f'Basariyla Guncellendi: {s_name_ex}')
                       except Exception as e:
                           print('Excel ayrilistirma hatasi:', e)
           
-          # Islem bittikten sonra mailleri otomatik olarak okundu isaretler
           mail.logout()
           EOF
           python bot.py
-
