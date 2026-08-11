@@ -124,7 +124,7 @@
       </div>
       
       <div id="action-buttons-container" class="hidden text-center my-8 flex justify-center gap-4 flex-wrap">
-        <label for="excel-file-input" style="background-color: #111111; color: #FFCC00; padding: 15px 25px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); display: inline-flex; align-items: center; gap: 8px; transition: background-color 0.2s;">
+        <label for="excel-file-input" style="background-color: #111111; color: #FFCC00; padding: 15px 25px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); display: inline-flex; align-items: center; gap: 8px;">
             <span id="excel-label-text"><i class="fa-solid fa-file-excel"></i> MANUEL EXCEL YÜKLE (.XLSM)</span>
         </label>
         <input type="file" id="excel-file-input" accept=".xlsx, .xls, .xlsm" style="display: none;" onchange="handleDailyExcel(event)">
@@ -167,7 +167,7 @@
   </div>
 
   <script>
-    // YAPAY ZEKA (GEMINI) API ANAHTARIN
+    // GEMİNİ API ANAHTARIN BURAYA DOĞRUDAN İŞLENDİ
     const GEMINI_API_KEY = "AQ.Ab8RN6JpkKZNo-rAYX0SZkmnHOF7Zdmiy5EW6KkriPodKB8wYA"; 
 
     const firebaseConfig = {
@@ -252,7 +252,7 @@
     function deleteShip(id) { if(confirm("Silmek istediğinize emin misiniz?")) db.collection('ships').doc(id).delete(); }
     function openRadar(imo) { if(!imo || imo === '-' || imo === 'BELİRTİLMEDİ') { alert("IMO numarası yok."); return; } window.open(`https://www.vesselfinder.com/vessels/details/${imo}`, '_blank'); }
 
-    // --- YAPAY ZEKA CHATBOT MANTIĞI ---
+    // --- AI CHATBOT ---
     function toggleAIChat() {
         const win = document.getElementById('ai-chat-window'); const btn = document.getElementById('ai-chat-toggle-btn');
         if(win.classList.contains('hidden')) { win.classList.remove('hidden'); btn.classList.add('hidden'); } 
@@ -285,7 +285,7 @@
         } catch (error) { document.getElementById(typingId).outerHTML = `<div class="ai-message text-red-600">Bağlantı hatası oluştu.</div>`; }
     }
 
-    // --- MANUEL EXCEL İŞLEME MANTIĞI ---
+    // --- MANUEL EXCEL İŞLEME ---
     function parseCustomDate(dateStr) {
         if (!dateStr) return null; let str = dateStr.toString().trim(); let parts = str.split(/[\sT]+/); 
         let datePart = parts[0], timePart = parts[1] || "00:00"; let dParts = datePart.split(/[\.\/\-]/);
