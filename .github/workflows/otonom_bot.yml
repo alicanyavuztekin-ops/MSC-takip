@@ -25,7 +25,7 @@ jobs:
           PANEL_SIFRE: ${{ secrets.PANEL_SIFRE }}
         run: |
           cat << 'EOF' > bot.py
-          import os, sys, datetime, imaplib, email, requests, hashlib
+          import os, sys, datetime, imaplib, email, requests
           import pandas as pd
 
           BOT_EMAIL = os.environ.get('BOT_EMAIL')
@@ -33,7 +33,7 @@ jobs:
           PANEL_EMAIL = os.environ.get('PANEL_EMAIL')
           PANEL_SIFRE = os.environ.get('PANEL_SIFRE')
 
-          # Veritabanina Baglan
+          # Veritabanına Bağlan
           API_KEY = 'AIzaSyAKAF1Tm0Ahy5kT3OW6Slc0sjTbiFvaifg'
           auth_url = f'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={API_KEY}'
           r_auth = requests.post(auth_url, json={'email': PANEL_EMAIL, 'password': PANEL_SIFRE, 'returnSecureToken': True}).json()
@@ -71,21 +71,12 @@ jobs:
 
           active_ships = {s['fields'].get('name', {}).get('stringValue', '').upper(): s for s in ships if s['fields'].get('status', {}).get('stringValue', '') != 'COMPLETED'}
 
-          # Islenmis mail takibi (okunmus/okunmamis fark etmeksizin calissin diye)
-          def is_processed(msg_hash):
-              r = requests.get(f'https://firestore.googleapis.com/v1/projects/msc-takip/databases/(default)/documents/processedEmails/{msg_hash}', headers=headers)
-              return r.status_code == 200
-
-          def mark_processed(msg_hash):
-              requests.patch(f'https://firestore.googleapis.com/v1/projects/msc-takip/databases/(default)/documents/processedEmails/{msg_hash}?updateMask.fieldPaths=processedAt', json={'fields': {'processedAt': {'stringValue': now_tr_str}}}, headers=headers)
-
-          # Excel Okuma Islemi
+          # E-posta Okuma Islemi
           try:
               mail = imaplib.IMAP4_SSL('imap.gmail.com')
               mail.login(BOT_EMAIL, BOT_PASSWORD)
               mail.select('inbox')
-              since_date = (now_tr - datetime.timedelta(days=2)).strftime('%d-%b-%Y')
-              status, messages = mail.search(None, f'(SINCE "{since_date}")')
+              status, messages = mail.search(None, '(UNSEEN)')
               mail_ids = messages[0].split()
           except Exception:
               sys.exit(0)
@@ -99,15 +90,11 @@ jobs:
           for m_id in mail_ids:
               status, msg_data = mail.fetch(m_id, '(RFC822)')
               msg = email.message_from_bytes(msg_data[0][1])
-
-              msg_uid = msg.get('Message-ID') or f"{msg.get('Date','')}-{msg.get('Subject','')}"
-              msg_hash = hashlib.md5(msg_uid.encode('utf-8', 'ignore')).hexdigest()
-              if is_processed(msg_hash): continue
               
               for part in msg.walk():
                   if part.get_content_maintype() == 'multipart' or part.get('Content-Disposition') is None: continue
                   filename = part.get_filename()
-                  if filename and filename.lower().endswith(('.xlsx', '.xlsm')):
+                  if filename and (filename.endswith('.xlsx') or filename.endswith('.xlsm')):
                       with open(filename, 'wb') as f: f.write(part.get_payload(decode=True))
                       
                       try:
@@ -121,12 +108,14 @@ jobs:
                           df = pd.read_excel(xls, sheet_name=target_sheet, header=None)
                           name_idx, eta_idx, etb_idx, start_row = -1, -1, -1, -1
                           
+                          # GELİŞTİRİLMİŞ SÜTUN BULUCU
                           for i in range(min(len(df), 20)):
                               row = df.iloc[i].fillna('').astype(str).str.upper().str.strip()
                               for j, val in enumerate(row):
                                   if 'GEMİ ADI' in val or 'VESSEL' in val: name_idx = j
-                                  if val == 'ETA' or 'VARIS' in val: eta_idx = j
-                                  if val == 'ETB' or 'YANASMA' in val: etb_idx = j
+                                  if 'ETA' in val or 'VARIS' in val or 'VARIŞ' in val or 'ARRIVAL' in val: eta_idx = j
+                                  if 'ETB' in val or 'YANASMA' in val or 'YANAŞMA' in val or 'BERTH' in val: etb_idx = j
+                              
                               if name_idx != -1 and eta_idx != -1:
                                   start_row = i + 1
                                   break
@@ -150,6 +139,8 @@ jobs:
                                   except: return None
                               
                               eta_date, etb_date = parse_d(raw_eta), parse_d(raw_etb)
+                              
+                              # İKİSİ DE VARSA ETB, YOKSA ETA AL (Tam Olarak İstediğin Mantık)
                               target_date = etb_date if (etb_date and not pd.isna(etb_date)) else eta_date
                               
                               if target_date and not pd.isna(target_date) and target_date >= today_start:
@@ -160,18 +151,15 @@ jobs:
                               runs.sort(key=lambda x: x['target_date'])
                               closest = runs[0]
                               
-                              # SADECE AKTIF LISTEDE VARSA GUNCELLE.
                               if s_name_ex in active_ships:
                                   note_str = f'ETB BAZ ALINDI ({closest["etb_str"]})' if closest['etb_str'] else 'ETA BAZ ALINDI (BOT)'
                                   new_eta_str = closest['target_date'].strftime('%Y-%m-%dT%H:%M')
                                   
                                   matched_id = active_ships[s_name_ex]['id']
-                                  upd_url = f'https://firestore.googleapis.com/v1/projects/msc-takip/databases/(default)/documents/ships/{matched_id}?updateMask.fieldPaths=eta&updateMask.fieldPaths=note&updateMask.fieldPaths=emailSent10h&updateMask.fieldPaths=emailSent5h&updateMask.fieldPaths=lastUpdated'
-                                  requests.patch(upd_url, json={'fields': {'eta': {'stringValue': new_eta_str}, 'note': {'stringValue': note_str}, 'lastUpdated': {'stringValue': f"{now_tr_str} (BOT)"}, 'emailSent10h': {'booleanValue': False}, 'emailSent5h': {'booleanValue': False}}}, headers=headers)
+                                  upd_url = f'https://firestore.googleapis.com/v1/projects/msc-takip/databases/(default)/documents/ships/{matched_id}?updateMask.fieldPaths=eta&updateMask.fieldPaths=note&updateMask.fieldPaths=emailSent12h&updateMask.fieldPaths=emailSent6h&updateMask.fieldPaths=emailSentArrived&updateMask.fieldPaths=lastUpdated'
+                                  requests.patch(upd_url, json={'fields': {'eta': {'stringValue': new_eta_str}, 'note': {'stringValue': note_str}, 'lastUpdated': {'stringValue': f"{now_tr_str} (BOT)"}, 'emailSent12h': {'booleanValue': False}, 'emailSent6h': {'booleanValue': False}, 'emailSentArrived': {'booleanValue': False}}}, headers=headers)
                                   
                       except Exception as e: print(e)
-              
-              mark_processed(msg_hash)
           mail.logout()
           EOF
           python bot.py
