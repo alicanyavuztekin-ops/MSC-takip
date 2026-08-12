@@ -178,7 +178,7 @@
   </div>
 
   <script>
-    const GEMINI_API_KEY = "AQ.Ab8RN6LfM0fmaTgLoh1FRZhwbMCTiyrAuGdAEsoXgIvrEJkk9g"; 
+    const OPENROUTER_API_KEY = "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"; 
 
     const firebaseConfig = {
       apiKey: "AIzaSyAKAF1Tm0Ahy5kT3OW6Slc0sjTbiFvaifg", authDomain: "msc-takip.firebaseapp.com",
@@ -331,6 +331,27 @@
     // --- AI SEKME ASİSTAN MANTIĞI ---
     function handleAITabKeyPress(e) { if(e.key === 'Enter') sendAITabMessage(); }
 
+    async function getWeatherSummary() {
+        const ports = [
+            { name: 'İZMİR ALSANCAK', lat: 38.44, lon: 27.15 },
+            { name: 'ALİAĞA SOCAR', lat: 38.80, lon: 26.97 }
+        ];
+        const codeMap = { 0:'Açık', 1:'Az bulutlu', 2:'Parçalı bulutlu', 3:'Kapalı', 45:'Sisli', 48:'Kırağı sisi', 51:'Hafif çisenti', 53:'Çisenti', 55:'Yoğun çisenti', 61:'Hafif yağmur', 63:'Yağmur', 65:'Kuvvetli yağmur', 71:'Hafif kar', 73:'Kar', 75:'Kuvvetli kar', 80:'Sağanak', 81:'Kuvvetli sağanak', 82:'Şiddetli sağanak', 95:'Fırtına', 96:'Dolulu fırtına', 99:'Şiddetli dolulu fırtına' };
+        try {
+            const results = await Promise.all(ports.map(p =>
+                fetch(`https://api.open-meteo.com/v1/forecast?latitude=${p.lat}&longitude=${p.lon}&current=temperature_2m,wind_speed_10m,weather_code&timezone=Europe%2FIstanbul`).then(r => r.json())
+            ));
+            return ports.map((p, i) => {
+                const c = results[i].current;
+                const durum = codeMap[c.weather_code] || 'Bilinmiyor';
+                return `${p.name}: ${c.temperature_2m}°C, rüzgar ${c.wind_speed_10m} km/s, ${durum}`;
+            }).join(" | ");
+        } catch (e) {
+            console.error("Hava durumu alınamadı:", e);
+            return "Hava durumu şu an alınamadı.";
+        }
+    }
+
     async function sendAITabMessage() {
         const input = document.getElementById('ai-tab-input'); const text = input.value.trim(); if(!text) return;
         const chatBox = document.getElementById('ai-tab-messages');
@@ -341,23 +362,35 @@
         chatBox.scrollTop = chatBox.scrollHeight;
 
         const activeShips = ships.filter(s => s.status !== 'COMPLETED').map(s => `Gemi: ${s.name}, Hedef: ${s.destinationPort}, ETA: ${s.eta}, Not: ${s.note || 'Yok'}, IMO: ${s.imo}`).join(" | ");
-        const systemPrompt = `Sen profesyonel bir MSC ve MEDLOG Liman Operasyon Asistanısın. Aktif gemi veritabanı: [${activeShips}]. Kullanıcının sorusuna bu verileri baz alarak kısa, net, profesyonel ve Türkçe yanıt ver.`;
+        const weatherSummary = await getWeatherSummary();
+        const systemPrompt = `Sen profesyonel bir MSC ve MEDLOG Liman Operasyon Asistanısın. Aktif gemi veritabanı: [${activeShips}]. Güncel hava durumu: [${weatherSummary}]. Kullanıcının sorusuna bu verileri baz alarak kısa, net, profesyonel ve Türkçe yanıt ver. Hava durumunun geminin yanaşma/ETA'sını etkileyip etkilemeyeceğini değerlendirebilirsin.`;
 
         try {
-            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent`, {
+            const response = await fetch(`https://openrouter.ai/api/v1/chat/completions`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-goog-api-key': GEMINI_API_KEY },
-                body: JSON.stringify({ contents: [{ parts: [{ text: systemPrompt + " Soru: " + text }] }] })
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+                    'HTTP-Referer': window.location.href,
+                    'X-Title': 'MSC Gemi Takip'
+                },
+                body: JSON.stringify({
+                    model: 'meta-llama/llama-3.3-70b-instruct:free',
+                    messages: [
+                        { role: 'system', content: systemPrompt },
+                        { role: 'user', content: text }
+                    ]
+                })
             });
             const data = await response.json();
             if (!response.ok || data.error) {
                 throw new Error(data.error ? data.error.message : `HTTP ${response.status}`);
             }
-            const aiText = data.candidates[0].content.parts[0].text;
+            const aiText = data.choices[0].message.content;
             document.getElementById(typingId).outerHTML = `<div class="ai-message">${aiText.replace(/\n/g, '<br>')}</div>`;
             chatBox.scrollTop = chatBox.scrollHeight;
         } catch (error) {
-            console.error("Gemini API hatası:", error);
+            console.error("OpenRouter API hatası:", error);
             document.getElementById(typingId).outerHTML = `<div class="ai-message text-red-600">Bağlantı hatası: ${error.message}</div>`;
         }
     }
