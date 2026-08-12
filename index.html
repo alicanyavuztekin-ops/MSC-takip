@@ -208,7 +208,7 @@
         const ship = ships.find(s => s.firestoreId === currentDeclShipId);
         const container = document.getElementById('declarations-list');
         if (!ship || !container) return;
-        const list = ship.declarations || [];
+        const list = ship.htDeclarations || [];
         if (list.length === 0) {
             container.innerHTML = `<div class="text-xs text-slate-400 text-center py-4">Henüz beyanname eklenmedi.</div>`;
             return;
@@ -234,8 +234,8 @@
         const note = document.getElementById('decl-note').value.trim().toUpperCase();
         if (!no) return;
         const ship = ships.find(s => s.firestoreId === currentDeclShipId);
-        const updated = [...(ship.declarations || []), { id: Date.now().toString(), no: no, note: note, completed: false }];
-        db.collection('ships').doc(currentDeclShipId).update({ declarations: updated }).then(() => {
+        const updated = [...(ship.htDeclarations || []), { id: Date.now().toString(), no: no, note: note, completed: false }];
+        db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: updated }).then(() => {
             document.getElementById('decl-form').reset();
         });
     }
@@ -243,8 +243,8 @@
     function completeDeclaration(declId) {
         if (!currentDeclShipId) return;
         const ship = ships.find(s => s.firestoreId === currentDeclShipId);
-        const updated = (ship.declarations || []).map(d => d.id === declId ? { ...d, completed: true } : d);
-        db.collection('ships').doc(currentDeclShipId).update({ declarations: updated });
+        const updated = (ship.htDeclarations || []).map(d => d.id === declId ? { ...d, completed: true } : d);
+        db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: updated });
     }
   </script>
 
@@ -433,7 +433,7 @@
         chatBox.innerHTML += `<div id="${typingId}" class="ai-message typing-indicator"><span></span><span></span><span></span> Lojistik veriler inceleniyor...</div>`;
         chatBox.scrollTop = chatBox.scrollHeight;
 
-        const activeShips = ships.filter(s => s.status !== 'COMPLETED').map(s => { const dl = s.declarations || []; const dDone = dl.filter(d => d.completed).length; return `Gemi: ${s.name}, Hedef: ${s.destinationPort}, ETA: ${s.eta}, Not: ${s.note || 'Yok'}, IMO: ${s.imo}, HT Beyanname: ${dDone}/${dl.length} tamamlandı`; }).join(" | ");
+        const activeShips = ships.filter(s => s.status !== 'COMPLETED').map(s => { const dl = s.htDeclarations || []; const dDone = dl.filter(d => d.completed).length; return `Gemi: ${s.name}, Hedef: ${s.destinationPort}, ETA: ${s.eta}, Not: ${s.note || 'Yok'}, IMO: ${s.imo}, HT Beyanname: ${dDone}/${dl.length} tamamlandı`; }).join(" | ");
         const weatherSummary = await getWeatherSummary();
         const systemPrompt = `Sen profesyonel bir MSC ve MEDLOG Liman Operasyon Asistanısın. Aktif gemi veritabanı: [${activeShips}]. Güncel hava durumu: [${weatherSummary}]. Kullanıcının sorusuna bu verileri baz alarak kısa, net, profesyonel ve Türkçe yanıt ver. Hava durumunun geminin yanaşma/ETA'sını etkileyip etkilemeyeceğini değerlendirebilirsin.`;
 
@@ -577,7 +577,7 @@
         } else { cN++; }
 
         let avatarBg = ship.name.includes("MED") ? "bg-[#FFCC00] text-[#111111]" : "bg-[#111111] text-[#FFCC00]"; let avatarText = ship.name.includes("MED") ? "MD" : "MS";
-        const declList = ship.declarations || []; const declDone = declList.filter(d => d.completed).length; const declTotal = declList.length;
+        const declList = ship.htDeclarations || []; const declDone = declList.filter(d => d.completed).length; const declTotal = declList.length;
 
         tbody.innerHTML += `<tr class="border-b hover:bg-zinc-50"><td class="p-3"><div class="flex items-center gap-3"><div class="${avatarBg} w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-sm">${avatarText}</div><div><div class="font-bold text-sm text-slate-800">${ship.name}</div><div class="text-[10px] text-gray-500">IMO: ${ship.imo || '-'} | SF: ${ship.voyage || '-'}</div></div></div></td><td class="p-3 text-xs"><div class="font-semibold text-slate-700 mb-1">${ship.originPort || '-'} <i class="fa-solid fa-arrow-right text-slate-400 mx-1"></i> ${ship.destinationPort}</div><span class="text-[10px] text-zinc-800 font-bold bg-[#FFCC00] px-2 py-0.5 rounded shadow-sm">${ship.note || 'NOT YOK'}</span></td><td class="p-3 text-xs font-medium"><div class="mb-1 text-slate-800">${new Date(ship.eta).toLocaleString('tr-TR')}</div><div class="text-[9px] text-slate-500 font-bold"><i class="fa-solid fa-clock-rotate-left"></i> ${ship.lastUpdated ? ship.lastUpdated : 'GÜNCELLEME YOK'}</div></td><td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${bClass}">${bText}</span></td><td class="p-3 text-right whitespace-nowrap"><button onclick="openRadar('${ship.imo}')" class="text-blue-600 bg-blue-50 w-8 h-8 rounded-lg border text-xs font-bold hover:bg-blue-100 transition-colors cursor-pointer" title="Radarda Gör"><i class="fa-solid fa-location-dot"></i></button> <button onclick="openDeclarationsModal('${ship.firestoreId}')" class="text-purple-600 bg-purple-50 w-8 h-8 rounded-lg border hover:bg-purple-100 transition-colors ml-1 cursor-pointer relative" title="HT Beyannameleri"><i class="fa-solid fa-file-lines"></i>${declTotal > 0 ? `<span class="absolute -top-1.5 -right-1.5 bg-[#111111] text-white text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center">${declDone}/${declTotal}</span>` : ''}</button> ${ship.status !== 'COMPLETED' ? `<button onclick="openEditModal('${ship.firestoreId}')" class="text-[#111111] bg-yellow-100 w-8 h-8 rounded-lg border border-yellow-300 shadow-sm hover:bg-[#FFCC00] transition-colors ml-1 cursor-pointer" title="Düzenle"><i class="fa-solid fa-pen"></i></button><button onclick="completeShip('${ship.firestoreId}')" class="text-emerald-600 bg-emerald-50 w-8 h-8 rounded-lg border hover:bg-emerald-100 transition-colors ml-1 cursor-pointer" title="Tamamla"><i class="fa-solid fa-check"></i></button>` : ''} <button onclick="deleteShip('${ship.firestoreId}')" class="text-red-600 bg-red-50 w-8 h-8 rounded-lg border border-red-200 shadow-sm hover:bg-red-100 transition-colors ml-1 cursor-pointer" title="Sil"><i class="fa-solid fa-trash"></i></button></td></tr>`;
 
