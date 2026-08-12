@@ -365,28 +365,39 @@
         const weatherSummary = await getWeatherSummary();
         const systemPrompt = `Sen profesyonel bir MSC ve MEDLOG Liman Operasyon Asistanısın. Aktif gemi veritabanı: [${activeShips}]. Güncel hava durumu: [${weatherSummary}]. Kullanıcının sorusuna bu verileri baz alarak kısa, net, profesyonel ve Türkçe yanıt ver. Hava durumunun geminin yanaşma/ETA'sını etkileyip etkilemeyeceğini değerlendirebilirsin.`;
 
-        try {
-            const response = await fetch(`https://openrouter.ai/api/v1/chat/completions`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
-                    'HTTP-Referer': window.location.href,
-                    'X-Title': 'MSC Gemi Takip'
-                },
-                body: JSON.stringify({
-                    model: 'meta-llama/llama-3.3-70b-instruct:free',
-                    messages: [
-                        { role: 'system', content: systemPrompt },
-                        { role: 'user', content: text }
-                    ]
-                })
-            });
-            const data = await response.json();
-            if (!response.ok || data.error) {
-                throw new Error(data.error ? data.error.message : `HTTP ${response.status}`);
+        const MODEL_CANDIDATES = ['openai/gpt-oss-20b:free', 'google/gemma-4-26b-a4b-it:free', 'nvidia/nemotron-3-nano-30b-a3b:free'];
+        let aiText = null; let lastError = null;
+        for (const model of MODEL_CANDIDATES) {
+            try {
+                const response = await fetch(`https://openrouter.ai/api/v1/chat/completions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
+                        'HTTP-Referer': window.location.href,
+                        'X-Title': 'MSC Gemi Takip'
+                    },
+                    body: JSON.stringify({
+                        model: model,
+                        messages: [
+                            { role: 'system', content: systemPrompt },
+                            { role: 'user', content: text }
+                        ]
+                    })
+                });
+                const data = await response.json();
+                if (!response.ok || data.error) {
+                    lastError = new Error(data.error ? data.error.message : `HTTP ${response.status}`);
+                    continue;
+                }
+                aiText = data.choices[0].message.content;
+                break;
+            } catch (err) {
+                lastError = err;
             }
-            const aiText = data.choices[0].message.content;
+        }
+        try {
+            if (aiText === null) throw (lastError || new Error('Hiçbir model yanıt vermedi.'));
             document.getElementById(typingId).outerHTML = `<div class="ai-message">${aiText.replace(/\n/g, '<br>')}</div>`;
             chatBox.scrollTop = chatBox.scrollHeight;
         } catch (error) {
