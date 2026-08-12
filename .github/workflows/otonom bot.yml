@@ -1,0 +1,162 @@
+name: Tam Otonom ETA Botu (Sadece Excel)
+
+on:
+  schedule:
+    - cron: '*/15 * * * *' 
+  workflow_dispatch:
+
+jobs:
+  excel-botu:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Python Kurulumu
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Kütüphaneleri Yükle
+        run: pip install pandas openpyxl requests
+
+      - name: Otonom Bot Kodunu Çalıştır
+        env:
+          BOT_EMAIL: ${{ secrets.BOT_EMAIL }}
+          BOT_PASSWORD: ${{ secrets.BOT_PASSWORD }}
+          PANEL_EMAIL: ${{ secrets.PANEL_EMAIL }}
+          PANEL_SIFRE: ${{ secrets.PANEL_SIFRE }}
+        run: |
+          cat << 'EOF' > bot.py
+          import os, sys, datetime, imaplib, email, requests
+          import pandas as pd
+
+          BOT_EMAIL = os.environ.get('BOT_EMAIL')
+          BOT_PASSWORD = os.environ.get('BOT_PASSWORD')
+          PANEL_EMAIL = os.environ.get('PANEL_EMAIL')
+          PANEL_SIFRE = os.environ.get('PANEL_SIFRE')
+
+          # Veritabanina Baglan
+          API_KEY = 'AIzaSyAKAF1Tm0Ahy5kT3OW6Slc0sjTbiFvaifg'
+          auth_url = f'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={API_KEY}'
+          r_auth = requests.post(auth_url, json={'email': PANEL_EMAIL, 'password': PANEL_SIFRE, 'returnSecureToken': True}).json()
+          
+          if 'idToken' not in r_auth: sys.exit(1)
+
+          id_token = r_auth['idToken']
+          local_id = r_auth['localId']
+          headers = {'Authorization': f'Bearer {id_token}'}
+
+          db_url = 'https://firestore.googleapis.com/v1/projects/msc-takip/databases/(default)/documents/ships'
+          query = {
+              'structuredQuery': {
+                  'from': [{'collectionId': 'ships'}],
+                  'where': {
+                      'fieldFilter': {
+                          'field': {'fieldPath': 'userId'},
+                          'op': 'EQUAL',
+                          'value': {'stringValue': local_id}
+                      }
+                  }
+              }
+          }
+          r_docs = requests.post(db_url + ':runQuery', json=query, headers=headers).json()
+
+          ships = []
+          for d in r_docs:
+              if 'document' in d:
+                  doc = d['document']
+                  doc_id = doc['name'].split('/')[-1]
+                  ships.append({'id': doc_id, 'fields': doc.get('fields', {})})
+
+          now_tr = datetime.datetime.utcnow() + datetime.timedelta(hours=3)
+          now_tr_str = now_tr.strftime('%d.%m.%Y %H:%M')
+
+          active_ships = {s['fields'].get('name', {}).get('stringValue', '').upper(): s for s in ships if s['fields'].get('status', {}).get('stringValue', '') != 'COMPLETED'}
+
+          # Excel Okuma Islemi
+          try:
+              mail = imaplib.IMAP4_SSL('imap.gmail.com')
+              mail.login(BOT_EMAIL, BOT_PASSWORD)
+              mail.select('inbox')
+              status, messages = mail.search(None, '(UNSEEN)')
+              mail_ids = messages[0].split()
+          except Exception:
+              sys.exit(0)
+
+          if not mail_ids: sys.exit(0)
+
+          aylar = ['OCAK', 'ŞUBAT', 'MART', 'NİSAN', 'MAYIS', 'HAZİRAN', 'TEMMUZ', 'AĞUSTOS', 'EYLÜL', 'EKİM', 'KASIM', 'ARALIK']
+          curr_month = aylar[now_tr.month - 1]
+          alt_month = curr_month.replace('Ğ','G').replace('Ü','U').replace('Ş','S').replace('İ','I').replace('Ö','O').replace('Ç','C')
+
+          for m_id in mail_ids:
+              status, msg_data = mail.fetch(m_id, '(RFC822)')
+              msg = email.message_from_bytes(msg_data[0][1])
+              
+              for part in msg.walk():
+                  if part.get_content_maintype() == 'multipart' or part.get('Content-Disposition') is None: continue
+                  filename = part.get_filename()
+                  if filename and (filename.endswith('.xlsx') or filename.endswith('.xlsm')):
+                      with open(filename, 'wb') as f: f.write(part.get_payload(decode=True))
+                      
+                      try:
+                          xls = pd.ExcelFile(filename)
+                          target_sheet = xls.sheet_names[0]
+                          for s_name in xls.sheet_names:
+                              if curr_month in s_name.upper() or alt_month in s_name.upper():
+                                  target_sheet = s_name
+                                  break
+                          
+                          df = pd.read_excel(xls, sheet_name=target_sheet, header=None)
+                          name_idx, eta_idx, etb_idx, start_row = -1, -1, -1, -1
+                          
+                          for i in range(min(len(df), 20)):
+                              row = df.iloc[i].fillna('').astype(str).str.upper().str.strip()
+                              for j, val in enumerate(row):
+                                  if 'GEMİ ADI' in val or 'VESSEL' in val: name_idx = j
+                                  if val == 'ETA' or 'VARIS' in val: eta_idx = j
+                                  if val == 'ETB' or 'YANASMA' in val: etb_idx = j
+                              if name_idx != -1 and eta_idx != -1:
+                                  start_row = i + 1
+                                  break
+                          
+                          if start_row == -1: continue
+                          
+                          future_runs = {}
+                          today_start = now_tr.replace(hour=0, minute=0, second=0, microsecond=0)
+                          
+                          for i in range(start_row, len(df)):
+                              row = df.iloc[i]
+                              if pd.isna(row.iloc[name_idx]): continue
+                              excel_name = str(row.iloc[name_idx]).strip().upper()
+                              raw_eta, raw_etb = row.iloc[eta_idx] if eta_idx != -1 else None, row.iloc[etb_idx] if etb_idx != -1 else None
+                              if not excel_name or pd.isna(raw_eta): continue
+                              
+                              def parse_d(val):
+                                  if pd.isna(val): return None
+                                  if isinstance(val, datetime.datetime): return val
+                                  try: return pd.to_datetime(val, dayfirst=True)
+                                  except: return None
+                              
+                              eta_date, etb_date = parse_d(raw_eta), parse_d(raw_etb)
+                              target_date = etb_date if (etb_date and not pd.isna(etb_date)) else eta_date
+                              
+                              if target_date and not pd.isna(target_date) and target_date >= today_start:
+                                  if excel_name not in future_runs: future_runs[excel_name] = []
+                                  future_runs[excel_name].append({'target_date': target_date, 'etb_str': etb_date.strftime('%d.%m.%Y %H:%M') if (etb_date and not pd.isna(etb_date)) else ''})
+                          
+                          for s_name_ex, runs in future_runs.items():
+                              runs.sort(key=lambda x: x['target_date'])
+                              closest = runs[0]
+                              
+                              # SADECE AKTIF LISTEDE VARSA GUNCELLE.
+                              if s_name_ex in active_ships:
+                                  note_str = f'ETB BAZ ALINDI ({closest["etb_str"]})' if closest['etb_str'] else 'ETA BAZ ALINDI (BOT)'
+                                  new_eta_str = closest['target_date'].strftime('%Y-%m-%dT%H:%M')
+                                  
+                                  matched_id = active_ships[s_name_ex]['id']
+                                  upd_url = f'https://firestore.googleapis.com/v1/projects/msc-takip/databases/(default)/documents/ships/{matched_id}?updateMask.fieldPaths=eta&updateMask.fieldPaths=note&updateMask.fieldPaths=emailSent10h&updateMask.fieldPaths=emailSent5h&updateMask.fieldPaths=lastUpdated'
+                                  requests.patch(upd_url, json={'fields': {'eta': {'stringValue': new_eta_str}, 'note': {'stringValue': note_str}, 'lastUpdated': {'stringValue': f"{now_tr_str} (BOT)"}, 'emailSent10h': {'booleanValue': False}, 'emailSent5h': {'booleanValue': False}}}, headers=headers)
+                                  
+                      except Exception as e: print(e)
+          mail.logout()
+          EOF
+          python bot.py
