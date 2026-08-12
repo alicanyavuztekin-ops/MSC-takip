@@ -25,7 +25,7 @@ jobs:
           PANEL_SIFRE: ${{ secrets.PANEL_SIFRE }}
         run: |
           cat << 'EOF' > bot.py
-          import os, sys, datetime, imaplib, email, requests
+          import os, sys, datetime, imaplib, email, requests, hashlib
           import pandas as pd
 
           BOT_EMAIL = os.environ.get('BOT_EMAIL')
@@ -71,12 +71,21 @@ jobs:
 
           active_ships = {s['fields'].get('name', {}).get('stringValue', '').upper(): s for s in ships if s['fields'].get('status', {}).get('stringValue', '') != 'COMPLETED'}
 
+          # Islenmis mail takibi (okunmus/okunmamis fark etmeksizin calissin diye)
+          def is_processed(msg_hash):
+              r = requests.get(f'https://firestore.googleapis.com/v1/projects/msc-takip/databases/(default)/documents/processedEmails/{msg_hash}', headers=headers)
+              return r.status_code == 200
+
+          def mark_processed(msg_hash):
+              requests.patch(f'https://firestore.googleapis.com/v1/projects/msc-takip/databases/(default)/documents/processedEmails/{msg_hash}?updateMask.fieldPaths=processedAt', json={'fields': {'processedAt': {'stringValue': now_tr_str}}}, headers=headers)
+
           # Excel Okuma Islemi
           try:
               mail = imaplib.IMAP4_SSL('imap.gmail.com')
               mail.login(BOT_EMAIL, BOT_PASSWORD)
               mail.select('inbox')
-              status, messages = mail.search(None, '(UNSEEN)')
+              since_date = (now_tr - datetime.timedelta(days=2)).strftime('%d-%b-%Y')
+              status, messages = mail.search(None, f'(SINCE "{since_date}")')
               mail_ids = messages[0].split()
           except Exception:
               sys.exit(0)
@@ -90,11 +99,15 @@ jobs:
           for m_id in mail_ids:
               status, msg_data = mail.fetch(m_id, '(RFC822)')
               msg = email.message_from_bytes(msg_data[0][1])
+
+              msg_uid = msg.get('Message-ID') or f"{msg.get('Date','')}-{msg.get('Subject','')}"
+              msg_hash = hashlib.md5(msg_uid.encode('utf-8', 'ignore')).hexdigest()
+              if is_processed(msg_hash): continue
               
               for part in msg.walk():
                   if part.get_content_maintype() == 'multipart' or part.get('Content-Disposition') is None: continue
                   filename = part.get_filename()
-                  if filename and (filename.endswith('.xlsx') or filename.endswith('.xlsm')):
+                  if filename and filename.lower().endswith(('.xlsx', '.xlsm')):
                       with open(filename, 'wb') as f: f.write(part.get_payload(decode=True))
                       
                       try:
@@ -157,6 +170,8 @@ jobs:
                                   requests.patch(upd_url, json={'fields': {'eta': {'stringValue': new_eta_str}, 'note': {'stringValue': note_str}, 'lastUpdated': {'stringValue': f"{now_tr_str} (BOT)"}, 'emailSent10h': {'booleanValue': False}, 'emailSent5h': {'booleanValue': False}}}, headers=headers)
                                   
                       except Exception as e: print(e)
+              
+              mark_processed(msg_hash)
           mail.logout()
           EOF
           python bot.py
