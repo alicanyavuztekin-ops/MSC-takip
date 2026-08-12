@@ -31,7 +31,7 @@ const transporter = nodemailer.createTransport({
 
 // 4. ANA KONTROL DÖNGÜSÜ
 async function checkShips() {
-    console.log("Zaman kontrolü başlıyor (Stabil Sistem)...");
+    console.log("Zaman kontrolü başlıyor (Site Linkli HTML Sistem)...");
     const now = new Date();
 
     try {
@@ -56,36 +56,66 @@ async function checkShips() {
             let updateData = {};
             let shouldUpdate = false;
             let mailSubject = "";
-            let mailText = "";
+            let mailHtml = "";
 
-            // Yeni Eklendi Maili
+            // --- SİTE LİNKİ VE BUTON ŞABLONU ---
+            const siteLink = ship.siteUrl || "https://alicanyavuztekin-ops.github.io"; 
+            const buttonHtml = `<br><br><a href="${siteLink}" style="background-color: #111111; color: #FFCC00; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-family: Arial, sans-serif; font-size: 14px;">👉 SİSTEME GİRİŞ YAP</a>`;
+
+            // YENİ EKLENDİ MAİLİ
             if (!ship.emailSentNew) {
                 mailSubject = `🚢 YENİ GEMİ EKLENDİ: ${ship.name} (SEFER: ${ship.voyage || '-'})`;
-                mailText = `Yeni gemi operasyon listesine eklendi!\n\nGemi: ${ship.name}\nIMO: ${ship.imo}\nGeldiği Liman: ${ship.originPort || '-'}\nVarış Limanı: ${ship.destinationPort || '-'}\nETA: ${new Date(ship.eta).toLocaleString('tr-TR')}\nBeyanname: ${ship.declarations || '0'} Adet\nNot: ${ship.note || '-'}`;
+                mailHtml = `
+                    <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+                        <h3 style="color: #111111;">Yeni gemi operasyon listesine eklendi!</h3>
+                        <p><b>Gemi:</b> ${ship.name}</p>
+                        <p><b>IMO:</b> ${ship.imo}</p>
+                        <p><b>Geldiği Liman:</b> ${ship.originPort || '-'}</p>
+                        <p><b>Varış Limanı:</b> ${ship.destinationPort || '-'}</p>
+                        <p><b>ETA:</b> ${new Date(ship.eta).toLocaleString('tr-TR')}</p>
+                        <p><b>Beyanname:</b> ${ship.declarations || '0'} Adet</p>
+                        <p><b>Not:</b> ${ship.note || '-'}</p>
+                        ${buttonHtml}
+                    </div>
+                `;
                 
-                await transporter.sendMail({ from: '"MSC & MEDLOG TAKİP" <mscgemitakip@gmail.com>', to: email, subject: mailSubject, text: mailText });
+                await transporter.sendMail({ from: '"MSC & MEDLOG TAKİP" <mscgemitakip@gmail.com>', to: email, subject: mailSubject, html: mailHtml });
                 console.log(`${ship.name} için YENİ GEMİ maili atıldı.`);
                 updateData.emailSentNew = true;
                 shouldUpdate = true;
             }
 
-            // 10 Saat Uyarısı
+            // 10 SAAT UYARISI MAİLİ
             if (diffHours > 0 && diffHours <= 10 && !ship.emailSent10h && (updateData.emailSentNew || ship.emailSentNew)) {
                 mailSubject = `🚨 UYARI: ${ship.name} VARIŞA 10 SAAT KALA!`;
-                mailText = `10 SAAT UYARISI:\n\n${ship.name} isimli geminin limana tahmini varışına 10 saat veya daha az bir süre kalmıştır. Gümrük ve beyanname işlemlerini kontrol ediniz.`;
+                mailHtml = `
+                    <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+                        <h3 style="color: #e65100;">10 SAAT UYARISI</h3>
+                        <p><b>${ship.name}</b> isimli geminin limana tahmini varışına 10 saat veya daha az bir süre kalmıştır.</p>
+                        <p>Gümrük ve beyanname işlemlerini kontrol ediniz.</p>
+                        ${buttonHtml}
+                    </div>
+                `;
                 
-                await transporter.sendMail({ from: '"MSC & MEDLOG TAKİP" <mscgemitakip@gmail.com>', to: email, subject: mailSubject, text: mailText });
+                await transporter.sendMail({ from: '"MSC & MEDLOG TAKİP" <mscgemitakip@gmail.com>', to: email, subject: mailSubject, html: mailHtml });
                 console.log(`${ship.name} için 10 SAAT maili atıldı.`);
                 updateData.emailSent10h = true;
                 shouldUpdate = true;
             }
 
-            // 5 Saat Uyarısı
+            // 5 SAAT UYARISI MAİLİ
             if (diffHours > 0 && diffHours <= 5 && !ship.emailSent5h && (updateData.emailSent10h || ship.emailSent10h)) {
                 mailSubject = `🔴 KRİTİK UYARI: ${ship.name} VARIŞA 5 SAAT KALA!`;
-                mailText = `KRİTİK 5 SAAT UYARISI:\n\n${ship.name} isimli geminin limana tahmini varışına 5 saatten az kalmıştır! Lütfen gümrük durumunu acilen teyit ediniz.`;
+                mailHtml = `
+                    <div style="font-family: Arial, sans-serif; color: #333; line-height: 1.6;">
+                        <h3 style="color: #d32f2f;">KRİTİK 5 SAAT UYARISI</h3>
+                        <p><b>${ship.name}</b> isimli geminin limana tahmini varışına 5 saatten az kalmıştır!</p>
+                        <p>Lütfen gümrük durumunu acilen teyit ediniz.</p>
+                        ${buttonHtml}
+                    </div>
+                `;
                 
-                await transporter.sendMail({ from: '"MSC & MEDLOG TAKİP" <mscgemitakip@gmail.com>', to: email, subject: mailSubject, text: mailText });
+                await transporter.sendMail({ from: '"MSC & MEDLOG TAKİP" <mscgemitakip@gmail.com>', to: email, subject: mailSubject, html: mailHtml });
                 console.log(`${ship.name} için 5 SAAT maili atıldı.`);
                 updateData.emailSent5h = true;
                 shouldUpdate = true;
