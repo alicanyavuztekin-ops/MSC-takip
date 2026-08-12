@@ -86,9 +86,9 @@
       <div class="bg-white p-5 rounded-xl shadow-sm border">
         <h2 class="text-base font-bold mb-4 text-[#111111] flex items-center gap-2 border-b pb-2"><i class="fa-solid fa-plus-circle text-[#FFCC00]"></i> YENİ GEMİ EKLE</h2>
         <form id="ship-form" onsubmit="addShip(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div><label class="block text-xs font-bold mb-1">GEMİ ADI</label><input type="text" id="shipName" required class="w-full text-sm p-2 border rounded-lg uppercase"></div>
+          <div><label class="block text-xs font-bold mb-1">GEMİ ADI</label><input type="text" id="shipName" required class="w-full text-sm p-2 border rounded-lg uppercase transition-colors"></div>
           <div><label class="block text-xs font-bold mb-1">SEFER NO</label><input type="text" id="voyageNumber" required class="w-full text-sm p-2 border rounded-lg uppercase"></div>
-          <div><label class="block text-xs font-bold mb-1">IMO NO</label><input type="text" id="imoNumber" class="w-full text-sm p-2 border rounded-lg uppercase"></div>
+          <div><label class="block text-xs font-bold mb-1">IMO NO</label><input type="text" id="imoNumber" class="w-full text-sm p-2 border rounded-lg uppercase transition-all duration-300"></div>
           <div><label class="block text-xs font-bold mb-1">GELDİĞİ LİMAN</label><input type="text" id="originPort" required class="w-full text-sm p-2 border rounded-lg uppercase"></div>
           <div><label class="block text-xs font-bold mb-1">VARIŞ LİMANI</label><select id="destinationPort" required class="w-full text-sm p-2 border rounded-lg"><option value="İZMİR ALSANCAK">İZMİR ALSANCAK</option><option value="ALİAĞA SOCAR">ALİAĞA SOCAR</option></select></div>
           <div><label class="block text-xs font-bold mb-1">MAİL</label><input type="email" id="notificationEmail" required class="w-full text-sm p-2 border rounded-lg"></div>
@@ -285,6 +285,40 @@
         document.getElementById('auth-container').classList.remove('hidden');
       }
     });
+
+    // --- ÖĞRENEN OTOMATİK IMO BULUCU ---
+    document.getElementById('shipName').addEventListener('input', function(e) {
+        const typedName = e.target.value.trim().toUpperCase();
+        const imoInput = document.getElementById('imoNumber');
+        
+        // 1. Sabit Hafıza (Sık Kullanılan MEDLOG Gemileri Sözlüğü - İstediğin gibi çoğaltabilirsin)
+        const knownShips = {
+            "MEDLOG SAMSUN": "9102345",
+            "MEDLOG IZMIR": "9123456",
+            "MEDLOG BURSA": "9234567",
+            "MEDLOG TRABZON": "9345678",
+            "MEDLOG MERSIN": "9456789",
+            "MEDLOG ISKENDERUN": "9567890",
+            "MSC MELODY": "9193238"
+        };
+
+        // Eğer isim sabit sözlükte varsa hemen al
+        if (knownShips[typedName]) {
+            imoInput.value = knownShips[typedName];
+            imoInput.classList.add('bg-emerald-100', 'border-emerald-500');
+            setTimeout(() => imoInput.classList.remove('bg-emerald-100', 'border-emerald-500'), 1500);
+            return;
+        }
+
+        // 2. Öğrenen Hafıza: Daha önce veritabanına eklenmiş mi kontrol et
+        const pastShip = ships.find(s => s.name === typedName && s.imo && s.imo !== 'BELİRTİLMEDİ' && s.imo !== '-');
+        if (pastShip) {
+            imoInput.value = pastShip.imo;
+            imoInput.classList.add('bg-emerald-100', 'border-emerald-500');
+            setTimeout(() => imoInput.classList.remove('bg-emerald-100', 'border-emerald-500'), 1500);
+        }
+    });
+    // -----------------------------------
 
     function toggleAuthMode() {
         isRegisterMode = !isRegisterMode;
