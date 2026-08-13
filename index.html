@@ -101,7 +101,28 @@
       <div class="bg-white p-5 rounded-xl shadow-sm border">
         <h2 class="text-base font-bold mb-4 text-[#111111] flex items-center gap-2 border-b pb-2"><i class="fa-solid fa-plus-circle text-[#FFCC00]"></i> YENİ GEMİ EKLE</h2>
         <form id="ship-form" onsubmit="addShip(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div><label class="block text-xs font-bold mb-1">GEMİ ADI</label><input type="text" id="shipName" required class="w-full text-sm p-2 border rounded-lg uppercase transition-colors"></div>
+          <div>
+            <label class="block text-xs font-bold mb-1">GEMİ ADI</label>
+            <select id="shipNameSelect" onchange="handleShipSelection()" required class="w-full text-sm p-2 border rounded-lg uppercase bg-slate-50 focus:bg-white outline-none transition-colors">
+                <option value="">GEMİ SEÇİNİZ...</option>
+                <option value="MED AYDIN" data-imo="9148025">MED AYDIN</option>
+                <option value="MED CERKEZKOY" data-imo="9147215">MED ÇERKEZKÖY</option>
+                <option value="MED CORLU" data-imo="9106479">MED ÇORLU</option>
+                <option value="MED DENIZLI" data-imo="9106493">MED DENİZLİ</option>
+                <option value="MED SAMSUN" data-imo="9225794">MED SAMSUN</option>
+                <option value="MED TEKIRDAG" data-imo="9265598">MED TEKİRDAĞ</option>
+                <option value="MED TRABZON" data-imo="9141780">MED TRABZON</option>
+                <option value="MED URLA" data-imo="9160920">MED URLA</option>
+                <option value="B.BAYRAKTAR" data-imo="9260536">B.BAYRAKTAR</option>
+                <option value="MED MERSIN" data-imo="9135638">MED MERSİN</option>
+                <option value="MED BEYKOZ" data-imo="9064748">MED BEYKOZ</option>
+                <option value="MED IZMIR" data-imo="9143879">MED İZMİR</option>
+                <option value="MED ANTALYA" data-imo="9359714">MED ANTALYA</option>
+                <option value="MED CESME" data-imo="9256365">MED ÇEŞME</option>
+                <option value="OTHER" class="bg-slate-200 font-bold">FARKLI GEMİ EKLE (MANUEL)...</option>
+            </select>
+            <input type="text" id="shipName" class="hidden w-full text-sm p-2 mt-2 border rounded-lg uppercase transition-colors" placeholder="Gemi Adı Girin">
+          </div>
           <div><label class="block text-xs font-bold mb-1">SEFER NO</label><input type="text" id="voyageNumber" required class="w-full text-sm p-2 border rounded-lg uppercase"></div>
           <div><label class="block text-xs font-bold mb-1">IMO NO</label><input type="text" id="imoNumber" class="w-full text-sm p-2 border rounded-lg uppercase transition-all duration-300"></div>
           <div><label class="block text-xs font-bold mb-1">GELDİĞİ LİMAN</label><input type="text" id="originPort" required class="w-full text-sm p-2 border rounded-lg uppercase"></div>
@@ -133,7 +154,7 @@
             <div id="filter-container" class="flex items-center gap-3 w-full sm:w-auto justify-between flex-wrap">
                 <!-- Arama Çubuğu -->
                 <div class="relative w-full sm:w-48">
-                    <input type="text" id="searchInput" onkeyup="renderShips()" placeholder="Gemi Adı veya HT No Ara..." class="w-full text-xs p-2.5 pl-8 border border-slate-300 rounded-lg outline-none focus:border-[#111111] focus:ring-1 focus:ring-[#111111]">
+                    <input type="text" id="searchInput" onkeyup="renderShips()" placeholder="Ad, Sefer, IMO, HT..." class="w-full text-xs p-2.5 pl-8 border border-slate-300 rounded-lg outline-none focus:border-[#111111] focus:ring-1 focus:ring-[#111111]">
                     <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400"></i>
                 </div>
                 
@@ -151,7 +172,7 @@
 
                 <!-- EXCEL RAPORU BUTONU -->
                 <button onclick="exportMonthlyReport()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2.5 rounded-lg text-xs flex items-center gap-2 shadow-sm transition-colors cursor-pointer shrink-0">
-                    <i class="fa-solid fa-file-excel"></i> EXCEL RAPORU AL
+                    <i class="fa-solid fa-file-excel"></i> RAPOR AL
                 </button>
             </div>
         </div>
@@ -255,6 +276,35 @@
   <script>
     let currentDeclShipId = null;
 
+    // --- GEMİ SEÇİMİ VE OTOMATİK IMO ---
+    function handleShipSelection() {
+        const select = document.getElementById('shipNameSelect');
+        const manualInput = document.getElementById('shipName');
+        const imoInput = document.getElementById('imoNumber');
+        
+        if (select.value === 'OTHER') {
+            manualInput.classList.remove('hidden');
+            manualInput.required = true;
+            manualInput.value = '';
+            imoInput.value = '';
+        } else if (select.value === '') {
+            manualInput.classList.add('hidden');
+            manualInput.required = false;
+            manualInput.value = '';
+            imoInput.value = '';
+        } else {
+            manualInput.classList.add('hidden');
+            manualInput.required = false;
+            manualInput.value = select.value;
+            const selectedOption = select.options[select.selectedIndex];
+            imoInput.value = selectedOption.getAttribute('data-imo') || '';
+            
+            // Başarılı doldurma animasyonu
+            imoInput.classList.add('bg-emerald-100', 'border-emerald-500');
+            setTimeout(() => imoInput.classList.remove('bg-emerald-100', 'border-emerald-500'), 1000);
+        }
+    }
+
     // --- AYLIK EXCEL RAPORU OLUŞTURMA FONKSİYONU ---
     function exportMonthlyReport() {
         const filterPort = document.getElementById('filterPort').value;
@@ -264,9 +314,12 @@
         const searchQuery = document.getElementById('searchInput').value.trim().toUpperCase();
         if(searchQuery) {
             exportShips = exportShips.filter(s => {
-                const matchName = s.name.includes(searchQuery);
-                const matchHT = (s.htDeclarations || []).some(ht => ht.no.includes(searchQuery));
-                return matchName || matchHT;
+                const q = searchQuery;
+                const matchName = (s.name || "").toUpperCase().includes(q);
+                const matchVoyage = (s.voyage || "").toUpperCase().includes(q);
+                const matchImo = (s.imo || "").toUpperCase().includes(q);
+                const matchHT = (s.htDeclarations || []).some(ht => ht.no.toUpperCase().includes(q));
+                return matchName || matchVoyage || matchImo || matchHT;
             });
         }
 
@@ -277,28 +330,59 @@
 
         let reportData = [];
         exportShips.sort((a, b) => new Date(b.eta) - new Date(a.eta)).forEach(s => {
-            let htListStr = (s.htDeclarations || []).map(d => d.no).join(", ");
-            let htCount = (s.htDeclarations || []).length;
-            let dateStr = new Date(s.eta).toLocaleDateString('tr-TR');
+            const hts = s.htDeclarations || [];
+            const htCount = hts.length;
+            const dateStr = new Date(s.eta).toLocaleDateString('tr-TR');
+            
+            if (htCount === 0) {
+                reportData.push({
+                    "GEMİ ADI": s.name,
+                    "SEFER NO": s.voyage || "-",
+                    "HEDEF ZAMAN (ETA/ETB)": dateStr,
+                    "GELDİĞİ LİMAN": s.originPort || "-",
+                    "VARIŞ LİMANI": s.destinationPort || "-",
+                    "TOPLAM HT BEYANNAME": htCount,
+                    "HT NUMARALARI": "-",
+                    "EK NOT": s.note || "-"
+                });
+            } else {
+                hts.forEach((ht, index) => {
+                    if (index === 0) {
+                        reportData.push({
+                            "GEMİ ADI": s.name,
+                            "SEFER NO": s.voyage || "-",
+                            "HEDEF ZAMAN (ETA/ETB)": dateStr,
+                            "GELDİĞİ LİMAN": s.originPort || "-",
+                            "VARIŞ LİMANI": s.destinationPort || "-",
+                            "TOPLAM HT BEYANNAME": htCount,
+                            "HT NUMARALARI": ht.no,
+                            "EK NOT": s.note || "-"
+                        });
+                    } else {
+                        reportData.push({
+                            "GEMİ ADI": "",
+                            "SEFER NO": "",
+                            "HEDEF ZAMAN (ETA/ETB)": "",
+                            "GELDİĞİ LİMAN": "",
+                            "VARIŞ LİMANI": "",
+                            "TOPLAM HT BEYANNAME": "",
+                            "HT NUMARALARI": ht.no,
+                            "EK NOT": ""
+                        });
+                    }
+                });
+            }
             
             reportData.push({
-                "DURUM": s.status === 'COMPLETED' ? "ARŞİVLENDİ" : "AKTİF",
-                "GEMİ ADI": s.name,
-                "SEFER NO": s.voyage || "-",
-                "HEDEF ZAMAN (ETA/ETB)": dateStr,
-                "GELDİĞİ LİMAN": s.originPort || "-",
-                "VARIŞ LİMANI": s.destinationPort || "-",
-                "TOPLAM HT BEYANNAME": htCount,
-                "HT NUMARALARI": htListStr,
-                "EK NOT": s.note || "-"
+                "GEMİ ADI": "", "SEFER NO": "", "HEDEF ZAMAN (ETA/ETB)": "", 
+                "GELDİĞİ LİMAN": "", "VARIŞ LİMANI": "", "TOPLAM HT BEYANNAME": "", 
+                "HT NUMARALARI": "", "EK NOT": ""
             });
         });
 
         const ws = XLSX.utils.json_to_sheet(reportData);
-        
-        // Sütun genişliklerini ayarla
         const wscols = [
-            {wch: 12}, {wch: 25}, {wch: 15}, {wch: 22}, {wch: 20}, {wch: 20}, {wch: 25}, {wch: 60}, {wch: 20}
+            {wch: 25}, {wch: 15}, {wch: 22}, {wch: 20}, {wch: 20}, {wch: 25}, {wch: 30}, {wch: 40}
         ];
         ws['!cols'] = wscols;
 
@@ -309,7 +393,7 @@
         XLSX.writeFile(wb, `Gemi_Operasyon_Raporu_${tarih}.xlsx`);
     }
 
-    // --- EVRAK (DOCX) ÜRETİM SİSTEMİ ---
+    // --- EVRAK (DOCX) ÜRETİM SİSTEMİ (MODERN FETCH + SENKRON) ---
     async function generateDoc(docType) {
         try {
             if (typeof window.PizZip === 'undefined' || typeof window.docxtemplater === 'undefined') {
@@ -332,12 +416,15 @@
             const htList = (ship.htDeclarations || []).map(ht => ({ htNo: ht.no }));
 
             try {
+                // Fetch ile dosyayı oku
                 const response = await fetch(fileName);
                 if (!response.ok) {
                     throw new Error("Şablon GitHub'da bulunamadı (HTTP " + response.status + "). Lütfen dosyaların tam adıyla yüklü olduğuna emin olun.");
                 }
                 
                 const arrayBuffer = await response.arrayBuffer();
+                
+                // Word Dosyasını Doldurma
                 const zip = new PizZip(arrayBuffer);
                 const doc = new window.docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
 
@@ -354,6 +441,7 @@
                 
                 saveAs(out, outputName);
 
+                // Evrak Durumunu Kaydet
                 const updateData = {};
                 if (docType === 'AMBAR') updateData.docAmbar = true;
                 if (docType === 'TESCIL') updateData.docTescil = true;
@@ -397,6 +485,7 @@
         }
     }
 
+    // --- HT İŞLEMLERİ (DÜZENLEME VE SİLME EKLENDİ) ---
     function openDeclarationsModal(shipId) {
         currentDeclShipId = shipId;
         const ship = ships.find(s => s.firestoreId === shipId);
@@ -421,16 +510,52 @@
         }
         container.innerHTML = list.map(d => `
             <div class="flex items-center justify-between p-2 border rounded-md ${d.completed ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'}">
-                <div>
-                    <div class="font-bold text-sm text-slate-800">${d.no}</div>
-                    ${d.note ? `<div class="text-[10px] text-slate-500">${d.note}</div>` : ''}
+                <div class="flex-1 overflow-hidden mr-2">
+                    <div class="font-bold text-sm text-slate-800 break-all">${d.no}</div>
+                    ${d.note ? `<div class="text-[10px] text-slate-500 break-all">${d.note}</div>` : ''}
                 </div>
-                ${d.completed
-                    ? `<span class="text-[9px] font-bold text-emerald-700 bg-emerald-100 px-2 py-1 rounded whitespace-nowrap"><i class="fa-solid fa-check"></i> TAMAMLANDI</span>`
-                    : `<button onclick="completeDeclaration('${d.id}')" class="text-[9px] font-bold text-[#111111] bg-yellow-100 border border-yellow-300 px-2 py-1.5 rounded hover:bg-[#FFCC00] cursor-pointer whitespace-nowrap">TAMAMLA</button>`
-                }
+                <div class="flex items-center gap-1 shrink-0">
+                    <button onclick="editDeclaration('${d.id}')" class="text-[9px] font-bold text-blue-700 bg-blue-100 border border-blue-300 w-7 h-7 rounded flex items-center justify-center hover:bg-blue-200 transition-colors" title="Düzenle"><i class="fa-solid fa-pen"></i></button>
+                    <button onclick="deleteDeclaration('${d.id}')" class="text-[9px] font-bold text-red-700 bg-red-100 border border-red-300 w-7 h-7 rounded flex items-center justify-center hover:bg-red-200 transition-colors" title="Sil"><i class="fa-solid fa-trash"></i></button>
+                    ${d.completed
+                        ? `<button onclick="toggleDeclarationStatus('${d.id}', false)" class="text-[9px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-1.5 rounded whitespace-nowrap hover:bg-emerald-200 transition-colors"><i class="fa-solid fa-check"></i> TAMAMLANDI</button>`
+                        : `<button onclick="toggleDeclarationStatus('${d.id}', true)" class="text-[9px] font-bold text-[#111111] bg-yellow-100 border border-yellow-300 px-2 py-1.5 rounded hover:bg-[#FFCC00] cursor-pointer whitespace-nowrap transition-colors">TAMAMLA</button>`
+                    }
+                </div>
             </div>
         `).join('');
+    }
+
+    function toggleDeclarationStatus(declId, status) {
+        if (!currentDeclShipId) return;
+        const ship = ships.find(s => s.firestoreId === currentDeclShipId);
+        const updated = (ship.htDeclarations || []).map(d => d.id === declId ? { ...d, completed: status } : d);
+        db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: updated });
+    }
+
+    function deleteDeclaration(declId) {
+        if (!confirm("Bu beyannameyi silmek istediğinize emin misiniz?")) return;
+        if (!currentDeclShipId) return;
+        const ship = ships.find(s => s.firestoreId === currentDeclShipId);
+        const updated = (ship.htDeclarations || []).filter(d => d.id !== declId);
+        // Yeni bir kayıt silindiğinde evrakları sıfırlıyoruz ki güncel hali basılabilsin.
+        db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: updated, docAmbar: false, docTescil: false }).then(() => renderDeclarationsList());
+    }
+
+    function editDeclaration(declId) {
+        if (!currentDeclShipId) return;
+        const ship = ships.find(s => s.firestoreId === currentDeclShipId);
+        const decl = (ship.htDeclarations || []).find(d => d.id === declId);
+        if (!decl) return;
+
+        const newNo = prompt("Lütfen yeni Beyanname / HT Numarasını girin:", decl.no);
+        if (newNo === null) return; 
+
+        const newNote = prompt("Varsa yeni Açıklama / Notu girin:", decl.note || "");
+        if (newNote === null) return; 
+
+        const updated = (ship.htDeclarations || []).map(d => d.id === declId ? { ...d, no: newNo.trim().toUpperCase(), note: newNote.trim().toUpperCase() } : d);
+        db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: updated, docAmbar: false, docTescil: false }).then(() => renderDeclarationsList());
     }
 
     function addBulkHT() {
@@ -472,13 +597,6 @@
         });
     }
 
-    function completeDeclaration(declId) {
-        if (!currentDeclShipId) return;
-        const ship = ships.find(s => s.firestoreId === currentDeclShipId);
-        const updated = (ship.htDeclarations || []).map(d => d.id === declId ? { ...d, completed: true } : d);
-        db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: updated });
-    }
-
   </script>
 
   <script>
@@ -515,19 +633,6 @@
         document.getElementById('action-buttons-container').classList.add('hidden');
         document.getElementById('auth-container').classList.remove('hidden');
       }
-    });
-
-    document.getElementById('shipName').addEventListener('input', function(e) {
-        const typedName = e.target.value.trim().toUpperCase();
-        const imoInput = document.getElementById('imoNumber');
-        const knownShips = { "MEDLOG SAMSUN": "9102345", "MEDLOG IZMIR": "9123456", "MEDLOG BURSA": "9234567", "MEDLOG TRABZON": "9345678", "MEDLOG MERSIN": "9456789", "MEDLOG ISKENDERUN": "9567890", "MSC MELODY": "9193238" };
-        if (knownShips[typedName]) {
-            imoInput.value = knownShips[typedName]; imoInput.classList.add('bg-emerald-100', 'border-emerald-500'); setTimeout(() => imoInput.classList.remove('bg-emerald-100', 'border-emerald-500'), 1500); return;
-        }
-        const pastShip = ships.find(s => s.name === typedName && s.imo && s.imo !== 'BELİRTİLMEDİ' && s.imo !== '-');
-        if (pastShip) {
-            imoInput.value = pastShip.imo; imoInput.classList.add('bg-emerald-100', 'border-emerald-500'); setTimeout(() => imoInput.classList.remove('bg-emerald-100', 'border-emerald-500'), 1500);
-        }
     });
 
     function toggleAuthMode() {
@@ -580,7 +685,13 @@
 
     function addShip(e) { 
         e.preventDefault(); 
-        const name = document.getElementById('shipName').value.trim().toUpperCase(); const eta = document.getElementById('eta').value;
+        const select = document.getElementById('shipNameSelect');
+        const manualInput = document.getElementById('shipName');
+        const name = (select.value === 'OTHER' ? manualInput.value : select.value).trim().toUpperCase();
+        
+        if(!name) { alert("Lütfen Gemi Adı giriniz!"); return; }
+        
+        const eta = document.getElementById('eta').value;
         const newShipData = {
             userId: currentUser.uid, name: name, voyage: document.getElementById('voyageNumber').value.trim().toUpperCase(),
             imo: document.getElementById('imoNumber').value.trim().toUpperCase() || 'BELİRTİLMEDİ',
@@ -591,7 +702,11 @@
             docAmbar: false, docTescil: false,
             siteUrl: getSiteUrl(), lastUpdated: getTrDateStr(), createdAt: new Date().toISOString()
         };
-        db.collection('ships').add(newShipData).then(() => { document.getElementById('ship-form').reset(); setTab('ACTIVE'); });
+        db.collection('ships').add(newShipData).then(() => { 
+            document.getElementById('ship-form').reset(); 
+            document.getElementById('shipName').classList.add('hidden');
+            setTab('ACTIVE'); 
+        });
     }
 
     function openEditModal(id) {
@@ -736,9 +851,12 @@
       // Arama Filtresi
       if(searchQuery) {
           filtered = filtered.filter(s => {
-              const matchName = s.name.includes(searchQuery);
-              const matchHT = (s.htDeclarations || []).some(ht => ht.no.includes(searchQuery));
-              return matchName || matchHT;
+              const q = searchQuery;
+              const matchName = (s.name || "").toUpperCase().includes(q);
+              const matchVoyage = (s.voyage || "").toUpperCase().includes(q);
+              const matchImo = (s.imo || "").toUpperCase().includes(q);
+              const matchHT = (s.htDeclarations || []).some(ht => ht.no.toUpperCase().includes(q));
+              return matchName || matchVoyage || matchImo || matchHT;
           });
       }
 
