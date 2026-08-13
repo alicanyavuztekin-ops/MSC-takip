@@ -48,10 +48,14 @@ async function checkShips() {
             const eta = new Date(ship.eta);
             const email = ship.email;
 
-            if (isNaN(eta.getTime()) || !email) continue;
+            if (isNaN(eta.getTime()) || !email) {
+                console.log(`ATLANDI: ${ship.name || doc.id} -> ${isNaN(eta.getTime()) ? `ETA okunamadı (kayıtlı değer: "${ship.eta}")` : ''}${(isNaN(eta.getTime()) && !email) ? ' ve ' : ''}${!email ? 'mail adresi boş' : ''}`);
+                continue;
+            }
             
             const diffMs = eta - now;
             const diffHours = diffMs / (1000 * 60 * 60);
+            console.log(`Kontrol: ${ship.name} | ETA'ya kalan: ${diffHours.toFixed(1)} saat | emailSentNew: ${!!ship.emailSentNew} | emailSent10h: ${!!ship.emailSent10h} | emailSent5h: ${!!ship.emailSent5h}`);
             
             let updateData = {};
             let shouldUpdate = false;
