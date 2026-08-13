@@ -15,10 +15,22 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   
-  <!-- WORD (DOCX) ÜRETİM KÜTÜPHANELERİ -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.4/pizzip.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.37.11/docxtemplater.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+  <!-- WORD ÜRETİM KÜTÜPHANELERİ (BİRİNCİL - JSDELIVR) -->
+  <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.4/dist/pizzip.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/docxtemplater@3.37.11/build/docxtemplater.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
+  
+  <!-- YEDEK KÜTÜPHANELER (GÜVENLİK DUVARI AŞICI) -->
+  <script>
+    window.onload = function() {
+        if (typeof window.PizZip === 'undefined') {
+            var s1 = document.createElement('script'); s1.src = "https://unpkg.com/pizzip@3.1.4/dist/pizzip.min.js"; document.head.appendChild(s1);
+            var s2 = document.createElement('script'); s2.src = "https://unpkg.com/docxtemplater@3.37.11/build/docxtemplater.js"; document.head.appendChild(s2);
+            var s3 = document.createElement('script'); s3.src = "https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"; document.head.appendChild(s3);
+            console.log("Birincil kütüphaneler engellendi, yedek kütüphaneler arka planda yüklendi.");
+        }
+    };
+  </script>
 
   <style>
     body { font-family: 'Inter', sans-serif; }
@@ -211,85 +223,47 @@
               <div><label class="block text-[10px] font-bold text-slate-600 mb-1">AÇIKLAMA / NOT</label><input type="text" id="decl-note" class="w-full text-xs p-2 border rounded-md uppercase outline-none"></div>
               <div class="sm:col-span-2"><button type="submit" class="w-full bg-[#111111] text-[#FFCC00] font-bold p-2.5 rounded-md text-xs cursor-pointer shadow hover:bg-black transition-colors">TEK BEYANNAME EKLE</button></div>
             </form>
-
-            <div class="flex justify-between items-center text-[10px] text-slate-400 mt-2">
-                <button onclick="clearTemplates()" class="hover:text-red-500 underline cursor-pointer"><i class="fa-solid fa-trash"></i> Tanımlı Şablonları Hafızadan Sil</button>
-            </div>
         </div>
       </div>
   </div>
 
-  <!-- GİZLİ DOSYA SEÇİCİLER (ŞABLON YÜKLEME İÇİN) -->
-  <input type="file" id="input-template-ambar" accept=".docx" class="hidden" onchange="handleTemplateUpload(event, 'AMBAR')">
-  <input type="file" id="input-template-tescil" accept=".docx" class="hidden" onchange="handleTemplateUpload(event, 'TESCIL')">
-
   <script>
     let currentDeclShipId = null;
 
-    // --- EVRAK (DOCX) ÜRETİM SİSTEMİ (%100 ÇEVRİMDIŞI) ---
-    function generateDoc(docType) {
-        if (!currentDeclShipId) return;
-        const ship = ships.find(s => s.firestoreId === currentDeclShipId);
-        if (!ship) return;
-
-        // Tarayıcı hafızasında şablon var mı kontrol et
-        const storageKey = docType === 'AMBAR' ? 'template_AMBAR' : 'template_TESCIL';
-        const savedTemplate = localStorage.getItem(storageKey);
-
-        if (!savedTemplate) {
-            // Şablon yoksa, bilgisayardan dosya seçmesini iste
-            alert(`Sistemde ${docType} şablonu bulunamadı!\n\nLütfen birazdan açılacak pencereden masaüstünüzdeki boş şablon Word dosyasını seçin.\n(Bunu sadece bir kere yapmanız yeterlidir, sistem şablonu hafızaya alacaktır).`);
-            const inputId = docType === 'AMBAR' ? 'input-template-ambar' : 'input-template-tescil';
-            document.getElementById(inputId).click();
-            return;
-        }
-
-        // Şablon varsa direkt üretimi başlat
-        processDocument(docType, ship, savedTemplate);
-    }
-
-    // Dosya seçildiğinde tarayıcı hafızasına alan fonksiyon
-    function handleTemplateUpload(event, docType) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            const base64Data = e.target.result.split(',')[1]; // DataURL'den sadece base64 kısmını al
-            const storageKey = docType === 'AMBAR' ? 'template_AMBAR' : 'template_TESCIL';
-            
-            // Tarayıcı hafızasına kaydet (Gelecek kullanımlar için)
-            localStorage.setItem(storageKey, base64Data);
-            
-            // Dosya seçiciyi sıfırla ki bir daha seçilebilsin
-            event.target.value = '';
-            
-            alert(`✅ ${docType} şablonu sisteme başarıyla kaydedildi!\n\nArtık tek tıkla evrak üretebilirsiniz. Hazır yüklenmişken ilk evrakınız şimdi indiriliyor...`);
-            
-            // Yükleme tamamlanır tamamlanmaz üretimi başlat
-            const ship = ships.find(s => s.firestoreId === currentDeclShipId);
-            if (ship) {
-                processDocument(docType, ship, base64Data);
+    // --- EVRAK (DOCX) ÜRETİM SİSTEMİ (MODERN FETCH İLE GÜNCELLENDİ) ---
+    async function generateDoc(docType) {
+        try {
+            // 1. Kütüphanelerin Yüklenip Yüklendiğini Kontrol Et
+            if (typeof window.PizZip === 'undefined' || typeof window.docxtemplater === 'undefined') {
+                alert("⏳ Güvenlik Duvarı Taraması: Kütüphaneler şu an yükleniyor. Lütfen 3-4 saniye bekleyip butona tekrar basın.");
+                return;
             }
-        };
-        reader.readAsDataURL(file); // Çevrimdışı ve güvenlik duvarına takılmayan okuma yöntemi
-    }
 
-    // Gerçek Üretim (Doldurma) İşlemi
-    function processDocument(docType, ship, base64Data) {
-        const btn = docType === 'AMBAR' ? document.getElementById('btn-doc-ambar') : document.getElementById('btn-doc-tescil');
-        const originalHtml = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-lg text-slate-500"></i> <span>HAZIRLANIYOR...</span>';
-        btn.disabled = true;
+            if (!currentDeclShipId) return;
+            const ship = ships.find(s => s.firestoreId === currentDeclShipId);
+            if (!ship) return;
 
-        setTimeout(() => {
+            const btn = docType === 'AMBAR' ? document.getElementById('btn-doc-ambar') : document.getElementById('btn-doc-tescil');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-lg text-slate-500"></i> <span>HAZIRLANIYOR...</span>';
+            btn.disabled = true;
+
+            const fileName = docType === 'AMBAR' ? 'AMBAR_LISTESI_SABLON.docx' : 'HT_TESCIL_ONAYI_SABLON.docx';
+            const safeName = (ship.name || "GEMI").replace(/ /g, "_");
+            const outputName = docType === 'AMBAR' ? `AMBAR_LISTESI_${safeName}.docx` : `HT_TESCIL_${safeName}.docx`;
+            const htList = (ship.htDeclarations || []).map(ht => ({ htNo: ht.no }));
+
             try {
-                const safeName = (ship.name || "GEMI").replace(/ /g, "_");
-                const outputName = docType === 'AMBAR' ? `AMBAR_LISTESI_${safeName}.docx` : `HT_TESCIL_${safeName}.docx`;
-                const htList = (ship.htDeclarations || []).map(ht => ({ htNo: ht.no }));
-
-                // Zip işlemini hafızadaki veri ile yap
-                const zip = new PizZip(base64Data, { base64: true });
+                // PizZipUtils YERİNE MODERN "FETCH" KULLANIYORUZ (Bağlantı hatalarını çözer)
+                const response = await fetch(fileName);
+                if (!response.ok) {
+                    throw new Error("Şablon GitHub'da bulunamadı (HTTP " + response.status + "). Lütfen dosyaların tam adıyla yüklü olduğuna emin olun.");
+                }
+                
+                const arrayBuffer = await response.arrayBuffer();
+                
+                // Word Dosyasını Doldurma
+                const zip = new PizZip(arrayBuffer);
                 const doc = new window.docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
 
                 doc.render({
@@ -305,7 +279,7 @@
                 
                 saveAs(out, outputName);
 
-                // Veritabanında Checkbox onayını kaydet
+                // Evrak Durumunu Kaydet
                 const updateData = {};
                 if (docType === 'AMBAR') updateData.docAmbar = true;
                 if (docType === 'TESCIL') updateData.docTescil = true;
@@ -313,21 +287,17 @@
                 
                 btn.innerHTML = originalHtml;
                 btn.disabled = false;
+                updateDocButtons({ ...ship, ...updateData });
+                
             } catch (err) {
                 btn.innerHTML = originalHtml;
                 btn.disabled = false;
                 console.error(err);
-                alert("❌ EVRAK OLUŞTURMA HATASI:\n" + err.message + "\n\nYüklediğiniz şablon dosyasında bir sorun olabilir. Lütfen 'Şablonları Hafızadan Sil' butonuna basıp dosyayı tekrar seçmeyi deneyin.");
+                alert("❌ EVRAK OLUŞTURMA HATASI:\n" + err.message);
             }
-        }, 100);
-    }
-    
-    // Şablonları Hafızadan Silme
-    function clearTemplates() {
-        if(confirm("Tüm tanımlı Word şablonları hafızadan silinecek. Emin misiniz?")) {
-            localStorage.removeItem('template_AMBAR');
-            localStorage.removeItem('template_TESCIL');
-            alert("Şablonlar silindi. Sonraki evrak üretiminde boş şablonu tekrar seçmeniz istenecektir.");
+        } catch (fatalErr) {
+            console.error(fatalErr);
+            alert("❌ BEKLENMEYEN HATA:\n" + fatalErr.message);
         }
     }
 
@@ -335,9 +305,6 @@
         const btnAmbar = document.getElementById('btn-doc-ambar');
         const btnTescil = document.getElementById('btn-doc-tescil');
         if(!btnAmbar || !btnTescil) return;
-
-        btnAmbar.disabled = false;
-        btnTescil.disabled = false;
 
         if (ship.docAmbar) {
             btnAmbar.className = "flex-1 bg-emerald-50 border border-emerald-400 text-emerald-800 p-2.5 rounded-lg text-xs font-bold hover:shadow-md transition-all flex flex-col items-center gap-1 cursor-pointer";
@@ -428,6 +395,7 @@
         if (!no) return;
         const ship = ships.find(s => s.firestoreId === currentDeclShipId);
         const updated = [...(ship.htDeclarations || []), { id: Date.now().toString(), no: no, note: note, completed: false }];
+        
         db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: updated, docAmbar: false, docTescil: false }).then(() => {
             document.getElementById('decl-form').reset();
         });
@@ -477,7 +445,6 @@
       }
     });
 
-    // --- ÖĞRENEN OTOMATİK IMO BULUCU ---
     document.getElementById('shipName').addEventListener('input', function(e) {
         const typedName = e.target.value.trim().toUpperCase();
         const imoInput = document.getElementById('imoNumber');
@@ -549,7 +516,7 @@
             eta: eta, declarations: parseInt(document.getElementById('declarations').value), note: document.getElementById('shipNote').value.trim().toUpperCase(),
             email: document.getElementById('notificationEmail').value.trim().toLowerCase(), status: 'PENDING', 
             emailSentNew: false, emailSent10h: false, emailSent5h: false, emailSent12h: false, emailSent6h: false, emailSentArrived: false,
-            docAmbar: false, docTescil: false, 
+            docAmbar: false, docTescil: false,
             siteUrl: getSiteUrl(), lastUpdated: getTrDateStr(), createdAt: new Date().toISOString()
         };
         db.collection('ships').add(newShipData).then(() => { document.getElementById('ship-form').reset(); setTab('ACTIVE'); });
