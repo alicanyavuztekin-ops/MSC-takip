@@ -105,7 +105,13 @@
           <div><label class="block text-xs font-bold mb-1">SEFER NO</label><input type="text" id="voyageNumber" required class="w-full text-sm p-2 border rounded-lg uppercase"></div>
           <div><label class="block text-xs font-bold mb-1">IMO NO</label><input type="text" id="imoNumber" class="w-full text-sm p-2 border rounded-lg uppercase transition-all duration-300"></div>
           <div><label class="block text-xs font-bold mb-1">GELDİĞİ LİMAN</label><input type="text" id="originPort" required class="w-full text-sm p-2 border rounded-lg uppercase"></div>
-          <div><label class="block text-xs font-bold mb-1">VARIŞ LİMANI</label><select id="destinationPort" required class="w-full text-sm p-2 border rounded-lg"><option value="İZMİR ALSANCAK">İZMİR ALSANCAK</option><option value="ALİAĞA SOCAR">ALİAĞA SOCAR</option></select></div>
+          <div><label class="block text-xs font-bold mb-1">VARIŞ LİMANI</label>
+            <select id="destinationPort" required class="w-full text-sm p-2 border rounded-lg">
+                <option value="İZMİR ALSANCAK">İZMİR ALSANCAK</option>
+                <option value="ALİAĞA SOCAR">ALİAĞA SOCAR</option>
+                <option value="ALİAĞA NEMPORT">ALİAĞA NEMPORT</option>
+            </select>
+          </div>
           <div><label class="block text-xs font-bold mb-1">MAİL</label><input type="email" id="notificationEmail" required class="w-full text-sm p-2 border rounded-lg"></div>
           <div><label class="block text-xs font-bold mb-1">HEDEF ZAMAN</label><input type="datetime-local" id="eta" required class="w-full text-sm p-2 border rounded-lg"></div>
           <div><label class="block text-xs font-bold mb-1">BEYANNAME</label><input type="number" id="declarations" min="1" required class="w-full text-sm p-2 border rounded-lg"></div>
@@ -122,12 +128,31 @@
                 <button onclick="setTab('ARCHIVE')" id="tab-archive" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-box-archive"></i> ARŞİV</button>
                 <button onclick="setTab('AI_CHAT')" id="tab-ai" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-robot text-[#111111]"></i> AI ASİSTAN</button>
             </div>
-            <div id="filter-container" class="flex items-center gap-3 w-full sm:w-auto justify-between">
-                <div class="flex bg-slate-200 p-1 rounded-lg">
+            
+            <!-- ARAMA MOTORU VE FİLTRELER -->
+            <div id="filter-container" class="flex items-center gap-3 w-full sm:w-auto justify-between flex-wrap">
+                <!-- Arama Çubuğu -->
+                <div class="relative w-full sm:w-48">
+                    <input type="text" id="searchInput" onkeyup="renderShips()" placeholder="Gemi Adı veya HT No Ara..." class="w-full text-xs p-2.5 pl-8 border border-slate-300 rounded-lg outline-none focus:border-[#111111] focus:ring-1 focus:ring-[#111111]">
+                    <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400"></i>
+                </div>
+                
+                <div class="flex bg-slate-200 p-1 rounded-lg shrink-0">
                     <button onclick="setViewMode('LIST')" id="btn-view-list" class="view-btn-active px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"><i class="fa-solid fa-list"></i> LİSTE</button>
                     <button onclick="setViewMode('BOARD')" id="btn-view-board" class="view-btn-inactive px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"><i class="fa-brands fa-trello"></i> PANO</button>
                 </div>
-                <select id="filterPort" onchange="renderShips()" class="text-xs p-2 border rounded-lg font-medium shadow-sm"><option value="ALL">TÜM LİMANLAR</option><option value="İZMİR ALSANCAK">İZMİR ALSANCAK</option><option value="ALİAĞA SOCAR">ALİAĞA SOCAR</option></select>
+                
+                <select id="filterPort" onchange="renderShips()" class="text-xs p-2.5 border rounded-lg font-medium shadow-sm outline-none shrink-0">
+                    <option value="ALL">TÜM LİMANLAR</option>
+                    <option value="İZMİR ALSANCAK">İZMİR ALSANCAK</option>
+                    <option value="ALİAĞA SOCAR">ALİAĞA SOCAR</option>
+                    <option value="ALİAĞA NEMPORT">ALİAĞA NEMPORT</option>
+                </select>
+
+                <!-- EXCEL RAPORU BUTONU -->
+                <button onclick="exportMonthlyReport()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2.5 rounded-lg text-xs flex items-center gap-2 shadow-sm transition-colors cursor-pointer shrink-0">
+                    <i class="fa-solid fa-file-excel"></i> EXCEL RAPORU AL
+                </button>
             </div>
         </div>
 
@@ -230,10 +255,63 @@
   <script>
     let currentDeclShipId = null;
 
-    // --- EVRAK (DOCX) ÜRETİM SİSTEMİ (MODERN FETCH İLE GÜNCELLENDİ) ---
+    // --- AYLIK EXCEL RAPORU OLUŞTURMA FONKSİYONU ---
+    function exportMonthlyReport() {
+        const filterPort = document.getElementById('filterPort').value;
+        let exportShips = ships.filter(s => currentViewTab === 'ACTIVE' ? s.status !== 'COMPLETED' : s.status === 'COMPLETED');
+        if(filterPort !== 'ALL') exportShips = exportShips.filter(s => s.destinationPort === filterPort);
+        
+        const searchQuery = document.getElementById('searchInput').value.trim().toUpperCase();
+        if(searchQuery) {
+            exportShips = exportShips.filter(s => {
+                const matchName = s.name.includes(searchQuery);
+                const matchHT = (s.htDeclarations || []).some(ht => ht.no.includes(searchQuery));
+                return matchName || matchHT;
+            });
+        }
+
+        if(exportShips.length === 0) {
+            alert("Raporlanacak gemi bulunamadı. Lütfen filtrelerinizi kontrol edin.");
+            return;
+        }
+
+        let reportData = [];
+        exportShips.sort((a, b) => new Date(b.eta) - new Date(a.eta)).forEach(s => {
+            let htListStr = (s.htDeclarations || []).map(d => d.no).join(", ");
+            let htCount = (s.htDeclarations || []).length;
+            let dateStr = new Date(s.eta).toLocaleDateString('tr-TR');
+            
+            reportData.push({
+                "DURUM": s.status === 'COMPLETED' ? "ARŞİVLENDİ" : "AKTİF",
+                "GEMİ ADI": s.name,
+                "SEFER NO": s.voyage || "-",
+                "HEDEF ZAMAN (ETA/ETB)": dateStr,
+                "GELDİĞİ LİMAN": s.originPort || "-",
+                "VARIŞ LİMANI": s.destinationPort || "-",
+                "TOPLAM HT BEYANNAME": htCount,
+                "HT NUMARALARI": htListStr,
+                "EK NOT": s.note || "-"
+            });
+        });
+
+        const ws = XLSX.utils.json_to_sheet(reportData);
+        
+        // Sütun genişliklerini ayarla
+        const wscols = [
+            {wch: 12}, {wch: 25}, {wch: 15}, {wch: 22}, {wch: 20}, {wch: 20}, {wch: 25}, {wch: 60}, {wch: 20}
+        ];
+        ws['!cols'] = wscols;
+
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "MSC_Medlog_Rapor");
+        
+        const tarih = new Date().toLocaleDateString('tr-TR').replace(/\./g, "-");
+        XLSX.writeFile(wb, `Gemi_Operasyon_Raporu_${tarih}.xlsx`);
+    }
+
+    // --- EVRAK (DOCX) ÜRETİM SİSTEMİ ---
     async function generateDoc(docType) {
         try {
-            // 1. Kütüphanelerin Yüklenip Yüklendiğini Kontrol Et
             if (typeof window.PizZip === 'undefined' || typeof window.docxtemplater === 'undefined') {
                 alert("⏳ Güvenlik Duvarı Taraması: Kütüphaneler şu an yükleniyor. Lütfen 3-4 saniye bekleyip butona tekrar basın.");
                 return;
@@ -254,15 +332,12 @@
             const htList = (ship.htDeclarations || []).map(ht => ({ htNo: ht.no }));
 
             try {
-                // PizZipUtils YERİNE MODERN "FETCH" KULLANIYORUZ (Bağlantı hatalarını çözer)
                 const response = await fetch(fileName);
                 if (!response.ok) {
                     throw new Error("Şablon GitHub'da bulunamadı (HTTP " + response.status + "). Lütfen dosyaların tam adıyla yüklü olduğuna emin olun.");
                 }
                 
                 const arrayBuffer = await response.arrayBuffer();
-                
-                // Word Dosyasını Doldurma
                 const zip = new PizZip(arrayBuffer);
                 const doc = new window.docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
 
@@ -279,7 +354,6 @@
                 
                 saveAs(out, outputName);
 
-                // Evrak Durumunu Kaydet
                 const updateData = {};
                 if (docType === 'AMBAR') updateData.docAmbar = true;
                 if (docType === 'TESCIL') updateData.docTescil = true;
@@ -323,7 +397,6 @@
         }
     }
 
-    // --- HT İŞLEMLERİ ---
     function openDeclarationsModal(shipId) {
         currentDeclShipId = shipId;
         const ship = ships.find(s => s.firestoreId === shipId);
@@ -366,14 +439,12 @@
         const text = inputEl.value.trim();
         if (!text) return;
 
-        // Ayırıcılar: Yeni satır, virgül veya boşluk
         const lines = text.split(/[\n,\t]+/).map(l => l.trim().toUpperCase()).filter(l => l.length > 0);
         if(lines.length === 0) return;
 
         const ship = ships.find(s => s.firestoreId === currentDeclShipId);
         let currentHTs = ship.htDeclarations || [];
         
-        // Yeni HT'leri objeye çevir
         const newHTs = lines.map(line => ({ 
             id: Date.now().toString() + Math.random().toString(36).substr(2, 5), 
             no: line, 
@@ -407,6 +478,7 @@
         const updated = (ship.htDeclarations || []).map(d => d.id === declId ? { ...d, completed: true } : d);
         db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: updated });
     }
+
   </script>
 
   <script>
@@ -578,7 +650,7 @@
         } catch (error) { document.getElementById(typingId).outerHTML = `<div class="ai-message text-red-600">Bağlantı hatası: ${error.message}</div>`; }
     }
 
-    // --- MANUEL EXCEL İŞLEME (.XLSM / .XLSX Desteği & ETB Kesin Önceliği) ---
+    // --- MANUEL EXCEL İŞLEME (.XLSM / .XLSX Desteği) ---
     function parseCustomDate(dateStr) {
         if (!dateStr) return null;
         let str = dateStr.toString().trim(); let parts = str.split(/[\sT]+/); let datePart = parts[0], timePart = parts[1] || "00:00";
@@ -656,8 +728,20 @@
       let cN = 0, c12 = 0, c6 = 0, cA = 0;
 
       const filterPort = document.getElementById('filterPort').value;
+      const searchQuery = document.getElementById('searchInput').value.trim().toUpperCase();
+
       let filtered = ships.filter(s => currentViewTab === 'ACTIVE' ? s.status !== 'COMPLETED' : s.status === 'COMPLETED');
       if(filterPort !== 'ALL') filtered = filtered.filter(s => s.destinationPort === filterPort);
+      
+      // Arama Filtresi
+      if(searchQuery) {
+          filtered = filtered.filter(s => {
+              const matchName = s.name.includes(searchQuery);
+              const matchHT = (s.htDeclarations || []).some(ht => ht.no.includes(searchQuery));
+              return matchName || matchHT;
+          });
+      }
+
       let tot = 0, nrm = 0, crit = 0, arr = 0;
       ships.filter(s => s.status !== 'COMPLETED').forEach(s => { const dh = (new Date(s.eta) - new Date()) / 3600000; if (dh <= 0) arr++; else if (dh <= 12) crit++; else nrm++; tot++; });
       tbody.innerHTML = '';
