@@ -35,6 +35,33 @@ async function checkShips() {
     const now = new Date();
 
     try {
+        // --- KARŞILIKLI SAĞLIK KONTROLÜ (HEARTBEAT) ---
+        const healthRef = db.collection('system').doc('health');
+        await healthRef.set({ checkShipsLastRun: now.toISOString() }, { merge: true });
+
+        const healthDoc = await healthRef.get();
+        const health = healthDoc.exists ? healthDoc.data() : {};
+        const otonomLast = health.otonomBotLastRun ? new Date(health.otonomBotLastRun) : null;
+        const otonomStaleMinutes = otonomLast ? (now - otonomLast) / 60000 : null;
+
+        if (otonomStaleMinutes !== null && otonomStaleMinutes > 40) {
+            if (!health.otonomBotAlertSent) {
+                const alertTo = process.env.PANEL_EMAIL;
+                if (alertTo) {
+                    await transporter.sendMail({
+                        from: '"MSC & MEDLOG TAKİP" <mscgemitakip@gmail.com>', to: alertTo,
+                        subject: '⚠️ UYARI: Otonom ETA Botu çalışmıyor olabilir',
+                        html: `<div style="font-family: Arial, sans-serif; color: #333;"><p>Otonom ETA Botu, beklenenden uzun süredir Firestore'a ulaşmadı (son görülme: ${otonomLast ? otonomLast.toLocaleString('tr-TR') : 'hiç çalışmamış'}).</p><p>GitHub → Actions → "Tam Otonom ETA Botu" sekmesini kontrol edin.</p></div>`
+                    });
+                    console.log("UYARI: Otonom bot gecikmesi maili gönderildi.");
+                }
+                await healthRef.set({ otonomBotAlertSent: true }, { merge: true });
+            }
+        } else if (health.otonomBotAlertSent) {
+            await healthRef.set({ otonomBotAlertSent: false }, { merge: true });
+            console.log("Otonom bot toparlandı, uyarı bayrağı sıfırlandı.");
+        }
+
         const shipsRef = db.collection('ships');
         const snapshot = await shipsRef.where('status', '==', 'PENDING').get();
 
