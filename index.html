@@ -32,6 +32,7 @@
     .col-12h { background-color: #fff7ed; border-top: 4px solid #f97316; }
     .col-6h { background-color: #fef2f2; border-top: 4px solid #ef4444; }
     .col-arrived { background-color: #f1f5f9; border-top: 4px solid #334155; }
+    
     .ai-message { background-color: #f1f5f9; border-radius: 12px 12px 12px 0; padding: 12px; margin-bottom: 12px; font-size: 14px; border-left: 4px solid #FFCC00; }
     .user-message { background-color: #111111; color: #FFCC00; border-radius: 12px 12px 0 12px; padding: 12px; margin-bottom: 12px; font-size: 14px; text-align: right; }
     .typing-indicator span { display: inline-block; width: 6px; height: 6px; background-color: #64748b; border-radius: 50%; margin-right: 3px; animation: typing 1s infinite alternate; }
@@ -218,63 +219,70 @@
   <script>
     let currentDeclShipId = null;
 
-    // --- EVRAK (DOCX) ÜRETİM SİSTEMİ (GITHUB READ) ---
+    // --- EVRAK (DOCX) ÜRETİM SİSTEMİ (GITHUB READ - GÜVENLİ) ---
     function loadFile(url, callback) {
         PizZipUtils.getBinaryContent(url, callback);
     }
 
     function generateDoc(docType) {
-        if (!currentDeclShipId) return;
-        const ship = ships.find(s => s.firestoreId === currentDeclShipId);
-        if (!ship) return;
+        try {
+            if (!currentDeclShipId) return;
+            const ship = ships.find(s => s.firestoreId === currentDeclShipId);
+            if (!ship) return;
 
-        const btn = docType === 'AMBAR' ? document.getElementById('btn-doc-ambar') : document.getElementById('btn-doc-tescil');
-        const originalHtml = btn.innerHTML;
-        btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-lg text-slate-500"></i> <span>HAZIRLANIYOR...</span>';
-        btn.disabled = true;
+            const btn = docType === 'AMBAR' ? document.getElementById('btn-doc-ambar') : document.getElementById('btn-doc-tescil');
+            const originalHtml = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-lg text-slate-500"></i> <span>HAZIRLANIYOR...</span>';
+            btn.disabled = true;
 
-        const fileName = docType === 'AMBAR' ? 'AMBAR_LISTESI_SABLON.docx' : 'HT_TESCIL_ONAYI_SABLON.docx';
-        const outputName = docType === 'AMBAR' ? `AMBAR_LISTESI_${ship.name.replace(/ /g,"_")}.docx` : `HT_TESCIL_${ship.name.replace(/ /g,"_")}.docx`;
-        const htList = (ship.htDeclarations || []).map(ht => ({ htNo: ht.no }));
+            const fileName = docType === 'AMBAR' ? 'AMBAR_LISTESI_SABLON.docx' : 'HT_TESCIL_ONAYI_SABLON.docx';
+            const outputName = docType === 'AMBAR' ? `AMBAR_LISTESI_${ship.name.replace(/ /g,"_")}.docx` : `HT_TESCIL_${ship.name.replace(/ /g,"_")}.docx`;
+            const htList = (ship.htDeclarations || []).map(ht => ({ htNo: ht.no }));
 
-        loadFile(fileName, function(error, content) {
-            if (error) {
-                btn.innerHTML = originalHtml;
-                btn.disabled = false;
-                alert("❌ Şablon dosyası bulunamadı!\n\nLütfen '" + fileName + "' dosyasını GitHub deponuza yüklediğinizden emin olun.");
-                return;
-            }
-            try {
-                const zip = new PizZip(content);
-                const doc = new window.docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
-
-                doc.render({
-                    gemiAdi: ship.name || "",
-                    seferNo: ship.voyage || "-",
-                    htListesi: htList
-                });
-
-                const out = doc.getZip().generate({
-                    type: "blob",
-                    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                });
+            // Güvenli Dosya Okuma Bloğu
+            loadFile(fileName, function(error, content) {
+                if (error) {
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                    alert("❌ ŞABLON DOSYASI BULUNAMADI VEYA ENGELLENDİ!\n\n1. Lütfen '" + fileName + "' dosyasını GitHub deponuza yüklediğinizden emin olun.\n2. Lütfen siteye masaüstünüzden değil internet linkinizden (github.io) girdiğinize emin olun.");
+                    return;
+                }
                 
-                saveAs(out, outputName);
+                try {
+                    const zip = new PizZip(content);
+                    const doc = new window.docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
 
-                const updateData = {};
-                if (docType === 'AMBAR') updateData.docAmbar = true;
-                if (docType === 'TESCIL') updateData.docTescil = true;
-                db.collection('ships').doc(currentDeclShipId).update(updateData);
-                
-                btn.innerHTML = originalHtml;
-                btn.disabled = false;
-            } catch (err) {
-                btn.innerHTML = originalHtml;
-                btn.disabled = false;
-                console.error(err);
-                alert("Evrak oluşturulurken bir hata oluştu: " + err.message);
-            }
-        });
+                    doc.render({
+                        gemiAdi: ship.name || "",
+                        seferNo: ship.voyage || "-",
+                        htListesi: htList
+                    });
+
+                    const out = doc.getZip().generate({
+                        type: "blob",
+                        mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                    });
+                    
+                    saveAs(out, outputName);
+
+                    const updateData = {};
+                    if (docType === 'AMBAR') updateData.docAmbar = true;
+                    if (docType === 'TESCIL') updateData.docTescil = true;
+                    db.collection('ships').doc(currentDeclShipId).update(updateData);
+                    
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                    
+                } catch (err) {
+                    btn.innerHTML = originalHtml;
+                    btn.disabled = false;
+                    console.error(err);
+                    alert("❌ EVRAK OLUŞTURMA HATASI:\nBüyük ihtimalle GitHub'daki şablonunuz bozuk veya 404 sayfası indirildi.\nLütfen şablonun tam olarak " + fileName + " adıyla yüklü olduğuna emin olun.");
+                }
+            });
+        } catch (fatalErr) {
+            alert("❌ BAĞLANTI HATASI:\nSistem internet kütüphanelerine erişemiyor. Lütfen sayfayı yenileyip tekrar deneyin.");
+        }
     }
 
     function updateDocButtons(ship) {
