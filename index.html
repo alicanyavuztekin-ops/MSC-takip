@@ -335,6 +335,7 @@
             const dateStr = new Date(s.eta).toLocaleDateString('tr-TR');
             
             if (htCount === 0) {
+                // Hiç beyanname yoksa sadece gemi bilgilerini yaz
                 reportData.push({
                     "GEMİ ADI": s.name,
                     "SEFER NO": s.voyage || "-",
@@ -346,6 +347,7 @@
                     "EK NOT": s.note || "-"
                 });
             } else {
+                // Beyannameler varsa ilk satıra gemi bilgilerini, sonrakilere sadece HT'leri yaz
                 hts.forEach((ht, index) => {
                     if (index === 0) {
                         reportData.push({
@@ -373,6 +375,7 @@
                 });
             }
             
+            // Gemiler arası karışmaması için temiz bir boş satır ekle
             reportData.push({
                 "GEMİ ADI": "", "SEFER NO": "", "HEDEF ZAMAN (ETA/ETB)": "", 
                 "GELDİĞİ LİMAN": "", "VARIŞ LİMANI": "", "TOPLAM HT BEYANNAME": "", 
@@ -381,6 +384,7 @@
         });
 
         const ws = XLSX.utils.json_to_sheet(reportData);
+        // Sütun genişlikleri - DURUM sütunu silindi, HT numaraları genişletildi
         const wscols = [
             {wch: 25}, {wch: 15}, {wch: 22}, {wch: 20}, {wch: 20}, {wch: 25}, {wch: 30}, {wch: 40}
         ];
@@ -693,14 +697,29 @@
         
         const eta = document.getElementById('eta').value;
         const newShipData = {
-            userId: currentUser.uid, name: name, voyage: document.getElementById('voyageNumber').value.trim().toUpperCase(),
+            userId: currentUser.uid, 
+            name: name, 
+            voyage: document.getElementById('voyageNumber').value.trim().toUpperCase(),
             imo: document.getElementById('imoNumber').value.trim().toUpperCase() || 'BELİRTİLMEDİ',
-            originPort: document.getElementById('originPort').value.trim().toUpperCase(), destinationPort: document.getElementById('destinationPort').value.toUpperCase(),
-            eta: eta, declarations: parseInt(document.getElementById('declarations').value), note: document.getElementById('shipNote').value.trim().toUpperCase(),
-            email: document.getElementById('notificationEmail').value.trim().toLowerCase(), status: 'PENDING', 
-            emailSentNew: false, emailSent10h: false, emailSent5h: false, emailSent12h: false, emailSent6h: false, emailSentArrived: false,
-            docAmbar: false, docTescil: false,
-            siteUrl: getSiteUrl(), lastUpdated: getTrDateStr(), createdAt: new Date().toISOString()
+            originPort: document.getElementById('originPort').value.trim().toUpperCase(), 
+            destinationPort: document.getElementById('destinationPort').value.toUpperCase(),
+            eta: eta, 
+            declarations: parseInt(document.getElementById('declarations').value), 
+            note: document.getElementById('shipNote').value.trim().toUpperCase(),
+            email: document.getElementById('notificationEmail').value.trim().toLowerCase(), 
+            status: 'PENDING', 
+            emailSentNew: false, 
+            emailSent10h: false, 
+            emailSent5h: false, 
+            emailSent12h: false, 
+            emailSent6h: false, 
+            emailSentArrived: false,
+            docAmbar: false, 
+            docTescil: false,
+            htDeclarations: [],
+            siteUrl: getSiteUrl(), 
+            lastUpdated: getTrDateStr(), 
+            createdAt: new Date().toISOString()
         };
         db.collection('ships').add(newShipData).then(() => { 
             document.getElementById('ship-form').reset(); 
@@ -877,14 +896,11 @@
         const declList = ship.htDeclarations || []; const declDone = declList.filter(d => d.completed).length; const declTotal = declList.length;
         const evrakHazir = (ship.docAmbar && ship.docTescil);
         
-        tbody.innerHTML += `<tr class="border-b hover:bg-zinc-50"><td class="p-3"><div class="flex items-center gap-3"><div class="${avatarBg} w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-sm">${avatarText}</div><div><div class="font-bold text-sm text-slate-800">${ship.name}</div><div class="text-[10px] text-gray-500">IMO: ${ship.imo || '-'} | SF: ${ship.voyage || '-'}</div></div></div></td><td class="p-3 text-xs"><div class="font-semibold text-slate-700 mb-1">${ship.originPort || '-'} <i class="fa-solid fa-arrow-right text-slate-400 mx-1"></i> ${ship.destinationPort}</div><span class="text-[10px] text-zinc-800 font-bold bg-[#FFCC00] px-2 py-0.5 rounded shadow-sm">${ship.note || 'NOT YOK'}</span></td><td class="p-3 text-xs font-medium"><div class="mb-1 text-slate-800">${new Date(ship.eta).toLocaleString('tr-TR')}</div><div class="text-[9px] text-slate-500 font-bold"><i class="fa-solid fa-clock-rotate-left"></i> ${ship.lastUpdated ? ship.lastUpdated : 'GÜNCELLEME YOK'}</div></td><td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${bClass}">${bText}</span></td><td class="p-3 text-right whitespace-nowrap"><button onclick="openRadar('${ship.imo}')" class="text-blue-600 bg-blue-50 w-8 h-8 rounded-lg border text-xs font-bold hover:bg-blue-100 transition-colors cursor-pointer" title="Radarda Gör"><i class="fa-solid fa-location-dot"></i></button> <button onclick="openDeclarationsModal('${ship.firestoreId}')" class="${evrakHazir ? 'text-emerald-700 bg-emerald-100 border-emerald-300' : 'text-purple-600 bg-purple-50 border'} w-8 h-8 rounded-lg border hover:shadow-md transition-all ml-1 cursor-pointer relative" title="HT Beyannameleri ve Evraklar"><i class="fa-solid ${evrakHazir ? 'fa-check-double' : 'fa-file-lines'}"></i>${declTotal > 0 && !evrakHazir ? `<span class="absolute -top-1.5 -right-1.5 bg-[#111111] text-white text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center">${declDone}/${declTotal}</span>` : ''}</button> ${ship.status !== 'COMPLETED' ? `<button onclick="openEditModal('${ship.firestoreId}')" class="text-[#111111] bg-yellow-100 w-8 h-8 rounded-lg border border-yellow-300 shadow-sm hover:bg-[#FFCC00] transition-colors ml-1 cursor-pointer" title="Düzenle"><i class="fa-solid fa-pen"></i></button><button onclick="completeShip('${ship.firestoreId}')" class="text-emerald-600 bg-emerald-50 w-8 h-8 rounded-lg border hover:bg-emerald-100 transition-colors ml-1 cursor-pointer" title="Tamamla"><i class="fa-solid fa-check"></i></button>` : ''} <button onclick="deleteShip('${ship.firestoreId}')" class="text-red-600 bg-red-50 w-8 h-8 rounded-lg border border-red-200 shadow-sm hover:bg-red-100 transition-colors ml-1 cursor-pointer" title="Sil"><i class="fa-solid fa-trash"></i></button></td></tr>`;
-
-        targetCol.innerHTML += `<div class="bg-white p-3 rounded-lg shadow-sm border ${evrakHazir ? 'border-emerald-400' : 'border-slate-200'} hover:shadow-md transition-shadow relative"><div class="flex justify-between items-start mb-2"><div class="font-bold text-[#111111] text-sm flex items-center gap-1"><div class="${avatarBg} w-5 h-5 rounded-full flex items-center justify-center text-[9px] shadow-sm">${avatarText}</div> ${ship.name}</div><div class="flex items-center gap-2"><button onclick="openDeclarationsModal('${ship.firestoreId}')" class="${evrakHazir ? 'text-emerald-600' : 'text-purple-500 hover:text-purple-700'} cursor-pointer relative" title="HT Beyannameleri ve Evraklar"><i class="fa-solid ${evrakHazir ? 'fa-check-double' : 'fa-file-lines'}"></i>${declTotal > 0 && !evrakHazir ? `<span class="absolute -top-2 -right-2 bg-[#111111] text-white text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center">${declDone}/${declTotal}</span>` : ''}</button><button onclick="openRadar('${ship.imo}')" class="text-blue-500 hover:text-blue-700 cursor-pointer" title="Haritada Gör"><i class="fa-solid fa-location-crosshairs"></i></button></div></div><div class="text-[10px] text-slate-500 mb-2 font-medium"><i class="fa-solid fa-arrow-right-arrow-left"></i> ${ship.originPort || '-'} > ${ship.destinationPort}</div><div class="bg-slate-50 p-1.5 rounded border text-xs font-bold text-center mb-2">${new Date(ship.eta).toLocaleString('tr-TR')}</div><div class="mb-3 text-[10px] font-bold text-zinc-800 bg-[#FFCC00] px-2 py-1 rounded shadow-sm leading-tight border border-yellow-400"><i class="fa-solid fa-clipboard"></i> ${ship.note || 'NOT YOK'}</div><div class="w-full bg-slate-200 rounded-full h-1.5 mb-2"><div class="${progressColor} h-1.5 rounded-full" style="width: ${progressWidth}"></div></div><div class="flex justify-between items-center mt-2 pt-2 border-t border-dashed"><span class="text-[9px] font-bold ${bClass} px-1.5 py-0.5 rounded">${bText}</span> ${ship.status !== 'COMPLETED' ? `<div class="flex gap-1"><button onclick="openEditModal('${ship.firestoreId}')" class="text-[10px] bg-yellow-100 text-[#111111] px-2 py-1 rounded font-bold hover:bg-[#FFCC00] cursor-pointer">DÜZENLE</button><button onclick="completeShip('${ship.firestoreId}')" class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded font-bold hover:bg-emerald-100 cursor-pointer">TAMAMLA</button></div>` : ''} </div></div>`;
+        tbody.innerHTML += `<tr class="border-b hover:bg-zinc-50"><td class="p-3"><div class="flex items-center gap-3"><div class="${avatarBg} w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-sm">${avatarText}</div><div><div class="font-bold text-sm text-slate-800">${ship.name}</div><div class="text-[10px] text-gray-500">IMO: ${ship.imo || '-'} | SF: ${ship.voyage || '-'}</div></div></div></td><td class="p-3 text-xs"><div class="font-semibold text-slate-700 mb-1">${ship.originPort || '-'} <i class="fa-solid fa-arrow-right text-slate-400 mx-1"></i> ${ship.destinationPort}</div><span class="text-[10px] text-zinc-800 font-bold bg-[#FFCC00] px-2 py-0.5 rounded shadow-sm">${ship.note || 'NOT YOK'}</span></td><td class="p-3 text-xs font-medium"><div class="mb-1 text-slate-800">${new Date(ship.eta).toLocaleString('tr-TR')}</div><div class="text-[9px] text-slate-500 font-bold"><i class="fa-solid fa-clock-rotate-left"></i> ${ship.lastUpdated ? ship.lastUpdated : 'GÜNCELLEME YOK'}</div></td><td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${bClass}">${bText}</span></td><td class="p-3 text-right whitespace-nowrap"><button onclick="openRadar('${ship.imo}')" class="text-blue-600 bg-blue-50 w-8 h-8 rounded-lg border text-xs font-bold hover:bg-blue-100 transition-colors cursor-pointer" title="Radarda Gör"><i class="fa-solid fa-location-dot"></i></button> <button onclick="openDeclarationsModal('${ship.firestoreId}')" class="${evrakHazir ? 'text-emerald-700 bg-emerald-100 border-emerald-300' : 'text-purple-600 bg-purple-50 border'} px-3 py-2 rounded-lg border hover:shadow-md transition-all ml-1 cursor-pointer relative" title="HT Beyannameleri ve Evraklar"><i class="fa-solid ${evrakHazir ? 'fa-check-double' : 'fa-file-lines'}"></i> BEYANNAME VE EVRAK ${declTotal > 0 && !evrakHazir ? `<span class="absolute -top-1.5 -right-1.5 bg-[#111111] text-white text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center">${declDone}/${declTotal}</span>` : ''}</button></td></tr>`;
       });
       
-      document.getElementById('stat-total').innerText = tot; document.getElementById('stat-normal').innerText = nrm; document.getElementById('stat-critical').innerText = crit; document.getElementById('stat-arrived').innerText = arr; document.getElementById('kb-count-normal').innerText = cN; document.getElementById('kb-count-12h').innerText = c12; document.getElementById('kb-count-6h').innerText = c6; document.getElementById('kb-count-arrived').innerText = cA;
+      document.getElementById('stat-total').innerText = tot; document.getElementById('stat-normal').innerText = nrm; document.getElementById('stat-critical').innerText = crit; document.getElementById('stat-arrived').innerText = arr;
       
-      // Modal açıksa butonları güncelle
       if (currentDeclShipId && !document.getElementById('declarationsModal').classList.contains('hidden')) { 
           const updatedShip = ships.find(s => s.firestoreId === currentDeclShipId);
           if (updatedShip) { renderDeclarationsList(); updateDocButtons(updatedShip); }
