@@ -25,7 +25,8 @@ jobs:
           PANEL_SIFRE: ${{ secrets.PANEL_SIFRE }}
         run: |
           cat << 'EOF' > bot.py
-          import os, sys, datetime, imaplib, email, requests
+          import os, sys, datetime, imaplib, email, requests, hashlib, smtplib, ssl
+          from email.mime.text import MIMEText
           import pandas as pd
 
           BOT_EMAIL = os.environ.get('BOT_EMAIL')
@@ -43,6 +44,51 @@ jobs:
           id_token = r_auth['idToken']
           local_id = r_auth['localId']
           headers = {'Authorization': f'Bearer {id_token}'}
+
+          # --- KARSILIKLI SAGLIK KONTROLU (HEARTBEAT) ---
+          HEALTH_URL = 'https://firestore.googleapis.com/v1/projects/msc-takip/databases/(default)/documents/system/health'
+
+          def utc_now_iso():
+              return datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.000Z')
+
+          def parse_utc(ts):
+              try: return datetime.datetime.fromisoformat(ts.replace('Z', '+00:00'))
+              except Exception: return None
+
+          def send_alert(subject, body):
+              if not PANEL_EMAIL: return
+              try:
+                  msg = MIMEText(body, 'html')
+                  msg['Subject'] = subject
+                  msg['From'] = BOT_EMAIL
+                  msg['To'] = PANEL_EMAIL
+                  with smtplib.SMTP_SSL('smtp.gmail.com', 465, context=ssl.create_default_context()) as server:
+                      server.login(BOT_EMAIL, BOT_PASSWORD)
+                      server.sendmail(BOT_EMAIL, PANEL_EMAIL, msg.as_string())
+                  print("Uyarı maili gönderildi.")
+              except Exception as e:
+                  print(f"Uyarı maili gönderilemedi: {e}")
+
+          requests.patch(f'{HEALTH_URL}?updateMask.fieldPaths=otonomBotLastRun', json={'fields': {'otonomBotLastRun': {'stringValue': utc_now_iso()}}}, headers=headers)
+
+          health_resp = requests.get(HEALTH_URL, headers=headers).json()
+          health_fields = health_resp.get('fields', {})
+          check_ships_last = health_fields.get('checkShipsLastRun', {}).get('stringValue')
+          check_ships_alert_sent = health_fields.get('checkShipsAlertSent', {}).get('booleanValue', False)
+          check_ships_dt = parse_utc(check_ships_last) if check_ships_last else None
+
+          if check_ships_dt is not None:
+              stale_minutes = (datetime.datetime.now(datetime.timezone.utc) - check_ships_dt).total_seconds() / 60
+              if stale_minutes > 40:
+                  if not check_ships_alert_sent:
+                      send_alert(
+                          '⚠️ UYARI: Mail Kontrol Botu çalışmıyor olabilir',
+                          f"<p>Mail Kontrol Botu (check-ships.js), beklenenden uzun süredir çalışmadı (son görülme: {check_ships_last}).</p><p>GitHub → Actions → 'MSC Gemi Takip Otomatik Kontrol Servisi' sekmesini kontrol edin.</p>"
+                      )
+                      requests.patch(f'{HEALTH_URL}?updateMask.fieldPaths=checkShipsAlertSent', json={'fields': {'checkShipsAlertSent': {'booleanValue': True}}}, headers=headers)
+              elif check_ships_alert_sent:
+                  requests.patch(f'{HEALTH_URL}?updateMask.fieldPaths=checkShipsAlertSent', json={'fields': {'checkShipsAlertSent': {'booleanValue': False}}}, headers=headers)
+                  print("Mail kontrol botu toparlandı, uyarı bayrağı sıfırlandı.")
 
           db_url = 'https://firestore.googleapis.com/v1/projects/msc-takip/databases/(default)/documents/ships'
           query = {
@@ -71,17 +117,27 @@ jobs:
 
           active_ships = {s['fields'].get('name', {}).get('stringValue', '').upper(): s for s in ships if s['fields'].get('status', {}).get('stringValue', '') != 'COMPLETED'}
 
+          # Islenmis mail takibi (okunmus/okunmamis fark etmeksizin calissin diye)
+          def is_processed(msg_hash):
+              r = requests.get(f'https://firestore.googleapis.com/v1/projects/msc-takip/databases/(default)/documents/processedEmails/{msg_hash}', headers=headers)
+              return r.status_code == 200
+
+          def mark_processed(msg_hash):
+              requests.patch(f'https://firestore.googleapis.com/v1/projects/msc-takip/databases/(default)/documents/processedEmails/{msg_hash}?updateMask.fieldPaths=processedAt', json={'fields': {'processedAt': {'stringValue': now_tr_str}}}, headers=headers)
+
           # Excel Okuma Islemi (IMAP)
           try:
               mail = imaplib.IMAP4_SSL('imap.gmail.com')
               mail.login(BOT_EMAIL, BOT_PASSWORD)
               mail.select('inbox')
-              status, messages = mail.search(None, '(UNSEEN)')
+              since_date = (now_tr - datetime.timedelta(days=2)).strftime('%d-%b-%Y')
+              status, messages = mail.search(None, f'(SINCE "{since_date}")')
               mail_ids = messages[0].split()
           except Exception:
               sys.exit(0)
 
           if not mail_ids: sys.exit(0)
+          print(f"Taranan mail sayısı: {len(mail_ids)}")
 
           # Sayfa ismini bulmak için hem Türkçe hem İngilizce ay kısaltmaları
           aylar = ['OCAK', 'ŞUBAT', 'MART', 'NİSAN', 'MAYIS', 'HAZİRAN', 'TEMMUZ', 'AĞUSTOS', 'EYLÜL', 'EKİM', 'KASIM', 'ARALIK']
@@ -93,6 +149,12 @@ jobs:
           for m_id in mail_ids:
               status, msg_data = mail.fetch(m_id, '(RFC822)')
               msg = email.message_from_bytes(msg_data[0][1])
+
+              msg_uid = msg.get('Message-ID') or f"{msg.get('Date','')}-{msg.get('Subject','')}"
+              msg_hash = hashlib.md5(msg_uid.encode('utf-8', 'ignore')).hexdigest()
+              if is_processed(msg_hash):
+                  print(f"Atlandı (önceden işlenmiş): {msg.get('Subject','(konu yok)')}")
+                  continue
               
               for part in msg.walk():
                   if part.get_content_maintype() == 'multipart' or part.get('Content-Disposition') is None: continue
@@ -100,6 +162,7 @@ jobs:
                   
                   # Sadece .xlsx ve .xlsm dosyalarını kabul et
                   if filename and (filename.endswith('.xlsx') or filename.endswith('.xlsm')):
+                      print(f"Excel eki bulundu: {filename} (mail: {msg.get('Subject','(konu yok)')})")
                       with open(filename, 'wb') as f: f.write(part.get_payload(decode=True))
                       
                       try:
@@ -179,7 +242,6 @@ jobs:
                               
                               # SADECE AKTİF LİSTEDE VARSA GÜNCELLE
                               if s_name_ex in active_ships:
-                                  # Hangi verinin baz alındığını net olarak panele yazdırır
                                   if closest['is_etb_used']:
                                       note_str = f'ETB BAZ ALINDI ({closest["date_str"]})'
                                   else:
@@ -188,10 +250,15 @@ jobs:
                                   new_eta_str = closest['target_date'].strftime('%Y-%m-%dT%H:%M')
                                   
                                   matched_id = active_ships[s_name_ex]['id']
-                                  upd_url = f'https://firestore.googleapis.com/v1/projects/msc-takip/databases/(default)/documents/ships/{matched_id}?updateMask.fieldPaths=eta&updateMask.fieldPaths=note&updateMask.fieldPaths=emailSent12h&updateMask.fieldPaths=emailSent6h&updateMask.fieldPaths=emailSentArrived&updateMask.fieldPaths=lastUpdated'
-                                  requests.patch(upd_url, json={'fields': {'eta': {'stringValue': new_eta_str}, 'note': {'stringValue': note_str}, 'lastUpdated': {'stringValue': f"{now_tr_str} (BOT)"}, 'emailSent12h': {'booleanValue': False}, 'emailSent6h': {'booleanValue': False}, 'emailSentArrived': {'booleanValue': False}}}, headers=headers)
+                                  upd_url = f'https://firestore.googleapis.com/v1/projects/msc-takip/databases/(default)/documents/ships/{matched_id}?updateMask.fieldPaths=eta&updateMask.fieldPaths=note&updateMask.fieldPaths=emailSent10h&updateMask.fieldPaths=emailSent5h&updateMask.fieldPaths=lastUpdated'
+                                  requests.patch(upd_url, json={'fields': {'eta': {'stringValue': new_eta_str}, 'note': {'stringValue': note_str}, 'lastUpdated': {'stringValue': f"{now_tr_str} (BOT)"}, 'emailSent10h': {'booleanValue': False}, 'emailSent5h': {'booleanValue': False}}}, headers=headers)
+                                  print(f"GÜNCELLENDİ: {s_name_ex} -> {note_str}")
+                              else:
+                                  print(f"EŞLEŞMEDİ: Excel'de '{s_name_ex}' var ama sistemdeki aktif gemi isimleriyle uyuşmuyor. Aktif isimler: {list(active_ships.keys())}")
                                   
                       except Exception as e: print(f"Excel Isleme Hatasi: {e}")
+              
+              mark_processed(msg_hash)
           mail.logout()
           EOF
           python bot.py

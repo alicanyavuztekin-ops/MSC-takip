@@ -24,4 +24,5 @@ jobs:
         env:
           GMAIL_PASS: ${{ secrets.GMAIL_PASS }}
           FIREBASE_SERVICE_ACCOUNT_B64: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_B64 }}
+          PANEL_EMAIL: ${{ secrets.PANEL_EMAIL }}
         run: node check-ships.js
