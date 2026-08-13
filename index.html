@@ -15,9 +15,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   
-  <!-- WORD (DOCX) ÜRETİM KÜTÜPHANELERİ -->
+  <!-- WORD (DOCX) ÜRETİM KÜTÜPHANELERİ (GÜVENLİ LİNKLER) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.4/pizzip.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pizzip/3.1.4/pizzip-utils.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/docxtemplater/3.37.11/docxtemplater.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
@@ -219,13 +218,15 @@
   <script>
     let currentDeclShipId = null;
 
-    // --- EVRAK (DOCX) ÜRETİM SİSTEMİ (GITHUB READ - GÜVENLİ) ---
-    function loadFile(url, callback) {
-        PizZipUtils.getBinaryContent(url, callback);
-    }
-
-    function generateDoc(docType) {
+    // --- EVRAK (DOCX) ÜRETİM SİSTEMİ (MODERN FETCH İLE GÜNCELLENDİ) ---
+    async function generateDoc(docType) {
         try {
+            // 1. Kütüphanelerin Yüklenip Yüklendiğini Kontrol Et
+            if (typeof window.PizZip === 'undefined' || typeof window.docxtemplater === 'undefined') {
+                alert("❌ BAĞLANTI HATASI:\nŞirket internet ağınız güvenlik nedeniyle Word kütüphanelerini engelliyor olabilir. Lütfen IT birimine danışın veya farklı bir ağdan/telefondan deneyin.");
+                return;
+            }
+
             if (!currentDeclShipId) return;
             const ship = ships.find(s => s.firestoreId === currentDeclShipId);
             if (!ship) return;
@@ -236,52 +237,54 @@
             btn.disabled = true;
 
             const fileName = docType === 'AMBAR' ? 'AMBAR_LISTESI_SABLON.docx' : 'HT_TESCIL_ONAYI_SABLON.docx';
-            const outputName = docType === 'AMBAR' ? `AMBAR_LISTESI_${ship.name.replace(/ /g,"_")}.docx` : `HT_TESCIL_${ship.name.replace(/ /g,"_")}.docx`;
+            const safeName = (ship.name || "GEMI").replace(/ /g, "_");
+            const outputName = docType === 'AMBAR' ? `AMBAR_LISTESI_${safeName}.docx` : `HT_TESCIL_${safeName}.docx`;
             const htList = (ship.htDeclarations || []).map(ht => ({ htNo: ht.no }));
 
-            // Güvenli Dosya Okuma Bloğu
-            loadFile(fileName, function(error, content) {
-                if (error) {
-                    btn.innerHTML = originalHtml;
-                    btn.disabled = false;
-                    alert("❌ ŞABLON DOSYASI BULUNAMADI VEYA ENGELLENDİ!\n\n1. Lütfen '" + fileName + "' dosyasını GitHub deponuza yüklediğinizden emin olun.\n2. Lütfen siteye masaüstünüzden değil internet linkinizden (github.io) girdiğinize emin olun.");
-                    return;
+            try {
+                // PizZipUtils YERİNE MODERN "FETCH" KULLANIYORUZ (Bağlantı hatalarını çözer)
+                const response = await fetch(fileName);
+                if (!response.ok) {
+                    throw new Error("Şablon GitHub'da bulunamadı (HTTP " + response.status + "). Lütfen dosyaların tam adıyla yüklü olduğuna emin olun.");
                 }
                 
-                try {
-                    const zip = new PizZip(content);
-                    const doc = new window.docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+                const arrayBuffer = await response.arrayBuffer();
+                
+                // Word Dosyasını Doldurma
+                const zip = new PizZip(arrayBuffer);
+                const doc = new window.docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
 
-                    doc.render({
-                        gemiAdi: ship.name || "",
-                        seferNo: ship.voyage || "-",
-                        htListesi: htList
-                    });
+                doc.render({
+                    gemiAdi: ship.name || "",
+                    seferNo: ship.voyage || "-",
+                    htListesi: htList
+                });
 
-                    const out = doc.getZip().generate({
-                        type: "blob",
-                        mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                    });
-                    
-                    saveAs(out, outputName);
+                const out = doc.getZip().generate({
+                    type: "blob",
+                    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+                });
+                
+                saveAs(out, outputName);
 
-                    const updateData = {};
-                    if (docType === 'AMBAR') updateData.docAmbar = true;
-                    if (docType === 'TESCIL') updateData.docTescil = true;
-                    db.collection('ships').doc(currentDeclShipId).update(updateData);
-                    
-                    btn.innerHTML = originalHtml;
-                    btn.disabled = false;
-                    
-                } catch (err) {
-                    btn.innerHTML = originalHtml;
-                    btn.disabled = false;
-                    console.error(err);
-                    alert("❌ EVRAK OLUŞTURMA HATASI:\nBüyük ihtimalle GitHub'daki şablonunuz bozuk veya 404 sayfası indirildi.\nLütfen şablonun tam olarak " + fileName + " adıyla yüklü olduğuna emin olun.");
-                }
-            });
+                // Evrak Durumunu Kaydet
+                const updateData = {};
+                if (docType === 'AMBAR') updateData.docAmbar = true;
+                if (docType === 'TESCIL') updateData.docTescil = true;
+                db.collection('ships').doc(currentDeclShipId).update(updateData);
+                
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                
+            } catch (err) {
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+                console.error(err);
+                alert("❌ EVRAK OLUŞTURMA HATASI:\n" + err.message);
+            }
         } catch (fatalErr) {
-            alert("❌ BAĞLANTI HATASI:\nSistem internet kütüphanelerine erişemiyor. Lütfen sayfayı yenileyip tekrar deneyin.");
+            console.error(fatalErr);
+            alert("❌ BEKLENMEYEN HATA:\n" + fatalErr.message);
         }
     }
 
