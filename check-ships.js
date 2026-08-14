@@ -35,33 +35,6 @@ async function checkShips() {
     const now = new Date();
 
     try {
-        // --- KARŞILIKLI SAĞLIK KONTROLÜ (HEARTBEAT) ---
-        const healthRef = db.collection('system').doc('health');
-        await healthRef.set({ checkShipsLastRun: now.toISOString() }, { merge: true });
-
-        const healthDoc = await healthRef.get();
-        const health = healthDoc.exists ? healthDoc.data() : {};
-        const otonomLast = health.otonomBotLastRun ? new Date(health.otonomBotLastRun) : null;
-        const otonomStaleMinutes = otonomLast ? (now - otonomLast) / 60000 : null;
-
-        if (otonomStaleMinutes !== null && otonomStaleMinutes > 40) {
-            if (!health.otonomBotAlertSent) {
-                const alertTo = process.env.PANEL_EMAIL;
-                if (alertTo) {
-                    await transporter.sendMail({
-                        from: '"MSC & MEDLOG TAKİP" <mscgemitakip@gmail.com>', to: alertTo,
-                        subject: '⚠️ UYARI: Otonom ETA Botu çalışmıyor olabilir',
-                        html: `<div style="font-family: Arial, sans-serif; color: #333;"><p>Otonom ETA Botu, beklenenden uzun süredir Firestore'a ulaşmadı (son görülme: ${otonomLast ? otonomLast.toLocaleString('tr-TR') : 'hiç çalışmamış'}).</p><p>GitHub → Actions → "Tam Otonom ETA Botu" sekmesini kontrol edin.</p></div>`
-                    });
-                    console.log("UYARI: Otonom bot gecikmesi maili gönderildi.");
-                }
-                await healthRef.set({ otonomBotAlertSent: true }, { merge: true });
-            }
-        } else if (health.otonomBotAlertSent) {
-            await healthRef.set({ otonomBotAlertSent: false }, { merge: true });
-            console.log("Otonom bot toparlandı, uyarı bayrağı sıfırlandı.");
-        }
-
         // --- YENİ KAYIT BİLDİRİMİ ---
         const newRegsSnap = await db.collection('newRegistrations').where('notified', '==', false).get();
         const ownerEmail = process.env.PANEL_EMAIL;
@@ -108,6 +81,25 @@ async function checkShips() {
             // --- SİTE LİNKİ VE BUTON ŞABLONU ---
             const siteLink = ship.siteUrl || "https://alicanyavuztekin-ops.github.io"; 
             const buttonHtml = `<br><br><a href="${siteLink}" style="background-color: #111111; color: #FFCC00; padding: 12px 20px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block; font-family: Arial, sans-serif; font-size: 14px;">👉 SİSTEME GİRİŞ YAP</a>`;
+            
+            // --- HT BEYANNAME LİSTESİ ---
+            let htListHtml = "";
+            if (ship.htDeclarations && ship.htDeclarations.length > 0) {
+              const htItems = ship.htDeclarations.map(ht => 
+                `<li style="margin-bottom: 4px;"><strong>${ht.no}</strong> ${ht.note ? `<span style="color:#64748b; font-size:11px;">(${ht.note})</span>` : ''}</li>`
+              ).join('');
+              
+              htListHtml = `
+                <div style="margin-top: 15px; padding: 15px; background-color: #f8fafc; border-left: 4px solid #FFCC00; border-radius: 0 8px 8px 0;">
+                  <h4 style="margin: 0 0 10px 0; color: #334155; font-size: 14px;">GİRİLEN HT BEYANNAMELERİ (${ship.htDeclarations.length} Adet):</h4>
+                  <ul style="margin: 0; padding-left: 20px; font-size: 13px; color: #0f172a;">
+                    ${htItems}
+                  </ul>
+                </div>
+              `;
+            } else {
+              htListHtml = `<div style="margin-top: 15px; padding: 10px; background-color: #fffbeb; border: 1px dashed #fcd34d; border-radius: 6px;"><p style="font-size: 12px; color: #b45309; margin:0; text-align: center;"><em>Bu gemi için henüz HT Beyannamesi girilmemiştir.</em></p></div>`;
+            }
 
             // YENİ EKLENDİ MAİLİ
             if (!ship.emailSentNew) {
@@ -120,8 +112,8 @@ async function checkShips() {
                         <p><b>Geldiği Liman:</b> ${ship.originPort || '-'}</p>
                         <p><b>Varış Limanı:</b> ${ship.destinationPort || '-'}</p>
                         <p><b>ETA:</b> ${new Date(ship.eta).toLocaleString('tr-TR')}</p>
-                        <p><b>Beyanname:</b> ${ship.declarations || '0'} Adet</p>
                         <p><b>Not:</b> ${ship.note || '-'}</p>
+                        ${htListHtml}
                         ${buttonHtml}
                     </div>
                 `;
@@ -140,6 +132,7 @@ async function checkShips() {
                         <h3 style="color: #e65100;">10 SAAT UYARISI</h3>
                         <p><b>${ship.name}</b> isimli geminin limana tahmini varışına 10 saat veya daha az bir süre kalmıştır.</p>
                         <p>Gümrük ve beyanname işlemlerini kontrol ediniz.</p>
+                        ${htListHtml}
                         ${buttonHtml}
                     </div>
                 `;
@@ -158,6 +151,7 @@ async function checkShips() {
                         <h3 style="color: #d32f2f;">KRİTİK 5 SAAT UYARISI</h3>
                         <p><b>${ship.name}</b> isimli geminin limana tahmini varışına 5 saatten az kalmıştır!</p>
                         <p>Lütfen gümrük durumunu acilen teyit ediniz.</p>
+                        ${htListHtml}
                         ${buttonHtml}
                     </div>
                 `;
