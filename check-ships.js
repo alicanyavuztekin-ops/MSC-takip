@@ -62,6 +62,22 @@ async function checkShips() {
             console.log("Otonom bot toparlandı, uyarı bayrağı sıfırlandı.");
         }
 
+        // --- YENİ KAYIT BİLDİRİMİ ---
+        const newRegsSnap = await db.collection('newRegistrations').where('notified', '==', false).get();
+        const ownerEmail = process.env.PANEL_EMAIL;
+        if (!newRegsSnap.empty && ownerEmail) {
+            for (const regDoc of newRegsSnap.docs) {
+                const reg = regDoc.data();
+                await transporter.sendMail({
+                    from: '"MSC & MEDLOG TAKİP" <mscgemitakip@gmail.com>', to: ownerEmail,
+                    subject: '👤 Yeni Kullanıcı Kaydoldu',
+                    html: `<div style="font-family: Arial, sans-serif; color: #333;"><p>Sisteme yeni bir kullanıcı kaydoldu:</p><p><b>E-posta:</b> ${reg.email}</p><p><b>Tarih:</b> ${reg.registeredAt || '-'}</p></div>`
+                });
+                await regDoc.ref.update({ notified: true });
+                console.log(`Yeni kayıt maili gönderildi: ${reg.email}`);
+            }
+        }
+
         const shipsRef = db.collection('ships');
         const snapshot = await shipsRef.where('status', '==', 'PENDING').get();
 
