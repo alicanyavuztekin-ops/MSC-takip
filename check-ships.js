@@ -31,7 +31,7 @@ const transporter = nodemailer.createTransport({
 
 // 4. ANA KONTROL DÖNGÜSÜ
 async function checkShips() {
-    console.log("Zaman kontrolü başlıyor (Site Linkli HTML Sistem)...");
+    console.log("Zaman kontrolü başlıyor (Site Linkli HTML Sistem - Heartbeat Kapalı)...");
     const now = new Date();
 
     try {
