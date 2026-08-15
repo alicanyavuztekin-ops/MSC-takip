@@ -1,16 +1,16 @@
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 
-// 1. GİZLİ ŞİFRELERİ VE KİMLİKLERİ AL
+// 1. GİZLİ BİLGİLERİ AL
 const GMAIL_PASS = process.env.GMAIL_PASS;
 const FIREBASE_B64 = process.env.FIREBASE_SERVICE_ACCOUNT_B64;
 
 if (!GMAIL_PASS || !FIREBASE_B64) {
-    console.error("HATA: Çevre değişkenleri (GMAIL_PASS veya FIREBASE_B64) eksik!");
+    console.error("HATA: GMAIL_PASS veya FIREBASE_B64 eksik!");
     process.exit(1);
 }
 
-// 2. FIREBASE BAĞLANTISINI KUR
+// 2. FIREBASE BAĞLANTISI
 const serviceAccount = JSON.parse(Buffer.from(FIREBASE_B64, 'base64').toString('utf8'));
 
 if (!admin.apps.length) {
@@ -20,40 +20,26 @@ if (!admin.apps.length) {
 }
 const db = admin.firestore();
 
-// 3. MAİL MOTORUNU KUR
+// 3. DOĞRUDAN GMAIL SMTP MOTORU (STANDART PORT 465)
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
+    host: 'smtp.gmail.com',
+    port: 465,
+    secure: true,
     auth: {
         user: 'mscgemitakip@gmail.com',
         pass: GMAIL_PASS
     }
 });
 
-// 4. ANA KONTROL DÖNGÜSÜ
+// 4. KONTROL VE GÖNDERİM MOTORU
 async function checkShips() {
-    console.log("Zaman kontrolü başlıyor (Kurumsal Tasarımlı Sistem)...");
+    console.log("Zaman kontrolü başlıyor (Grup Mail Uyumlu Mod)...");
     
-    // GITHUB SUNUCUSU AMERİKA'DA BİLE OLSA TÜRKİYE SAATİNİ (UTC+3) BUL
+    // Türkiye Saati (UTC+3)
     const nowUTC = new Date();
     const nowTR = new Date(nowUTC.getTime() + (3 * 60 * 60 * 1000));
 
     try {
-        // --- YENİ KAYIT BİLDİRİMİ ---
-        const newRegsSnap = await db.collection('newRegistrations').where('notified', '==', false).get();
-        const ownerEmail = process.env.PANEL_EMAIL;
-        if (!newRegsSnap.empty && ownerEmail) {
-            for (const regDoc of newRegsSnap.docs) {
-                const reg = regDoc.data();
-                await transporter.sendMail({
-                    from: '"MSC & MEDLOG OPERASYON" <mscgemitakip@gmail.com>', to: ownerEmail,
-                    subject: '👤 Yeni Kullanıcı Kaydoldu',
-                    html: `<div style="font-family: Arial, sans-serif; color: #333;"><p>Sisteme yeni bir kullanıcı kaydoldu:</p><p><b>E-posta:</b> ${reg.email}</p><p><b>Tarih:</b> ${reg.registeredAt || '-'}</p></div>`
-                });
-                await regDoc.ref.update({ notified: true });
-                console.log(`Yeni kayıt maili gönderildi: ${reg.email}`);
-            }
-        }
-
         const shipsRef = db.collection('ships');
         const snapshot = await shipsRef.where('status', '==', 'PENDING').get();
 
@@ -62,17 +48,16 @@ async function checkShips() {
             return;
         }
 
-        let islemYapilanGemiSayisi = 0;
+        let islemSayisi = 0;
 
         for (const doc of snapshot.docs) {
             const ship = doc.data();
-            const email = ship.email;
+            const emailField = ship.email;
             const etaDate = new Date(ship.eta);
 
-            // Boş veya hatalı kayıtları atla
-            if (isNaN(etaDate.getTime()) || !email) continue;
+            if (isNaN(etaDate.getTime()) || !emailField) continue;
             
-            // TÜRKİYE SAATİNE GÖRE FARK HESAPLAMA
+            // Türkiye Saati ile Kalan Süre
             const diffMs = etaDate.getTime() - nowTR.getTime();
             const diffHours = diffMs / (1000 * 60 * 60);
             
@@ -81,149 +66,122 @@ async function checkShips() {
             let emailTitle = "";
             let emailColor = "";
 
-            // --- MAİL TETİKLEME MANTIĞI ---
-            
-            // 1. YENİ GEMİ EKLENDİ BİLDİRİMİ
+            // 1. Yeni Gemi Bildirimi
             if (!ship.emailSentNew) {
-              emailSubject = `YENİ GEMİ BİLDİRİMİ: ${ship.name || 'İSİMSİZ'} - ${ship.voyage || '-'}`;
+              emailSubject = `YENİ GEMİ: ${ship.name || 'İSİMSİZ'} - ${ship.voyage || '-'}`;
               emailTitle = "YENİ GEMİ OPERASYON BİLDİRİMİ";
-              emailColor = "#2563eb"; // Kurumsal Mavi
+              emailColor = "#2563eb";
               updates.emailSentNew = true;
             } 
-            // 2. LİMANDA (YANAŞTI) BİLDİRİMİ
+            // 2. Limanda / Yanaştı
             else if (diffHours <= 0 && !ship.emailSentArrived) {
               emailSubject = `LİMANDA: ${ship.name} YANAŞTI`;
               emailTitle = "GEMİ LİMANA YANAŞTI";
-              emailColor = "#16a34a"; // Başarı Yeşili
+              emailColor = "#16a34a";
               updates.emailSentArrived = true;
             }
-            // 3. 6 SAAT KALA BİLDİRİMİ
+            // 3. 6 Saat Kala
             else if (diffHours > 0 && diffHours <= 6 && !ship.emailSent6h) {
-              emailSubject = `KRİTİK UYARI - 6 SAAT: ${ship.name}`;
+              emailSubject = `KRİTİK UYARI (6 SAAT): ${ship.name}`;
               emailTitle = "LİMANDA OLMASINA 6 SAAT KALDI";
-              emailColor = "#dc2626"; // Kritik Kırmızı
+              emailColor = "#dc2626";
               updates.emailSent6h = true;
             }
-            // 4. 12 SAAT KALA BİLDİRİMİ
+            // 4. 12 Saat Kala
             else if (diffHours > 6 && diffHours <= 12 && !ship.emailSent12h) {
-              emailSubject = `YAKLAŞIYOR - 12 SAAT: ${ship.name}`;
+              emailSubject = `YAKLAŞIYOR (12 SAAT): ${ship.name}`;
               emailTitle = "LİMANDA OLMASINA 12 SAAT KALDI";
-              emailColor = "#ea580c"; // Uyarı Turuncusu
+              emailColor = "#ea580c";
               updates.emailSent12h = true;
             }
 
-            // EĞER ATILACAK MAİL VARSA GÖNDER
-            if (Object.keys(updates).length > 0 && email) {
-                
-                console.log(`[İŞLEM BAŞLIYOR] Gemi: ${ship.name} | ETA'ya kalan: ${diffHours.toFixed(1)} saat`);
-                
-                // HT Beyannamelerini HTML Liste Haline Getir
-                let htListHtml = "";
-                if (ship.htDeclarations && ship.htDeclarations.length > 0) {
-                    const htItems = ship.htDeclarations.map(ht => 
-                    `<li style="margin-bottom: 6px; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px;"><strong>${ht.no}</strong> ${ht.note ? `<span style="color:#64748b; font-size:11px; float: right;">(${ht.note})</span>` : ''}</li>`
-                    ).join('');
-                    
-                    htListHtml = `
-                    <div style="margin-top: 20px; padding: 15px; background-color: #f8fafc; border-left: 4px solid #FFCC00; border-radius: 4px;">
-                        <h4 style="margin: 0 0 10px 0; color: #111111; font-size: 14px; text-transform: uppercase;">Girilen HT Beyannameleri (${ship.htDeclarations.length} Adet):</h4>
-                        <ul style="margin: 0; padding-left: 0; list-style-type: none; font-size: 13px; color: #0f172a;">
-                        ${htItems}
-                        </ul>
-                    </div>
-                    `;
-                } else {
-                    htListHtml = `<div style="margin-top: 20px; padding: 12px; background-color: #fffbeb; border: 1px dashed #fcd34d; border-radius: 4px;"><p style="font-size: 12px; color: #b45309; margin:0; text-align: center;"><em>Bu gemi için henüz HT Beyannamesi girilmemiştir.</em></p></div>`;
-                }
-
+            if (Object.keys(updates).length > 0) {
                 const siteLink = ship.siteUrl || "https://alicanyavuztekin-ops.github.io";
+                const htList = ship.htDeclarations || [];
+                
+                // DÜZ METİN (Filtreleri aşmak için zorunlu)
+                const htListText = htList.length > 0 
+                    ? htList.map(h => `- ${h.no} ${h.note ? `(${h.note})` : ''}`).join('\n')
+                    : 'Henüz HT Beyannamesi girilmedi.';
 
-                // KURUMSAL TASARIMLI HTML MAİL ŞABLONU
+                const textContent = `
+MSC & MEDLOG LİMAN OPERASYON BİLDİRİMİ
+--------------------------------------
+${emailTitle}
+
+GEMİ ADI: ${ship.name}
+SEFER NO: ${ship.voyage || '-'}
+IMO NO: ${ship.imo || '-'}
+GÜZERGAH: ${ship.originPort} -> ${ship.destinationPort}
+HEDEF ZAMAN (ETA/ETB): ${etaDate.toLocaleString('tr-TR')}
+EK NOT: ${ship.note || '-'}
+
+GİRİLEN HT BEYANNAMELERİ (${htList.length} Adet):
+${htListText}
+
+Sisteme Giriş: ${siteLink}
+                `.trim();
+
+                // HTML GÖRSEL ŞABLON
+                const htListHtml = htList.length > 0 
+                    ? htList.map(h => `<li style="padding:4px 0; border-bottom:1px solid #eee;"><b>${h.no}</b> ${h.note ? `<span style="color:#666; font-size:11px;">(${h.note})</span>` : ''}</li>`).join('')
+                    : '<li style="color:#888;">Henüz HT Beyannamesi girilmedi.</li>';
+
                 const htmlContent = `
-                    <div style="font-family: 'Arial', sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #cbd5e1; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); background-color: #ffffff;">
-                        
-                        <!-- KURUMSAL HEADER (MSC & MEDLOG RENKLERİ) -->
-                        <div style="background-color: #111111; padding: 25px 20px; text-align: center; border-bottom: 4px solid #FFCC00;">
-                            <h1 style="margin: 0; color: #FFCC00; font-size: 26px; font-weight: 900; letter-spacing: 2px;">MSC <span style="color: #ffffff;">&amp;</span> MEDLOG</h1>
-                            <p style="margin: 6px 0 0 0; color: #94a3b8; font-size: 11px; font-weight: bold; letter-spacing: 3px; text-transform: uppercase;">Liman Operasyon Sistemİ</p>
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 6px; overflow: hidden;">
+                        <div style="background-color: #111; padding: 18px; text-align: center; border-bottom: 3px solid #FFCC00;">
+                            <h2 style="margin: 0; color: #FFCC00; font-size: 20px;">MSC &amp; MEDLOG OPERASYON</h2>
                         </div>
-
-                        <!-- DURUM BANDI -->
-                        <div style="background-color: ${emailColor}; color: white; padding: 12px; text-align: center; font-weight: bold; font-size: 15px; letter-spacing: 1px;">
+                        <div style="background-color: ${emailColor}; color: #fff; padding: 10px; text-align: center; font-weight: bold; font-size: 14px;">
                             ${emailTitle}
                         </div>
-
-                        <!-- İÇERİK BÖLÜMÜ -->
-                        <div style="padding: 30px 25px; background-color: #ffffff;">
-                            <p style="font-size: 14px; color: #334155; margin-top: 0;">Sayın İlgili,</p>
-                            <p style="font-size: 14px; color: #475569; line-height: 1.5;">Operasyon sistemimizde kayıtlı olan aşağıdaki geminin güncel durum bilgisi tarafınıza sunulmuştur.</p>
-                            
-                            <table style="width: 100%; border-collapse: collapse; margin-top: 25px; border: 1px solid #e2e8f0; font-size: 13px;">
-                                <tr>
-                                    <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; width: 35%; background-color: #f1f5f9; font-weight: bold; color: #475569;">GEMİ ADI</td>
-                                    <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; font-weight: bold; color: #111111; font-size: 15px;">${ship.name}</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; background-color: #f1f5f9; font-weight: bold; color: #475569;">SEFER NO</td>
-                                    <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; color: #0f172a;">${ship.voyage || '-'}</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; background-color: #f1f5f9; font-weight: bold; color: #475569;">IMO NO</td>
-                                    <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; color: #0f172a;">${ship.imo || '-'}</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; background-color: #f1f5f9; font-weight: bold; color: #475569;">GÜZERGAH</td>
-                                    <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; color: #0f172a;">${ship.originPort} &rarr; <strong>${ship.destinationPort}</strong></td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; background-color: #f1f5f9; font-weight: bold; color: #475569;">HEDEF ZAMAN</td>
-                                    <td style="padding: 12px 15px; border-bottom: 1px solid #e2e8f0; color: #111111; font-weight: bold;">${etaDate.toLocaleString('tr-TR')}</td>
-                                </tr>
-                                <tr>
-                                    <td style="padding: 12px 15px; border-right: 1px solid #e2e8f0; background-color: #f1f5f9; font-weight: bold; color: #475569;">EK NOT</td>
-                                    <td style="padding: 12px 15px; color: #0f172a; font-style: italic;">${ship.note || '-'}</td>
-                                </tr>
+                        <div style="padding: 20px;">
+                            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                                <tr><td style="padding: 8px; border-bottom: 1px solid #eee; width: 35%; background: #f9f9f9;"><b>GEMİ ADI</b></td><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">${ship.name}</td></tr>
+                                <tr><td style="padding: 8px; border-bottom: 1px solid #eee; background: #f9f9f9;"><b>SEFER NO</b></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${ship.voyage || '-'}</td></tr>
+                                <tr><td style="padding: 8px; border-bottom: 1px solid #eee; background: #f9f9f9;"><b>IMO NO</b></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${ship.imo || '-'}</td></tr>
+                                <tr><td style="padding: 8px; border-bottom: 1px solid #eee; background: #f9f9f9;"><b>GÜZERGAH</b></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${ship.originPort} &rarr; <b>${ship.destinationPort}</b></td></tr>
+                                <tr><td style="padding: 8px; border-bottom: 1px solid #eee; background: #f9f9f9;"><b>HEDEF ZAMAN</b></td><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">${etaDate.toLocaleString('tr-TR')}</td></tr>
+                                <tr><td style="padding: 8px; background: #f9f9f9;"><b>EK NOT</b></td><td style="padding: 8px;">${ship.note || '-'}</td></tr>
                             </table>
 
-                            ${htListHtml}
-
-                            <div style="text-align: center; margin-top: 35px; margin-bottom: 10px;">
-                                <a href="${siteLink}" style="background-color: #111111; color: #FFCC00; padding: 14px 32px; text-decoration: none; border-radius: 4px; font-size: 14px; font-weight: bold; display: inline-block; border: 1px solid #000000;">SİSTEME GİT VE İŞLEM YAP</a>
+                            <div style="margin-top: 15px; padding: 12px; background: #fcfcfc; border: 1px solid #eee; border-radius: 4px;">
+                                <h4 style="margin: 0 0 8px 0; font-size: 12px; color: #333;">HT BEYANNAMELERİ (${htList.length} Adet):</h4>
+                                <ul style="margin: 0; padding-left: 18px; font-size: 12px;">${htListHtml}</ul>
                             </div>
-                        </div>
 
-                        <!-- KURUMSAL FOOTER -->
-                        <div style="background-color: #f8fafc; color: #64748b; text-align: center; padding: 20px; font-size: 11px; line-height: 1.6; border-top: 1px solid #e2e8f0;">
-                            <strong>Bu e-posta MSC & MEDLOG Otonom Operasyon Paneli tarafından oluşturulmuştur.</strong><br>
-                            Lütfen bu e-postayı yanıtlamayınız. Sistemsel bir hata olduğunu düşünüyorsanız departman yöneticinizle iletişime geçiniz.<br>
-                            &copy; ${new Date().getFullYear()} MSC & MEDLOG Tüm Hakları Saklıdır.
+                            <div style="text-align: center; margin-top: 20px;">
+                                <a href="${siteLink}" style="background-color: #111; color: #FFCC00; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-size: 13px; font-weight: bold; display: inline-block;">Sisteme Git ve İşlem Yap</a>
+                            </div>
                         </div>
                     </div>
                 `;
 
+                // Çoklu e-posta desteği (virgülle ayrılmışsa temizle)
+                const cleanRecipients = emailField.split(',').map(e => e.trim()).filter(e => e.length > 0).join(', ');
+
                 try {
                     await transporter.sendMail({
-                        from: `"MSC & MEDLOG Operasyon" <${process.env.EMAIL_USER || 'mscgemitakip@gmail.com'}>`,
-                        to: email,
+                        from: '"MSC & MEDLOG Operasyon" <mscgemitakip@gmail.com>',
+                        replyTo: 'mscgemitakip@gmail.com',
+                        to: cleanRecipients,
                         subject: emailSubject,
-                        html: htmlContent
+                        text: textContent, // Filtreleri aşan Düz Metin
+                        html: htmlContent  // Renkli Görsel Şablon
                     });
+                    
                     await shipsRef.doc(doc.id).update(updates);
-                    console.log(`✅ Mail Başarıyla Gönderildi: ${ship.name} -> ${email}`);
-                    islemYapilanGemiSayisi++;
+                    console.log(`✅ Mail İletildi: ${ship.name} -> ${cleanRecipients}`);
+                    islemSayisi++;
                 } catch (error) {
-                    console.error(`❌ Mail Gönderme Hatası (${ship.name}):`, error);
+                    console.error(`❌ Mail Hatası (${ship.name}):`, error);
                 }
             }
         }
         
-        if (islemYapilanGemiSayisi === 0) {
-            console.log("Şu an mail atılacak yeni veya saati gelmiş kritik bir gemi yok.");
-        }
-        
-        console.log("🏁 Mail botu taraması başarıyla tamamlandı.");
+        console.log(`İşlem tamamlandı. Gönderilen: ${islemSayisi}`);
     } catch (error) {
-        console.error("HATA OLUŞTU:", error);
+        console.error("HATA:", error);
     }
 }
 
