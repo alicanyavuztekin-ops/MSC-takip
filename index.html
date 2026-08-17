@@ -253,8 +253,17 @@
         
         <!-- EVRAK ÜRETME BUTONLARI -->
         <div class="flex gap-2 shrink-0 bg-slate-100 p-2 rounded-lg border border-slate-200 shadow-inner">
-            <button onclick="generateDoc('AMBAR')" id="btn-doc-ambar" class="flex-1 bg-white border border-slate-300 text-slate-700 p-2.5 rounded-lg text-xs font-bold hover:shadow-md transition-all flex flex-col items-center gap-1"><i class="fa-solid fa-file-word text-blue-600 text-lg"></i> <span>AMBAR LİSTESİ ÜRET</span></button>
-            <button onclick="generateDoc('TESCIL')" id="btn-doc-tescil" class="flex-1 bg-white border border-slate-300 text-slate-700 p-2.5 rounded-lg text-xs font-bold hover:shadow-md transition-all flex flex-col items-center gap-1"><i class="fa-solid fa-file-signature text-purple-600 text-lg"></i> <span>HT TESCİL ÜRET</span></button>
+            <button onclick="generateDoc('AMBAR')" id="btn-doc-ambar" class="flex-1 bg-white border border-slate-300 text-slate-700 p-2.5 rounded-lg text-xs font-bold hover:shadow-md transition-all flex flex-col items-center gap-1"><i class="fa-solid fa-file-word text-blue-600 text-lg"></i> <span>SEÇİLİ OLANLARIN AMBAR LİSTESİNİ ÜRET</span></button>
+            <button onclick="generateDoc('TESCIL')" id="btn-doc-tescil" class="flex-1 bg-white border border-slate-300 text-slate-700 p-2.5 rounded-lg text-xs font-bold hover:shadow-md transition-all flex flex-col items-center gap-1"><i class="fa-solid fa-file-signature text-purple-600 text-lg"></i> <span>SEÇİLİ OLANLARIN HT TESCİLİNİ ÜRET</span></button>
+        </div>
+
+        <!-- TOPLU SEÇİM BUTONLARI -->
+        <div class="flex justify-between items-center text-[10px] text-slate-500 font-bold px-1 pt-2">
+            <span>BEYANNAMELER LİSTESİ</span>
+            <div class="flex gap-2">
+                <button onclick="toggleAllDeclCheckboxes(true)" class="hover:text-blue-600 cursor-pointer">TÜMÜNÜ SEÇ</button> | 
+                <button onclick="toggleAllDeclCheckboxes(false)" class="hover:text-red-600 cursor-pointer">SEÇİMİ KALDIR</button>
+            </div>
         </div>
 
         <div id="declarations-list" class="space-y-2 flex-1 overflow-y-auto min-h-[150px] p-1"></div>
@@ -555,7 +564,13 @@
         XLSX.writeFile(wb, `Gemi_Operasyon_Raporu_${tarih}.xlsx`);
     }
 
-    // --- EVRAK (DOCX) ÜRETİM SİSTEMİ (MODERN FETCH + SENKRON) ---
+    // --- SEÇİM KUTUCUKLARI (TÜMÜNÜ SEÇ/KALDIR) ---
+    function toggleAllDeclCheckboxes(state) {
+        const checkboxes = document.querySelectorAll('.decl-checkbox');
+        checkboxes.forEach(cb => cb.checked = state);
+    }
+
+    // --- EVRAK (DOCX) ÜRETİM SİSTEMİ ---
     async function generateDoc(docType) {
         try {
             if (typeof window.PizZip === 'undefined' || typeof window.docxtemplater === 'undefined') {
@@ -567,6 +582,15 @@
             const ship = ships.find(s => s.firestoreId === currentDeclShipId);
             if (!ship) return;
 
+            // SADECE SEÇİLİ OLAN KUTUCUKLARI BUL
+            const checkedBoxes = Array.from(document.querySelectorAll('.decl-checkbox:checked'));
+            const checkedIds = checkedBoxes.map(cb => cb.value);
+
+            if (checkedIds.length === 0) {
+                alert("⚠️ Lütfen evraka eklenmesi için listeden en az BİR (1) adet beyanname seçin!");
+                return;
+            }
+
             const btn = docType === 'AMBAR' ? document.getElementById('btn-doc-ambar') : document.getElementById('btn-doc-tescil');
             const originalHtml = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-lg text-slate-500"></i> <span>HAZIRLANIYOR...</span>';
@@ -575,10 +599,12 @@
             const fileName = docType === 'AMBAR' ? 'AMBAR_LISTESI_SABLON.docx' : 'HT_TESCIL_ONAYI_SABLON.docx';
             const safeName = (ship.name || "GEMI").replace(/ /g, "_");
             const outputName = docType === 'AMBAR' ? `AMBAR_LISTESI_${safeName}.docx` : `HT_TESCIL_${safeName}.docx`;
-            const htList = (ship.htDeclarations || []).map(ht => ({ htNo: ht.no }));
+            
+            // YALNIZCA SEÇİLEN HT'LERİ FİLTRELE
+            const selectedDeclarations = (ship.htDeclarations || []).filter(ht => checkedIds.includes(ht.id));
+            const htList = selectedDeclarations.map(ht => ({ htNo: ht.no }));
 
             try {
-                // Fetch ile dosyayı oku
                 const response = await fetch(fileName);
                 if (!response.ok) {
                     throw new Error("Şablon GitHub'da bulunamadı (HTTP " + response.status + "). Lütfen dosyaların tam adıyla yüklü olduğuna emin olun.");
@@ -586,7 +612,6 @@
                 
                 const arrayBuffer = await response.arrayBuffer();
                 
-                // Word Dosyasını Doldurma
                 const zip = new PizZip(arrayBuffer);
                 const doc = new window.docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
 
@@ -603,7 +628,6 @@
                 
                 saveAs(out, outputName);
 
-                // Evrak Durumunu Kaydet
                 const updateData = {};
                 if (docType === 'AMBAR') updateData.docAmbar = true;
                 if (docType === 'TESCIL') updateData.docTescil = true;
@@ -632,18 +656,18 @@
 
         if (ship.docAmbar) {
             btnAmbar.className = "flex-1 bg-emerald-50 border border-emerald-400 text-emerald-800 p-2.5 rounded-lg text-xs font-bold hover:shadow-md transition-all flex flex-col items-center gap-1 cursor-pointer";
-            btnAmbar.innerHTML = '<i class="fa-solid fa-check-circle text-emerald-600 text-lg"></i> <span>AMBAR HAZIR</span>';
+            btnAmbar.innerHTML = '<i class="fa-solid fa-check-circle text-emerald-600 text-lg"></i> <span>SEÇİLİLERİN AMBARI HAZIR</span>';
         } else {
             btnAmbar.className = "flex-1 bg-white border border-slate-300 text-slate-700 p-2.5 rounded-lg text-xs font-bold hover:shadow-md transition-all flex flex-col items-center gap-1 cursor-pointer";
-            btnAmbar.innerHTML = '<i class="fa-solid fa-file-word text-blue-600 text-lg"></i> <span>AMBAR LİSTESİ ÜRET</span>';
+            btnAmbar.innerHTML = '<i class="fa-solid fa-file-word text-blue-600 text-lg"></i> <span>SEÇİLİ OLANLARIN AMBAR LİSTESİNİ ÜRET</span>';
         }
 
         if (ship.docTescil) {
             btnTescil.className = "flex-1 bg-emerald-50 border border-emerald-400 text-emerald-800 p-2.5 rounded-lg text-xs font-bold hover:shadow-md transition-all flex flex-col items-center gap-1 cursor-pointer";
-            btnTescil.innerHTML = '<i class="fa-solid fa-check-circle text-emerald-600 text-lg"></i> <span>TESCİL HAZIR</span>';
+            btnTescil.innerHTML = '<i class="fa-solid fa-check-circle text-emerald-600 text-lg"></i> <span>SEÇİLİLERİN TESCİLİ HAZIR</span>';
         } else {
             btnTescil.className = "flex-1 bg-white border border-slate-300 text-slate-700 p-2.5 rounded-lg text-xs font-bold hover:shadow-md transition-all flex flex-col items-center gap-1 cursor-pointer";
-            btnTescil.innerHTML = '<i class="fa-solid fa-file-signature text-purple-600 text-lg"></i> <span>HT TESCİL ÜRET</span>';
+            btnTescil.innerHTML = '<i class="fa-solid fa-file-signature text-purple-600 text-lg"></i> <span>SEÇİLİ OLANLARIN HT TESCİLİNİ ÜRET</span>';
         }
     }
 
@@ -672,16 +696,19 @@
         }
         container.innerHTML = list.map(d => `
             <div class="flex items-center justify-between p-2 border rounded-md ${d.completed ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'}">
-                <div class="flex-1 overflow-hidden mr-2">
-                    <div class="font-bold text-sm text-slate-800 break-all">${d.no}</div>
-                    ${d.note ? `<div class="text-[10px] text-slate-500 break-all">${d.note}</div>` : ''}
+                <div class="flex items-center gap-2 flex-1 overflow-hidden mr-2">
+                    <input type="checkbox" class="decl-checkbox w-4 h-4 text-blue-600 rounded cursor-pointer shrink-0" value="${d.id}" checked title="Evraka Ekle">
+                    <div class="flex-1 overflow-hidden">
+                        <div class="font-bold text-sm text-slate-800 break-all">${d.no}</div>
+                        ${d.note ? `<div class="text-[10px] text-slate-500 break-all">${d.note}</div>` : ''}
+                    </div>
                 </div>
                 <div class="flex items-center gap-1 shrink-0">
-                    <button onclick="editDeclaration('${d.id}')" class="text-[9px] font-bold text-blue-700 bg-blue-100 border border-blue-300 w-7 h-7 rounded flex items-center justify-center hover:bg-blue-200 transition-colors" title="Düzenle"><i class="fa-solid fa-pen"></i></button>
-                    <button onclick="deleteDeclaration('${d.id}')" class="text-[9px] font-bold text-red-700 bg-red-100 border border-red-300 w-7 h-7 rounded flex items-center justify-center hover:bg-red-200 transition-colors" title="Sil"><i class="fa-solid fa-trash"></i></button>
+                    <button onclick="editDeclaration('${d.id}')" class="text-[9px] font-bold text-blue-700 bg-blue-100 border border-blue-300 w-7 h-7 rounded flex items-center justify-center hover:bg-blue-200 transition-colors cursor-pointer" title="Düzenle"><i class="fa-solid fa-pen"></i></button>
+                    <button onclick="deleteDeclaration('${d.id}')" class="text-[9px] font-bold text-red-700 bg-red-100 border border-red-300 w-7 h-7 rounded flex items-center justify-center hover:bg-red-200 transition-colors cursor-pointer" title="Sil"><i class="fa-solid fa-trash"></i></button>
                     ${d.completed
-                        ? `<button onclick="toggleDeclarationStatus('${d.id}', false)" class="text-[9px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-1.5 rounded whitespace-nowrap hover:bg-emerald-200 transition-colors"><i class="fa-solid fa-check"></i> TAMAMLANDI</button>`
-                        : `<button onclick="toggleDeclarationStatus('${d.id}', true)" class="text-[9px] font-bold text-[#111111] bg-yellow-100 border border-yellow-300 px-2 py-1.5 rounded hover:bg-[#FFCC00] cursor-pointer whitespace-nowrap transition-colors">TAMAMLA</button>`
+                        ? `<button onclick="toggleDeclarationStatus('${d.id}', false)" class="text-[9px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-1.5 rounded whitespace-nowrap hover:bg-emerald-200 transition-colors cursor-pointer"><i class="fa-solid fa-check"></i> TAMAMLANDI</button>`
+                        : `<button onclick="toggleDeclarationStatus('${d.id}', true)" class="text-[9px] font-bold text-[#111111] bg-yellow-100 border border-yellow-300 px-2 py-1.5 rounded hover:bg-[#FFCC00] whitespace-nowrap transition-colors cursor-pointer">TAMAMLA</button>`
                     }
                 </div>
             </div>
