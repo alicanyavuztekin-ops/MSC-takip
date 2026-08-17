@@ -133,7 +133,7 @@
                 <option value="ALİAĞA NEMPORT">ALİAĞA NEMPORT</option>
             </select>
           </div>
-          <!-- YENİ E-POSTA AKILLI REHBERİ -->
+          <!-- E-POSTA AKILLI REHBERİ -->
           <div>
             <label class="block text-xs font-bold mb-1 flex justify-between items-center">
                 <span>MAİL ADRESLERİ</span> 
@@ -195,7 +195,7 @@
 
         <div id="view-board" class="hidden p-4 bg-slate-50">
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <div class="kanban-col col-normal"><h3 class="text-sm font-bold text-emerald-700 mb-3 flex items-center gap-2"><i class="fa-solid fa-water"></i> SEYİRDE <span id="kb-count-normal" class="ml-auto bg-emerald-200 px-2 py-0.5 rounded-full text-xs">0</span></h3><div id="kb-normal" class="space-y-3"></div></div>
+                <div class="kanban-col col-normal"><h3 class="text-sm font-bold text-emerald-700 mb-3 flex items-center gap-2"><i class="fa-solid fa-route"></i> SEYİRDE <span id="kb-count-normal" class="ml-auto bg-emerald-200 px-2 py-0.5 rounded-full text-xs">0</span></h3><div id="kb-normal" class="space-y-3"></div></div>
                 <div class="kanban-col col-12h"><h3 class="text-sm font-bold text-orange-700 mb-3 flex items-center gap-2"><i class="fa-solid fa-clock"></i> 12 SAAT KALA <span id="kb-count-12h" class="ml-auto bg-orange-200 px-2 py-0.5 rounded-full text-xs">0</span></h3><div id="kb-12h" class="space-y-3"></div></div>
                 <div class="kanban-col col-6h"><h3 class="text-sm font-bold text-red-700 mb-3 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i> 6 SAAT KALA <span id="kb-count-6h" class="ml-auto bg-red-200 px-2 py-0.5 rounded-full text-xs">0</span></h3><div id="kb-6h" class="space-y-3"></div></div>
                 <div class="kanban-col col-arrived"><h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2"><i class="fa-solid fa-anchor"></i> LİMANDA <span id="kb-count-arrived" class="ml-auto bg-slate-200 px-2 py-0.5 rounded-full text-xs">0</span></h3><div id="kb-arrived" class="space-y-3"></div></div>
@@ -253,8 +253,17 @@
         
         <!-- EVRAK ÜRETME BUTONLARI -->
         <div class="flex gap-2 shrink-0 bg-slate-100 p-2 rounded-lg border border-slate-200 shadow-inner">
-            <button onclick="generateDoc('AMBAR')" id="btn-doc-ambar" class="flex-1 bg-white border border-slate-300 text-slate-700 p-2.5 rounded-lg text-xs font-bold hover:shadow-md transition-all flex flex-col items-center gap-1"><i class="fa-solid fa-file-word text-blue-600 text-lg"></i> <span>AMBAR LİSTESİ ÜRET</span></button>
-            <button onclick="generateDoc('TESCIL')" id="btn-doc-tescil" class="flex-1 bg-white border border-slate-300 text-slate-700 p-2.5 rounded-lg text-xs font-bold hover:shadow-md transition-all flex flex-col items-center gap-1"><i class="fa-solid fa-file-signature text-purple-600 text-lg"></i> <span>HT TESCİL ÜRET</span></button>
+            <button onclick="generateDoc('AMBAR')" id="btn-doc-ambar" class="flex-1 bg-white border border-slate-300 text-slate-700 p-2.5 rounded-lg text-xs font-bold hover:shadow-md transition-all flex flex-col items-center gap-1"><i class="fa-solid fa-file-word text-blue-600 text-lg"></i> <span>SEÇİLİ OLANLARIN AMBAR LİSTESİNİ ÜRET</span></button>
+            <button onclick="generateDoc('TESCIL')" id="btn-doc-tescil" class="flex-1 bg-white border border-slate-300 text-slate-700 p-2.5 rounded-lg text-xs font-bold hover:shadow-md transition-all flex flex-col items-center gap-1"><i class="fa-solid fa-file-signature text-purple-600 text-lg"></i> <span>SEÇİLİ OLANLARIN HT TESCİLİNİ ÜRET</span></button>
+        </div>
+
+        <!-- TOPLU SEÇİM BUTONLARI -->
+        <div class="flex justify-between items-center text-[10px] text-slate-500 font-bold px-1 pt-2">
+            <span>BEYANNAMELER LİSTESİ</span>
+            <div class="flex gap-2">
+                <button onclick="toggleAllDeclCheckboxes(true)" class="hover:text-blue-600 cursor-pointer">TÜMÜNÜ SEÇ</button> | 
+                <button onclick="toggleAllDeclCheckboxes(false)" class="hover:text-red-600 cursor-pointer">SEÇİMİ KALDIR</button>
+            </div>
         </div>
 
         <div id="declarations-list" class="space-y-2 flex-1 overflow-y-auto min-h-[150px] p-1"></div>
@@ -493,41 +502,46 @@
             const dateStr = new Date(s.eta).toLocaleDateString('tr-TR');
             
             if (htCount === 0) {
-                // Hiç beyanname yoksa sadece gemi bilgilerini yaz
                 reportData.push({
                     "GEMİ ADI": s.name,
                     "SEFER NO": s.voyage || "-",
-                    "HEDEF ZAMAN (ETA/ETB)": dateStr,
+                    "HEDEF ZAMAN": dateStr,
                     "GELDİĞİ LİMAN": s.originPort || "-",
                     "VARIŞ LİMANI": s.destinationPort || "-",
-                    "TOPLAM HT BEYANNAME": htCount,
+                    "TOPLAM HT": htCount,
                     "HT NUMARALARI": "-",
-                    "EK NOT": s.note || "-"
+                    "HT DURUM / NOT": "-",
+                    "GEMİ EK NOTU": s.note || "-"
                 });
             } else {
-                // Beyannameler varsa ilk satıra gemi bilgilerini, sonrakilere sadece HT'leri yaz
                 hts.forEach((ht, index) => {
+                    let htDurum = ht.completed ? "[TAMAMLANDI]" : "[BEKLİYOR]";
+                    let htNot = ht.note ? ht.note : "";
+                    let tamNot = htDurum + (htNot ? " - " + htNot : "");
+
                     if (index === 0) {
                         reportData.push({
                             "GEMİ ADI": s.name,
                             "SEFER NO": s.voyage || "-",
-                            "HEDEF ZAMAN (ETA/ETB)": dateStr,
+                            "HEDEF ZAMAN": dateStr,
                             "GELDİĞİ LİMAN": s.originPort || "-",
                             "VARIŞ LİMANI": s.destinationPort || "-",
-                            "TOPLAM HT BEYANNAME": htCount,
+                            "TOPLAM HT": htCount,
                             "HT NUMARALARI": ht.no,
-                            "EK NOT": s.note || "-"
+                            "HT DURUM / NOT": tamNot,
+                            "GEMİ EK NOTU": s.note || "-"
                         });
                     } else {
                         reportData.push({
                             "GEMİ ADI": "",
                             "SEFER NO": "",
-                            "HEDEF ZAMAN (ETA/ETB)": "",
+                            "HEDEF ZAMAN": "",
                             "GELDİĞİ LİMAN": "",
                             "VARIŞ LİMANI": "",
-                            "TOPLAM HT BEYANNAME": "",
+                            "TOPLAM HT": "",
                             "HT NUMARALARI": ht.no,
-                            "EK NOT": ""
+                            "HT DURUM / NOT": tamNot,
+                            "GEMİ EK NOTU": ""
                         });
                     }
                 });
@@ -535,16 +549,15 @@
             
             // Gemiler arası karışmaması için temiz bir boş satır ekle
             reportData.push({
-                "GEMİ ADI": "", "SEFER NO": "", "HEDEF ZAMAN (ETA/ETB)": "", 
-                "GELDİĞİ LİMAN": "", "VARIŞ LİMANI": "", "TOPLAM HT BEYANNAME": "", 
-                "HT NUMARALARI": "", "EK NOT": ""
+                "GEMİ ADI": "", "SEFER NO": "", "HEDEF ZAMAN": "", 
+                "GELDİĞİ LİMAN": "", "VARIŞ LİMANI": "", "TOPLAM HT": "", 
+                "HT NUMARALARI": "", "HT DURUM / NOT": "", "GEMİ EK NOTU": ""
             });
         });
 
         const ws = XLSX.utils.json_to_sheet(reportData);
-        // Sütun genişlikleri - DURUM sütunu silindi, HT numaraları genişletildi
         const wscols = [
-            {wch: 25}, {wch: 15}, {wch: 22}, {wch: 20}, {wch: 20}, {wch: 25}, {wch: 30}, {wch: 40}
+            {wch: 25}, {wch: 15}, {wch: 22}, {wch: 20}, {wch: 20}, {wch: 15}, {wch: 25}, {wch: 35}, {wch: 40}
         ];
         ws['!cols'] = wscols;
 
@@ -555,7 +568,13 @@
         XLSX.writeFile(wb, `Gemi_Operasyon_Raporu_${tarih}.xlsx`);
     }
 
-    // --- EVRAK (DOCX) ÜRETİM SİSTEMİ (MODERN FETCH + SENKRON) ---
+    // --- SEÇİM KUTUCUKLARI (TÜMÜNÜ SEÇ/KALDIR) ---
+    function toggleAllDeclCheckboxes(state) {
+        const checkboxes = document.querySelectorAll('.decl-checkbox');
+        checkboxes.forEach(cb => cb.checked = state);
+    }
+
+    // --- EVRAK (DOCX) ÜRETİM SİSTEMİ ---
     async function generateDoc(docType) {
         try {
             if (typeof window.PizZip === 'undefined' || typeof window.docxtemplater === 'undefined') {
@@ -567,6 +586,15 @@
             const ship = ships.find(s => s.firestoreId === currentDeclShipId);
             if (!ship) return;
 
+            // SADECE SEÇİLİ OLAN KUTUCUKLARI BUL
+            const checkedBoxes = Array.from(document.querySelectorAll('.decl-checkbox:checked'));
+            const checkedIds = checkedBoxes.map(cb => cb.value);
+
+            if (checkedIds.length === 0) {
+                alert("⚠️ Lütfen evraka eklenmesi için listeden en az BİR (1) adet beyanname seçin!");
+                return;
+            }
+
             const btn = docType === 'AMBAR' ? document.getElementById('btn-doc-ambar') : document.getElementById('btn-doc-tescil');
             const originalHtml = btn.innerHTML;
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin text-lg text-slate-500"></i> <span>HAZIRLANIYOR...</span>';
@@ -575,10 +603,12 @@
             const fileName = docType === 'AMBAR' ? 'AMBAR_LISTESI_SABLON.docx' : 'HT_TESCIL_ONAYI_SABLON.docx';
             const safeName = (ship.name || "GEMI").replace(/ /g, "_");
             const outputName = docType === 'AMBAR' ? `AMBAR_LISTESI_${safeName}.docx` : `HT_TESCIL_${safeName}.docx`;
-            const htList = (ship.htDeclarations || []).map(ht => ({ htNo: ht.no }));
+            
+            // YALNIZCA SEÇİLEN HT'LERİ FİLTRELE
+            const selectedDeclarations = (ship.htDeclarations || []).filter(ht => checkedIds.includes(ht.id));
+            const htList = selectedDeclarations.map(ht => ({ htNo: ht.no }));
 
             try {
-                // Fetch ile dosyayı oku
                 const response = await fetch(fileName);
                 if (!response.ok) {
                     throw new Error("Şablon GitHub'da bulunamadı (HTTP " + response.status + "). Lütfen dosyaların tam adıyla yüklü olduğuna emin olun.");
@@ -586,7 +616,6 @@
                 
                 const arrayBuffer = await response.arrayBuffer();
                 
-                // Word Dosyasını Doldurma
                 const zip = new PizZip(arrayBuffer);
                 const doc = new window.docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
 
@@ -603,7 +632,6 @@
                 
                 saveAs(out, outputName);
 
-                // Evrak Durumunu Kaydet
                 const updateData = {};
                 if (docType === 'AMBAR') updateData.docAmbar = true;
                 if (docType === 'TESCIL') updateData.docTescil = true;
@@ -632,18 +660,18 @@
 
         if (ship.docAmbar) {
             btnAmbar.className = "flex-1 bg-emerald-50 border border-emerald-400 text-emerald-800 p-2.5 rounded-lg text-xs font-bold hover:shadow-md transition-all flex flex-col items-center gap-1 cursor-pointer";
-            btnAmbar.innerHTML = '<i class="fa-solid fa-check-circle text-emerald-600 text-lg"></i> <span>AMBAR HAZIR</span>';
+            btnAmbar.innerHTML = '<i class="fa-solid fa-check-circle text-emerald-600 text-lg"></i> <span>SEÇİLİLERİN AMBARI HAZIR</span>';
         } else {
             btnAmbar.className = "flex-1 bg-white border border-slate-300 text-slate-700 p-2.5 rounded-lg text-xs font-bold hover:shadow-md transition-all flex flex-col items-center gap-1 cursor-pointer";
-            btnAmbar.innerHTML = '<i class="fa-solid fa-file-word text-blue-600 text-lg"></i> <span>AMBAR LİSTESİ ÜRET</span>';
+            btnAmbar.innerHTML = '<i class="fa-solid fa-file-word text-blue-600 text-lg"></i> <span>SEÇİLİ OLANLARIN AMBAR LİSTESİNİ ÜRET</span>';
         }
 
         if (ship.docTescil) {
             btnTescil.className = "flex-1 bg-emerald-50 border border-emerald-400 text-emerald-800 p-2.5 rounded-lg text-xs font-bold hover:shadow-md transition-all flex flex-col items-center gap-1 cursor-pointer";
-            btnTescil.innerHTML = '<i class="fa-solid fa-check-circle text-emerald-600 text-lg"></i> <span>TESCİL HAZIR</span>';
+            btnTescil.innerHTML = '<i class="fa-solid fa-check-circle text-emerald-600 text-lg"></i> <span>SEÇİLİLERİN TESCİLİ HAZIR</span>';
         } else {
             btnTescil.className = "flex-1 bg-white border border-slate-300 text-slate-700 p-2.5 rounded-lg text-xs font-bold hover:shadow-md transition-all flex flex-col items-center gap-1 cursor-pointer";
-            btnTescil.innerHTML = '<i class="fa-solid fa-file-signature text-purple-600 text-lg"></i> <span>HT TESCİL ÜRET</span>';
+            btnTescil.innerHTML = '<i class="fa-solid fa-file-signature text-purple-600 text-lg"></i> <span>SEÇİLİ OLANLARIN HT TESCİLİNİ ÜRET</span>';
         }
     }
 
@@ -672,16 +700,19 @@
         }
         container.innerHTML = list.map(d => `
             <div class="flex items-center justify-between p-2 border rounded-md ${d.completed ? 'bg-emerald-50 border-emerald-200' : 'bg-white border-slate-200'}">
-                <div class="flex-1 overflow-hidden mr-2">
-                    <div class="font-bold text-sm text-slate-800 break-all">${d.no}</div>
-                    ${d.note ? `<div class="text-[10px] text-slate-500 break-all">${d.note}</div>` : ''}
+                <div class="flex items-center gap-2 flex-1 overflow-hidden mr-2">
+                    <input type="checkbox" class="decl-checkbox w-4 h-4 text-blue-600 rounded cursor-pointer shrink-0" value="${d.id}" checked title="Evraka Ekle">
+                    <div class="flex-1 overflow-hidden">
+                        <div class="font-bold text-sm text-slate-800 break-all">${d.no}</div>
+                        ${d.note ? `<div class="text-[10px] text-slate-500 break-all">${d.note}</div>` : ''}
+                    </div>
                 </div>
                 <div class="flex items-center gap-1 shrink-0">
-                    <button onclick="editDeclaration('${d.id}')" class="text-[9px] font-bold text-blue-700 bg-blue-100 border border-blue-300 w-7 h-7 rounded flex items-center justify-center hover:bg-blue-200 transition-colors" title="Düzenle"><i class="fa-solid fa-pen"></i></button>
-                    <button onclick="deleteDeclaration('${d.id}')" class="text-[9px] font-bold text-red-700 bg-red-100 border border-red-300 w-7 h-7 rounded flex items-center justify-center hover:bg-red-200 transition-colors" title="Sil"><i class="fa-solid fa-trash"></i></button>
+                    <button onclick="editDeclaration('${d.id}')" class="text-[9px] font-bold text-blue-700 bg-blue-100 border border-blue-300 w-7 h-7 rounded flex items-center justify-center hover:bg-blue-200 transition-colors cursor-pointer" title="Düzenle"><i class="fa-solid fa-pen"></i></button>
+                    <button onclick="deleteDeclaration('${d.id}')" class="text-[9px] font-bold text-red-700 bg-red-100 border border-red-300 w-7 h-7 rounded flex items-center justify-center hover:bg-red-200 transition-colors cursor-pointer" title="Sil"><i class="fa-solid fa-trash"></i></button>
                     ${d.completed
-                        ? `<button onclick="toggleDeclarationStatus('${d.id}', false)" class="text-[9px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-1.5 rounded whitespace-nowrap hover:bg-emerald-200 transition-colors"><i class="fa-solid fa-check"></i> TAMAMLANDI</button>`
-                        : `<button onclick="toggleDeclarationStatus('${d.id}', true)" class="text-[9px] font-bold text-[#111111] bg-yellow-100 border border-yellow-300 px-2 py-1.5 rounded hover:bg-[#FFCC00] cursor-pointer whitespace-nowrap transition-colors">TAMAMLA</button>`
+                        ? `<button onclick="toggleDeclarationStatus('${d.id}', false)" class="text-[9px] font-bold text-emerald-700 bg-emerald-100 border border-emerald-300 px-2 py-1.5 rounded whitespace-nowrap hover:bg-emerald-200 transition-colors cursor-pointer"><i class="fa-solid fa-check"></i> TAMAMLANDI</button>`
+                        : `<button onclick="toggleDeclarationStatus('${d.id}', true)" class="text-[9px] font-bold text-[#111111] bg-yellow-100 border border-yellow-300 px-2 py-1.5 rounded hover:bg-[#FFCC00] whitespace-nowrap transition-colors cursor-pointer">TAMAMLA</button>`
                     }
                 </div>
             </div>
@@ -713,7 +744,7 @@
         const newNo = prompt("Lütfen yeni Beyanname / HT Numarasını girin:", decl.no);
         if (newNo === null) return; 
 
-        const newNote = prompt("Varsa yeni Açıklama / Notu girin:", decl.note || "");
+        const newNote = prompt("Varsa yeni Açıklama / Notu girin (Örn: X-RAY, Muayene):", decl.note || "");
         if (newNote === null) return; 
 
         const updated = (ship.htDeclarations || []).map(d => d.id === declId ? { ...d, no: newNo.trim().toUpperCase(), note: newNote.trim().toUpperCase() } : d);
@@ -1054,11 +1085,11 @@
       
       filtered.sort((a, b) => new Date(a.eta) - new Date(b.eta)).forEach(ship => {
         const diffHours = (new Date(ship.eta) - new Date()) / 3600000;
-        let bClass = 'bg-blue-100 text-blue-700', bText = '🟢 SEYİRDE'; let progressWidth = '40%'; let progressColor = 'bg-blue-500'; let targetCol = kbNormal;
-        if (ship.status === 'COMPLETED') { bClass = 'bg-slate-100 text-slate-600'; bText = 'ARŞİVLENDİ'; progressWidth = '100%'; targetCol = kbArrived; cA++; progressColor = 'bg-slate-400';
-        } else if (diffHours <= 0) { bClass = 'bg-slate-800 text-white'; bText = '⚓ YANAŞTI'; progressWidth = '100%'; progressColor = 'bg-emerald-500'; targetCol = kbArrived; cA++;
-        } else if (diffHours <= 6) { bClass = 'bg-red-100 text-red-700 animate-pulse'; bText = '🔴 6 SAAT KALA'; progressWidth = '90%'; progressColor = 'bg-red-600'; targetCol = kb6h; c6++;
-        } else if (diffHours <= 12) { bClass = 'bg-orange-100 text-orange-700'; bText = '🟠 12 SAAT KALA'; progressWidth = '75%'; progressColor = 'bg-orange-500'; targetCol = kb12h; c12++;
+        let bClass = 'bg-blue-100 text-blue-700', bText = '<i class="fa-solid fa-route"></i> SEYİRDE'; let progressWidth = '40%'; let progressColor = 'bg-blue-500'; let targetCol = kbNormal;
+        if (ship.status === 'COMPLETED') { bClass = 'bg-slate-100 text-slate-600'; bText = '<i class="fa-solid fa-box-archive"></i> ARŞİVLENDİ'; progressWidth = '100%'; targetCol = kbArrived; cA++; progressColor = 'bg-slate-400';
+        } else if (diffHours <= 0) { bClass = 'bg-slate-800 text-white'; bText = '<i class="fa-solid fa-anchor"></i> YANAŞTI'; progressWidth = '100%'; progressColor = 'bg-emerald-500'; targetCol = kbArrived; cA++;
+        } else if (diffHours <= 6) { bClass = 'bg-red-100 text-red-700 animate-pulse'; bText = '<i class="fa-solid fa-triangle-exclamation"></i> 6 SAAT KALA'; progressWidth = '90%'; progressColor = 'bg-red-600'; targetCol = kb6h; c6++;
+        } else if (diffHours <= 12) { bClass = 'bg-orange-100 text-orange-700'; bText = '<i class="fa-solid fa-clock"></i> 12 SAAT KALA'; progressWidth = '75%'; progressColor = 'bg-orange-500'; targetCol = kb12h; c12++;
         } else { cN++; }
 
         let avatarBg = ship.name.includes("MED") ? "bg-[#FFCC00] text-[#111111]" : "bg-[#111111] text-[#FFCC00]"; let avatarText = ship.name.includes("MED") ? "MD" : "MS";
