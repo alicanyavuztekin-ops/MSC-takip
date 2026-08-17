@@ -133,7 +133,16 @@
                 <option value="ALİAĞA NEMPORT">ALİAĞA NEMPORT</option>
             </select>
           </div>
-          <div><label class="block text-xs font-bold mb-1">MAİL</label><input type="email" id="notificationEmail" required class="w-full text-sm p-2 border rounded-lg"></div>
+          <!-- YENİ E-POSTA AKILLI REHBERİ -->
+          <div>
+            <label class="block text-xs font-bold mb-1 flex justify-between items-center">
+                <span>MAİL ADRESLERİ</span> 
+                <button type="button" onclick="openEmailManagerModal()" class="text-blue-600 hover:text-blue-800 font-bold cursor-pointer text-[10px]"><i class="fa-solid fa-address-book"></i> REHBER</button>
+            </label>
+            <input type="text" id="notificationEmail" required class="w-full text-sm p-2 border rounded-lg" placeholder="Örn: mail1@, mail2@" onkeyup="updateEmailChipsState()">
+            <div id="quickEmailChips" class="flex flex-wrap gap-1 mt-1.5 min-h-[24px]"></div>
+          </div>
+          
           <div><label class="block text-xs font-bold mb-1">HEDEF ZAMAN</label><input type="datetime-local" id="eta" required class="w-full text-sm p-2 border rounded-lg"></div>
           <div><label class="block text-xs font-bold mb-1">BEYANNAME</label><input type="number" id="declarations" min="1" required class="w-full text-sm p-2 border rounded-lg"></div>
           <div><label class="block text-xs font-bold mb-1">EK NOT</label><input type="text" id="shipNote" class="w-full text-sm p-2 border rounded-lg uppercase" placeholder="ETB vb."></div>
@@ -273,8 +282,157 @@
       </div>
   </div>
 
+  <!-- E-POSTA REHBERİ MODALI -->
+  <div id="emailManagerModal" class="fixed inset-0 bg-slate-900/80 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+      <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
+          <h3 class="font-bold text-lg text-slate-800 border-b pb-3"><i class="fa-solid fa-address-book text-blue-600"></i> E-POSTA REHBERİ</h3>
+          <button onclick="document.getElementById('emailManagerModal').classList.add('hidden')" class="absolute top-4 right-6 text-slate-400 hover:text-red-600 text-2xl font-bold cursor-pointer">&times;</button>
+          
+          <form onsubmit="addSavedEmail(event)" class="flex gap-2">
+              <input type="email" id="newPresetEmail" required placeholder="Yeni E-Posta Adresi Ekle" class="flex-1 text-sm p-2.5 border rounded-lg focus:outline-none focus:border-[#111111]">
+              <button type="submit" class="bg-[#111111] text-[#FFCC00] font-bold px-4 rounded-lg hover:bg-black transition-colors cursor-pointer"><i class="fa-solid fa-plus"></i> EKLE</button>
+          </form>
+
+          <div id="savedEmailsList" class="space-y-2 max-h-60 overflow-y-auto mt-4 p-1 border-t pt-4"></div>
+          
+          <div class="pt-2 border-t">
+              <button type="button" onclick="saveAsDefaultEmails()" class="w-full bg-emerald-100 text-emerald-800 border border-emerald-300 font-bold p-2.5 rounded-lg text-xs hover:bg-emerald-200 transition-colors cursor-pointer">
+                  <i class="fa-solid fa-star"></i> EKRANDA SEÇİLİ OLANLARI "VARSAYILAN" YAP
+              </button>
+              <p class="text-[10px] text-slate-500 text-center mt-2">Buna basarsanız siteye her girişinizde ve her gemi eklemede o mailler otomatik yazılı gelir.</p>
+          </div>
+      </div>
+  </div>
+
   <script>
     let currentDeclShipId = null;
+
+    // --- E-POSTA REHBERİ MANTIĞI ---
+    const DEFAULT_PRESET_EMAILS = ["gumruk.izmir@medlog.com.tr"];
+
+    function getSavedEmails() {
+        try {
+            const raw = localStorage.getItem('msc_saved_emails');
+            if (raw) return JSON.parse(raw);
+        } catch(e){}
+        return [...DEFAULT_PRESET_EMAILS];
+    }
+
+    function saveSavedEmails(emails) {
+        localStorage.setItem('msc_saved_emails', JSON.stringify(emails));
+        renderEmailChips();
+        renderSavedEmailsList();
+    }
+
+    function getDefaultEmailString() {
+        return localStorage.getItem('msc_default_email_str') || "";
+    }
+
+    function saveAsDefaultEmails() {
+        const input = document.getElementById('notificationEmail');
+        const val = input.value.trim();
+        localStorage.setItem('msc_default_email_str', val);
+        alert("✅ Ekranda seçili olan e-postalar başarıyla VARSAYILAN olarak kaydedildi!\nArtık her gemi ekleme işleminde otomatik olarak doldurulacaktır.");
+        document.getElementById('emailManagerModal').classList.add('hidden');
+    }
+
+    function initEmailPresets() {
+        const emailInput = document.getElementById('notificationEmail');
+        if (emailInput) {
+            emailInput.value = getDefaultEmailString();
+        }
+        renderEmailChips();
+    }
+
+    function renderEmailChips() {
+        const container = document.getElementById('quickEmailChips');
+        if (!container) return;
+        const emailInput = document.getElementById('notificationEmail');
+        const currentVal = (emailInput ? emailInput.value : '').toLowerCase();
+        const currentEmails = currentVal.split(',').map(e => e.trim()).filter(e => e.length > 0);
+
+        const savedEmails = getSavedEmails();
+        if (savedEmails.length === 0) {
+            container.innerHTML = `<span class="text-[10px] text-slate-400">Rehberde kayıt yok.</span>`;
+            return;
+        }
+
+        container.innerHTML = savedEmails.map(email => {
+            const isSelected = currentEmails.includes(email.toLowerCase());
+            const shortName = email.split('@')[0];
+            if (isSelected) {
+                return `<button type="button" onclick="toggleEmailChip('${email}')" class="bg-[#111111] text-[#FFCC00] border border-[#111111] text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 cursor-pointer transition-all shadow-sm"><i class="fa-solid fa-check text-[10px]"></i> ${shortName}</button>`;
+            } else {
+                return `<button type="button" onclick="toggleEmailChip('${email}')" class="bg-white hover:bg-slate-100 text-slate-600 border border-slate-300 text-[10px] font-medium px-2.5 py-1 rounded-full flex items-center gap-1 cursor-pointer transition-all"><i class="fa-solid fa-plus text-[10px] text-slate-400"></i> ${shortName}</button>`;
+            }
+        }).join('');
+    }
+
+    function updateEmailChipsState() {
+        renderEmailChips();
+    }
+
+    function toggleEmailChip(emailToToggle) {
+        const emailInput = document.getElementById('notificationEmail');
+        if (!emailInput) return;
+        let list = emailInput.value.split(',').map(e => e.trim()).filter(e => e.length > 0);
+        const lowerList = list.map(e => e.toLowerCase());
+        const idx = lowerList.indexOf(emailToToggle.toLowerCase());
+
+        if (idx !== -1) {
+            list.splice(idx, 1);
+        } else {
+            list.push(emailToToggle);
+        }
+
+        emailInput.value = list.join(', ');
+        renderEmailChips();
+    }
+
+    function openEmailManagerModal() {
+        renderSavedEmailsList();
+        document.getElementById('emailManagerModal').classList.remove('hidden');
+    }
+
+    function renderSavedEmailsList() {
+        const container = document.getElementById('savedEmailsList');
+        if (!container) return;
+        const saved = getSavedEmails();
+        if (saved.length === 0) {
+            container.innerHTML = `<div class="text-center py-4 text-xs text-slate-400">Kayıtlı e-posta yok.</div>`;
+            return;
+        }
+        container.innerHTML = saved.map((em, idx) => `
+            <div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-xs mb-2">
+                <span class="font-medium text-slate-700"><i class="fa-solid fa-envelope text-slate-400 mr-2"></i>${em}</span>
+                <button type="button" onclick="deleteSavedEmail(${idx})" class="text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded hover:bg-red-100 transition-colors cursor-pointer" title="Rehberden Sil"><i class="fa-solid fa-trash"></i></button>
+            </div>
+        `).join('');
+    }
+
+    function addSavedEmail(e) {
+        e.preventDefault();
+        const input = document.getElementById('newPresetEmail');
+        const newEm = input.value.trim().toLowerCase();
+        if (!newEm) return;
+        const saved = getSavedEmails();
+        if (!saved.map(s => s.toLowerCase()).includes(newEm)) {
+            saved.push(newEm);
+            saveSavedEmails(saved);
+            input.value = '';
+        } else {
+            alert("Bu e-posta adresi zaten rehberde kayıtlı!");
+        }
+    }
+
+    function deleteSavedEmail(idx) {
+        if(!confirm("Bu mail adresini rehberden silmek istediğinize emin misiniz?")) return;
+        const saved = getSavedEmails();
+        if (idx >= 0 && idx < saved.length) {
+            saved.splice(idx, 1);
+            saveSavedEmails(saved);
+        }
+    }
 
     // --- GEMİ SEÇİMİ VE OTOMATİK IMO ---
     function handleShipSelection() {
@@ -628,6 +786,10 @@
         document.getElementById('app-container').classList.remove('hidden');
         document.getElementById('action-buttons-container').classList.remove('hidden');
         document.getElementById('action-buttons-container').style.display = 'flex';
+        
+        // REHBERİ YÜKLE
+        initEmailPresets();
+
         db.collection('ships').where('userId', '==', currentUser.uid).onSnapshot(snap => {
           ships = []; snap.forEach(doc => ships.push({ firestoreId: doc.id, ...doc.data() })); 
           renderShips();
@@ -648,7 +810,10 @@
 
     function handleAuthSubmit(e) {
         e.preventDefault(); const email = document.getElementById('auth-email').value.trim(); const password = document.getElementById('auth-password').value;
-        if(isRegisterMode) { auth.createUserWithEmailAndPassword(email, password).then(() => { alert("✅ Kayıt başarılı! Giriş yapıldı."); }).catch(err => { alert("❌ Kayıt Olma Hatası: " + err.message); });
+        if(isRegisterMode) { auth.createUserWithEmailAndPassword(email, password).then((cred) => { 
+            db.collection('newRegistrations').doc(cred.user.uid).set({ email: email, registeredAt: getTrDateStr(), notified: false });
+            alert("✅ Kayıt başarılı! Giriş yapıldı."); 
+        }).catch(err => { alert("❌ Kayıt Olma Hatası: " + err.message); });
         } else { auth.signInWithEmailAndPassword(email, password).catch(err => { alert("❌ Giriş Hatası: " + err.message); }); }
     }
 
@@ -724,6 +889,7 @@
         db.collection('ships').add(newShipData).then(() => { 
             document.getElementById('ship-form').reset(); 
             document.getElementById('shipName').classList.add('hidden');
+            initEmailPresets(); // REHBERDEN VARSAYILAN MAİLLERİ GERİ YÜKLE
             setTab('ACTIVE'); 
         });
     }
@@ -834,20 +1000,23 @@
                         futureRuns[excelName].push({ name: excelName, targetDateObj: targetDateObj, isEtbUsed: isEtbUsed, dateStr: dateStr });
                     }
                 }
-                let updatedCount = 0; let activeShips = ships.filter(s => s.status !== 'COMPLETED');
+                let updatedCount = 0; let updateLog = []; let activeShips = ships.filter(s => s.status !== 'COMPLETED');
                 for (const [shipName, runs] of Object.entries(futureRuns)) {
                     runs.sort((a, b) => a.targetDateObj - b.targetDateObj); const closestRun = runs[0]; 
                     const activeMatch = activeShips.find(s => (s.name || '').toUpperCase().trim() === shipName);
                     if (activeMatch) {
                         let noteStr = closestRun.isEtbUsed ? `ETB BAZ ALINDI (${closestRun.dateStr})` : `ETA BAZ ALINDI (${closestRun.dateStr})`;
+                        updateLog.push(`${shipName}: ${closestRun.isEtbUsed ? 'ETB' : 'ETA'} kullanıldı (${closestRun.dateStr})`);
                         await db.collection('ships').doc(activeMatch.firestoreId).update({
                             eta: closestRun.targetDateObj.toISOString().slice(0,16), note: noteStr, siteUrl: getSiteUrl(), 
                             emailSent10h: false, emailSent5h: false, emailSent12h: false, emailSent6h: false, emailSentArrived: false, lastUpdated: getTrDateStr()
                         });
                         updatedCount++;
+                    } else {
+                        updateLog.push(`${shipName}: Excel'de var ama sistemde bu isimde aktif gemi yok`);
                     }
                 }
-                alert(`✅ İŞLEM BAŞARILI!\n📄 Okunan Sayfa: ${targetSheet}\n🔄 Güncellenen Aktif Gemi: ${updatedCount}`); setTab('ACTIVE');
+                alert(`✅ İŞLEM BAŞARILI!\n📄 Okunan Sayfa: ${targetSheet}\n🔄 Güncellenen Aktif Gemi: ${updatedCount}\n\n${updateLog.join('\n') || 'Excel içinde eşleşen/gelecek tarihli kayıt bulunamadı.'}`); setTab('ACTIVE');
             } catch (err) { alert("❌ Yükleme Hatası: " + err.message); }
             btnLabel.innerHTML = '<i class="fa-solid fa-file-excel"></i> MANUEL EXCEL YÜKLE (.XLSM)'; event.target.value = ''; 
         };
