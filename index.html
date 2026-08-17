@@ -1005,7 +1005,7 @@
                 const now = new Date(); const currMonth = currentMonthNames[now.getMonth()]; const altMonth = currMonth.replace(/Ğ/g, 'G').replace(/Ü/g, 'U').replace(/Ş/g, 'S').replace(/İ/g, 'I').replace(/Ö/g, 'O').replace(/Ç/g, 'C'); const engMon = engMonthNames[now.getMonth()];
                 let targetSheet = workbook.SheetNames.find(s => { let su = s.toUpperCase(); return su.includes(currMonth) || su.includes(altMonth) || su.includes(engMon); }) || workbook.SheetNames[0];
                 const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[targetSheet], {header: 1, raw: false, defval: ""});
-                let nameIdx = -1, etaIdx = -1, etbIdx = -1, startRow = -1;
+                let nameIdx = -1, etaIdx = -1, etbIdx = -1, voyageIdx = -1, startRow = -1;
                 for (let i = 0; i < Math.min(aoa.length, 20); i++) {
                     const row = aoa[i]; if (!row || row.length === 0) continue;
                     for (let j = 0; j < row.length; j++) {
@@ -1013,6 +1013,7 @@
                         if (val.includes('GEMİ ADI') || val.includes('VESSEL')) nameIdx = j;
                         if (val === 'ETA' || val.includes('TAHMİNİ VARIŞ') || val.includes('VARIS') || val.includes('VARIŞ') || val.includes('ARRIVAL')) etaIdx = j;
                         if (val === 'ETB' || val.includes('TAHMİNİ YANAŞMA') || val.includes('YANASMA') || val.includes('YANAŞMA') || val.includes('BERTH')) etbIdx = j;
+                        if (val === 'SEFER' || val.includes('SEFER NO') || val.includes('VOYAGE') || val === 'VOY') voyageIdx = j;
                     }
                     if (nameIdx !== -1 && (etaIdx !== -1 || etbIdx !== -1)) { startRow = i + 1; break; }
                 }
@@ -1020,7 +1021,11 @@
                 let futureRuns = {}; const rightNow = new Date(); rightNow.setHours(0,0,0,0);
                 for (let i = startRow; i < aoa.length; i++) {
                     const row = aoa[i]; if (!row || !row[nameIdx]) continue;
-                    const excelName = row[nameIdx].toString().trim().toUpperCase(); const rawEta = (etaIdx !== -1 && row[etaIdx]) ? row[etaIdx].toString().trim() : ''; const rawEtb = (etbIdx !== -1 && row[etbIdx]) ? row[etbIdx].toString().trim() : '';
+                    const excelName = row[nameIdx].toString().trim().toUpperCase(); 
+                    const rawEta = (etaIdx !== -1 && row[etaIdx]) ? row[etaIdx].toString().trim() : ''; 
+                    const rawEtb = (etbIdx !== -1 && row[etbIdx]) ? row[etbIdx].toString().trim() : '';
+                    const excelVoyage = (voyageIdx !== -1 && row[voyageIdx]) ? row[voyageIdx].toString().trim().toUpperCase() : '';
+
                     if (!excelName || (!rawEta && !rawEtb)) continue;
                     const etaDateObj = parseCustomDate(rawEta); const etbDateObj = parseCustomDate(rawEtb);
                     let targetDateObj = null; let isEtbUsed = false;
@@ -1028,26 +1033,44 @@
                     if (targetDateObj && targetDateObj >= rightNow) {
                         if (!futureRuns[excelName]) futureRuns[excelName] = [];
                         let dateStr = targetDateObj.toLocaleDateString('tr-TR') + " " + targetDateObj.getHours().toString().padStart(2, '0') + ":" + targetDateObj.getMinutes().toString().padStart(2, '0');
-                        futureRuns[excelName].push({ name: excelName, targetDateObj: targetDateObj, isEtbUsed: isEtbUsed, dateStr: dateStr });
+                        futureRuns[excelName].push({ name: excelName, voyage: excelVoyage, targetDateObj: targetDateObj, isEtbUsed: isEtbUsed, dateStr: dateStr });
                     }
                 }
                 let updatedCount = 0; let updateLog = []; let activeShips = ships.filter(s => s.status !== 'COMPLETED');
                 for (const [shipName, runs] of Object.entries(futureRuns)) {
                     runs.sort((a, b) => a.targetDateObj - b.targetDateObj); const closestRun = runs[0]; 
-                    const activeMatch = activeShips.find(s => (s.name || '').toUpperCase().trim() === shipName);
+                    
+                    const activeMatch = activeShips.find(s => {
+                        let isNameMatch = (s.name || '').toUpperCase().trim() === shipName;
+                        if (!isNameMatch) return false;
+
+                        // Sefer no (Voyage) Teyidi
+                        if (closestRun.voyage && s.voyage) {
+                            let v1 = closestRun.voyage.replace(/\s+/g, '');
+                            let v2 = s.voyage.replace(/\s+/g, '');
+                            // Eğer biri diğerini içermiyorsa, seferler farklı demektir. (Örn 632R vs A632R)
+                            if (!v1.includes(v2) && !v2.includes(v1)) {
+                                return false; 
+                            }
+                        }
+                        return true;
+                    });
+
                     if (activeMatch) {
-                        let noteStr = closestRun.isEtbUsed ? `ETB BAZ ALINDI (${closestRun.dateStr})` : `ETA BAZ ALINDI (${closestRun.dateStr})`;
-                        updateLog.push(`${shipName}: ${closestRun.isEtbUsed ? 'ETB' : 'ETA'} kullanıldı (${closestRun.dateStr})`);
+                        updateLog.push(`${shipName} (Sefer Onaylı): ETA güncellendi -> ${closestRun.dateStr}`);
                         await db.collection('ships').doc(activeMatch.firestoreId).update({
-                            eta: closestRun.targetDateObj.toISOString().slice(0,16), note: noteStr, siteUrl: getSiteUrl(), 
-                            emailSent10h: false, emailSent5h: false, emailSent12h: false, emailSent6h: false, emailSentArrived: false, lastUpdated: getTrDateStr()
+                            eta: closestRun.targetDateObj.toISOString().slice(0,16), 
+                            siteUrl: getSiteUrl(), 
+                            emailSent10h: false, emailSent5h: false, emailSent12h: false, emailSent6h: false, emailSentArrived: false, 
+                            lastUpdated: getTrDateStr() + " (EXCEL OTO)"
                         });
                         updatedCount++;
                     } else {
-                        updateLog.push(`${shipName}: Excel'de var ama sistemde bu isimde aktif gemi yok`);
+                        updateLog.push(`${shipName}: Excel'de var ama sistemde eşleşen aktif sefer yok`);
                     }
                 }
-                alert(`✅ İŞLEM BAŞARILI!\n📄 Okunan Sayfa: ${targetSheet}\n🔄 Güncellenen Aktif Gemi: ${updatedCount}\n\n${updateLog.join('\n') || 'Excel içinde eşleşen/gelecek tarihli kayıt bulunamadı.'}`); setTab('ACTIVE');
+                alert(`✅ İŞLEM BAŞARILI!\n📄 Okunan Sayfa: ${targetSheet}\n🔄 Güncellenen Aktif Gemi: ${updatedCount}\n\n${updateLog.join('\n') || 'Excel içinde eşleşen/gelecek tarihli kayıt bulunamadı.'}`); 
+                setTab('ACTIVE');
             } catch (err) { alert("❌ Yükleme Hatası: " + err.message); }
             btnLabel.innerHTML = '<i class="fa-solid fa-file-excel"></i> MANUEL EXCEL YÜKLE (.XLSM)'; event.target.value = ''; 
         };
