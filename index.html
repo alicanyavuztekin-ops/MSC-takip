@@ -31,11 +31,6 @@
     .col-12h { background-color: #fff7ed; border-top: 4px solid #f97316; }
     .col-6h { background-color: #fef2f2; border-top: 4px solid #ef4444; }
     .col-arrived { background-color: #f1f5f9; border-top: 4px solid #334155; }
-    .ai-message { background-color: #f1f5f9; border-radius: 12px 12px 12px 0; padding: 12px; margin-bottom: 12px; font-size: 14px; border-left: 4px solid #FFCC00; }
-    .user-message { background-color: #111111; color: #FFCC00; border-radius: 12px 12px 0 12px; padding: 12px; margin-bottom: 12px; font-size: 14px; text-align: right; }
-    .typing-indicator span { display: inline-block; width: 6px; height: 6px; background-color: #64748b; border-radius: 50%; margin-right: 3px; animation: typing 1s infinite alternate; }
-    .typing-indicator span:nth-child(2) { animation-delay: 0.2s; } .typing-indicator span:nth-child(3) { animation-delay: 0.4s; }
-    @keyframes typing { 0% { transform: translateY(0); } 100% { transform: translateY(-5px); } }
   </style>
 </head>
 <body class="bg-zinc-100 font-sans text-slate-800 antialiased min-h-screen relative">
@@ -128,7 +123,8 @@
             <input type="text" id="notificationEmail" required class="w-full text-sm p-2 border rounded-lg" placeholder="Örn: mail1@, mail2@" onkeyup="updateEmailChipsState()">
             <div id="quickEmailChips" class="flex flex-wrap gap-1 mt-1.5 min-h-[24px]"></div>
           </div>
-          <div><label class="block text-xs font-bold mb-1">HEDEF ZAMAN</label><input type="datetime-local" id="eta" required class="w-full text-sm p-2 border rounded-lg"></div>
+          <!-- lang="tr-TR" ile saat formatını Türkçe sisteme zorluyoruz -->
+          <div><label class="block text-xs font-bold mb-1">HEDEF ZAMAN</label><input type="datetime-local" lang="tr-TR" id="eta" required class="w-full text-sm p-2 border rounded-lg"></div>
           <div><label class="block text-xs font-bold mb-1">BEYANNAME</label><input type="number" id="declarations" min="1" required class="w-full text-sm p-2 border rounded-lg"></div>
           <div><label class="block text-xs font-bold mb-1">EK NOT</label><input type="text" id="shipNote" class="w-full text-sm p-2 border rounded-lg uppercase" placeholder="ETB vb."></div>
           <div class="flex items-end"><button type="submit" class="w-full bg-[#FFCC00] text-[#111111] font-bold p-2.5 rounded-lg shadow-md hover:bg-yellow-500 cursor-pointer"><i class="fa-solid fa-check-circle"></i> EKLE</button></div>
@@ -142,7 +138,6 @@
                 <button onclick="setTab('ACTIVE')" id="tab-active" class="tab-active py-2 px-4 rounded-lg font-bold text-sm shadow-sm transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-satellite-dish"></i> AKTİF</button>
                 <button onclick="setTab('ARCHIVE')" id="tab-archive" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-box-archive"></i> ARŞİV</button>
                 <button onclick="setTab('DENIZYOLU')" id="tab-denizyolu" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-ship text-[#111111]"></i> DENİZYOLU GÖNDERME</button>
-                <button onclick="setTab('AI_CHAT')" id="tab-ai" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-robot text-[#111111]"></i> AI ASİSTAN</button>
             </div>
             
             <div id="filter-container" class="flex items-center gap-3 w-full xl:w-auto justify-between flex-wrap">
@@ -211,23 +206,6 @@
             </div>
         </div>
 
-        <!-- AI ASİSTAN -->
-        <div id="view-ai-chat" class="hidden p-6 bg-slate-50 min-h-[500px] flex flex-col">
-            <div class="max-w-3xl mx-auto w-full bg-white rounded-2xl shadow-md border border-slate-200 flex flex-col h-[550px] overflow-hidden">
-                <div class="bg-[#111111] p-4 text-white flex items-center gap-3 border-b-4 border-[#FFCC00]">
-                    <div class="bg-[#FFCC00] text-[#111111] w-10 h-10 rounded-xl flex items-center justify-center font-bold"><i class="fa-solid fa-robot"></i></div>
-                    <div><h3 class="font-bold uppercase text-sm">AI LİMAN OPERASYON ASİSTANI</h3><p class="text-[11px] text-[#FFCC00]">Aktif gemi veritabanına bağlı akıllı analist</p></div>
-                </div>
-                <div id="ai-tab-messages" class="flex-1 p-4 overflow-y-auto bg-slate-50 flex flex-col space-y-3">
-                    <div class="ai-message">Merhaba! Ben MSC Lojistik Asistanın. Sistemdeki tüm gemi saatlerini, gecikme risklerini ve operasyonel detayları bana dilediğin gibi sorabilirsin.</div>
-                </div>
-                <div class="p-4 bg-white border-t flex gap-3">
-                    <input type="text" id="ai-tab-input" placeholder="Örn: Bu hafta Aliağa'ya gelecek gemiler hangileri?" class="flex-1 text-sm p-3 border rounded-xl focus:outline-none focus:border-[#111111]" onkeypress="handleAITabKeyPress(event)">
-                    <button onclick="sendAITabMessage()" class="bg-[#111111] hover:bg-black text-[#FFCC00] font-bold px-6 rounded-xl flex items-center justify-center transition-colors cursor-pointer"><i class="fa-solid fa-paper-plane mr-2"></i> GÖNDER</button>
-                </div>
-            </div>
-        </div>
-
       </div>
       
       <div id="action-buttons-container" class="hidden text-center my-8 flex justify-center gap-4 flex-wrap">
@@ -248,7 +226,7 @@
         <form id="edit-form" onsubmit="saveEdit(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <input type="hidden" id="edit-id">
           <div class="sm:col-span-2"><label class="block text-xs font-bold text-slate-600 mb-1">GEMİ ADI</label><input type="text" id="edit-shipName" required class="w-full text-sm p-2.5 border rounded-lg uppercase"></div>
-          <div><label class="block text-xs font-bold text-slate-600 mb-1">HEDEF ZAMAN</label><input type="datetime-local" id="edit-eta" required class="w-full text-sm p-2.5 border rounded-lg"></div>
+          <div><label class="block text-xs font-bold text-slate-600 mb-1">HEDEF ZAMAN</label><input type="datetime-local" lang="tr-TR" id="edit-eta" required class="w-full text-sm p-2.5 border rounded-lg"></div>
           <div><label class="block text-xs font-bold text-slate-600 mb-1">EK NOT</label><input type="text" id="edit-note" class="w-full text-sm p-2.5 border rounded-lg uppercase"></div>
           <div class="sm:col-span-2"><button type="submit" class="w-full bg-[#111111] text-[#FFCC00] font-bold p-3 rounded-lg text-sm cursor-pointer shadow hover:bg-black">KAYDET</button></div>
         </form>
@@ -292,6 +270,21 @@
               <div class="sm:col-span-2"><button type="submit" class="w-full bg-[#111111] text-[#FFCC00] font-bold p-2.5 rounded-md text-xs cursor-pointer shadow hover:bg-black transition-colors">TEK BEYANNAME EKLE</button></div>
             </form>
         </div>
+      </div>
+  </div>
+
+  <!-- YENİ: DENİZYOLU İHRACAT ANA GEMİ DÜZENLEME MODALI -->
+  <div id="dyEditModal" class="fixed inset-0 bg-slate-900/80 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm">
+      <div class="bg-white rounded-2xl max-w-xl w-full p-6 space-y-4 shadow-2xl relative">
+        <h3 class="font-bold text-lg text-blue-900 uppercase border-b border-blue-200 pb-3"><i class="fa-solid fa-pen text-blue-600"></i> İHRACAT GEMİSİNİ DÜZENLE</h3>
+        <button onclick="document.getElementById('dyEditModal').classList.add('hidden')" class="absolute top-4 right-6 text-slate-400 hover:text-red-600 text-2xl font-bold cursor-pointer">&times;</button>
+        <form id="dy-edit-form" onsubmit="saveDYEdit(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <input type="hidden" id="dy-edit-id">
+          <div class="sm:col-span-2"><label class="block text-xs font-bold text-slate-600 mb-1">GEMİ ADI</label><input type="text" id="dy-edit-shipName" required class="w-full text-sm p-2.5 border rounded-lg uppercase"></div>
+          <div><label class="block text-xs font-bold text-slate-600 mb-1">NEREDEN</label><input type="text" id="dy-edit-from" required class="w-full text-sm p-2.5 border rounded-lg uppercase"></div>
+          <div><label class="block text-xs font-bold text-slate-600 mb-1">NEREYE</label><input type="text" id="dy-edit-to" required class="w-full text-sm p-2.5 border rounded-lg uppercase"></div>
+          <div class="sm:col-span-2"><button type="submit" class="w-full bg-blue-600 text-white font-bold p-3 rounded-lg text-sm cursor-pointer shadow hover:bg-blue-700">KAYDET</button></div>
+        </form>
       </div>
   </div>
 
@@ -355,7 +348,6 @@
 
   <script>
     // 1. FIREBASE BAĞLANTISI VE GLOBAL DEĞİŞKENLER
-    const OPENROUTER_API_KEY = "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";
     const firebaseConfig = {
       apiKey: "AIzaSyAKAF1Tm0Ahy5kT3OW6Slc0sjTbiFvaifg", authDomain: "msc-takip.firebaseapp.com",
       projectId: "msc-takip", storageBucket: "msc-takip.firebasestorage.app",
@@ -382,7 +374,7 @@
     function getSavedEmails() { try { const raw = localStorage.getItem('msc_saved_emails'); if (raw) return JSON.parse(raw); } catch(e){} return [...DEFAULT_PRESET_EMAILS]; }
     function saveSavedEmails(emails) { localStorage.setItem('msc_saved_emails', JSON.stringify(emails)); renderEmailChips(); renderSavedEmailsList(); }
     function getDefaultEmailString() { return localStorage.getItem('msc_default_email_str') || ""; }
-    function saveAsDefaultEmails() { const input = document.getElementById('notificationEmail'); localStorage.setItem('msc_default_email_str', input.value.trim()); alert("✅ Kaydedildi!"); document.getElementById('emailManagerModal').classList.add('hidden'); }
+    function saveAsDefaultEmails() { const input = document.getElementById('notificationEmail'); localStorage.setItem('msc_default_email_str', input.value.trim()); alert("✅ Ekranda seçili olan e-postalar başarıyla VARSAYILAN olarak kaydedildi!\nArtık her gemi ekleme işleminde otomatik olarak doldurulacaktır."); document.getElementById('emailManagerModal').classList.add('hidden'); }
     function initEmailPresets() { const emailInput = document.getElementById('notificationEmail'); if (emailInput) { emailInput.value = getDefaultEmailString(); } renderEmailChips(); }
     function renderEmailChips() {
         const container = document.getElementById('quickEmailChips'); if (!container) return;
@@ -408,10 +400,10 @@
     function renderSavedEmailsList() {
         const container = document.getElementById('savedEmailsList'); if (!container) return; const saved = getSavedEmails();
         if (saved.length === 0) { container.innerHTML = `<div class="text-center py-4 text-xs text-slate-400">Kayıtlı e-posta yok.</div>`; return; }
-        container.innerHTML = saved.map((em, idx) => `<div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-xs mb-2"><span class="font-medium text-slate-700"><i class="fa-solid fa-envelope text-slate-400 mr-2"></i>${em}</span><button type="button" onclick="deleteSavedEmail(${idx})" class="text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded hover:bg-red-100 transition-colors cursor-pointer"><i class="fa-solid fa-trash"></i></button></div>`).join('');
+        container.innerHTML = saved.map((em, idx) => `<div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg border border-slate-200 text-xs mb-2"><span class="font-medium text-slate-700"><i class="fa-solid fa-envelope text-slate-400 mr-2"></i>${em}</span><button type="button" onclick="deleteSavedEmail(${idx})" class="text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded hover:bg-red-100 transition-colors cursor-pointer" title="Rehberden Sil"><i class="fa-solid fa-trash"></i></button></div>`).join('');
     }
-    function addSavedEmail(e) { e.preventDefault(); const input = document.getElementById('newPresetEmail'); const newEm = input.value.trim().toLowerCase(); if (!newEm) return; const saved = getSavedEmails(); if (!saved.map(s => s.toLowerCase()).includes(newEm)) { saved.push(newEm); saveSavedEmails(saved); input.value = ''; } else { alert("Adres kayıtlı!"); } }
-    function deleteSavedEmail(idx) { if(!confirm("Silmek istediğinize emin misiniz?")) return; const saved = getSavedEmails(); if (idx >= 0 && idx < saved.length) { saved.splice(idx, 1); saveSavedEmails(saved); } }
+    function addSavedEmail(e) { e.preventDefault(); const input = document.getElementById('newPresetEmail'); const newEm = input.value.trim().toLowerCase(); if (!newEm) return; const saved = getSavedEmails(); if (!saved.map(s => s.toLowerCase()).includes(newEm)) { saved.push(newEm); saveSavedEmails(saved); input.value = ''; } else { alert("Bu e-posta adresi zaten rehberde kayıtlı!"); } }
+    function deleteSavedEmail(idx) { if(!confirm("Bu mail adresini rehberden silmek istediğinize emin misiniz?")) return; const saved = getSavedEmails(); if (idx >= 0 && idx < saved.length) { saved.splice(idx, 1); saveSavedEmails(saved); } }
 
     // --- DENİZYOLU İHRACAT (MASTER-DETAIL) İŞLEMLERİ ---
     
@@ -427,7 +419,7 @@
             shipName: document.getElementById('dy-ship').value.trim().toUpperCase(),
             fromPort: document.getElementById('dy-from').value.trim().toUpperCase(),
             toPort: document.getElementById('dy-to').value.trim().toUpperCase(),
-            declarations: [], // Artık beyannameler burada bir liste (array) olarak tutulacak
+            declarations: [],
             createdAt: new Date().toISOString()
         };
 
@@ -471,13 +463,36 @@
                     <button onclick="openDYModal('${d.firestoreId}')" class="text-blue-700 bg-blue-50 px-3 py-2 rounded-lg border border-blue-200 shadow-sm hover:bg-blue-100 transition-colors mr-2 cursor-pointer text-xs font-bold" title="Beyannameleri Gör ve Ekle">
                         <i class="fa-solid fa-list-check mr-1"></i> BEYANNAMELER VE LİSTE
                     </button>
+                    <button onclick="openDYEditModal('${d.firestoreId}')" class="text-blue-600 bg-blue-50 w-8 h-8 rounded-lg border border-blue-200 shadow-sm hover:bg-blue-100 transition-colors cursor-pointer mr-1" title="Gemiyi Düzenle"><i class="fa-solid fa-pen"></i></button>
                     <button onclick="deleteDY('${d.firestoreId}')" class="text-red-600 bg-red-50 w-8 h-8 rounded-lg border border-red-200 shadow-sm hover:bg-red-100 transition-colors cursor-pointer" title="Gemiyi Tamamen Sil"><i class="fa-solid fa-trash"></i></button>
                 </td>
             </tr>`;
         });
     }
 
-    // 3. Gemiyi Tamamen Sil
+    // 3. Gemiyi Düzenle ve Sil (Ana Gemi İşlemleri)
+    function openDYEditModal(id) {
+        const dy = denizyoluList.find(d => d.firestoreId === id);
+        if(!dy) return;
+        document.getElementById('dy-edit-id').value = dy.firestoreId;
+        document.getElementById('dy-edit-shipName').value = dy.shipName || '';
+        document.getElementById('dy-edit-from').value = dy.fromPort || '';
+        document.getElementById('dy-edit-to').value = dy.toPort || '';
+        document.getElementById('dyEditModal').classList.remove('hidden');
+    }
+
+    function saveDYEdit(e) {
+        e.preventDefault();
+        const id = document.getElementById('dy-edit-id').value;
+        db.collection('denizyolu').doc(id).update({
+            shipName: document.getElementById('dy-edit-shipName').value.trim().toUpperCase(),
+            fromPort: document.getElementById('dy-edit-from').value.trim().toUpperCase(),
+            toPort: document.getElementById('dy-edit-to').value.trim().toUpperCase()
+        }).then(() => {
+            document.getElementById('dyEditModal').classList.add('hidden');
+        });
+    }
+
     function deleteDY(id) {
         if(confirm("Bu gemiyi ve içindeki TÜM BEYANNAMELERİ tamamen silmek istediğinize emin misiniz? Bu işlem geri alınamaz!")) {
             db.collection('denizyolu').doc(id).delete();
@@ -547,7 +562,6 @@
         const updated = [...(ship.declarations || []), newDecl];
         db.collection('denizyolu').doc(currentDYShipId).update({ declarations: updated }).then(() => {
             document.getElementById('dy-decl-form').reset();
-            // Input'a geri focuslan (seri giriş için)
             document.getElementById('dy-decl-talimat').focus();
         });
     }
@@ -588,14 +602,16 @@
 
         const selectedData = (ship.declarations || []).filter(d => ids.includes(d.id));
         
-        // Sadece istenen iki sütun
         let reportData = selectedData.map(d => ({
-            "IM NUMARASI": d.imNo,
-            "HT BEYANNAME": d.htNo || "BEKLİYOR"
+            "AMBAR ÇIKIŞI YAPILACAK HT": d.htNo || "BEKLİYOR / GİRİLMEDİ",
+            "IM ÖZET BEYAN": d.imNo
         }));
 
+        reportData.push({ "AMBAR ÇIKIŞI YAPILACAK HT": "", "IM ÖZET BEYAN": "" });
+        reportData.push({ "AMBAR ÇIKIŞI YAPILACAK HT": "Vergi No: 6230002830", "IM ÖZET BEYAN": "" });
+
         const ws = XLSX.utils.json_to_sheet(reportData);
-        ws['!cols'] = [{wch: 30}, {wch: 30}];
+        ws['!cols'] = [{wch: 35}, {wch: 30}];
         const wb = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(wb, ws, "Ambar_Cikis");
         
@@ -624,7 +640,6 @@
           denizyoluList = []; snap.forEach(doc => denizyoluList.push({ firestoreId: doc.id, ...doc.data() })); 
           if(currentViewTab === 'DENIZYOLU') renderDenizyolu();
           
-          // Eğer Modal açıksa modalın içindeki listeyi de canlı olarak güncelle (yeni eklendiğinde görünsün)
           if(currentDYShipId && !document.getElementById('dyDeclarationsModal').classList.contains('hidden')) {
               renderDYDeclarationsList();
           }
@@ -659,18 +674,16 @@
 
     function setTab(tabName) {
         currentViewTab = tabName;
-        ['tab-active', 'tab-archive', 'tab-denizyolu', 'tab-ai'].forEach(id => { document.getElementById(id).className = "tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"; });
-        let activeBtnId = tabName === 'ACTIVE' ? 'tab-active' : (tabName === 'ARCHIVE' ? 'tab-archive' : (tabName === 'DENIZYOLU' ? 'tab-denizyolu' : 'tab-ai'));
+        ['tab-active', 'tab-archive', 'tab-denizyolu'].forEach(id => { document.getElementById(id).className = "tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"; });
+        let activeBtnId = tabName === 'ACTIVE' ? 'tab-active' : (tabName === 'ARCHIVE' ? 'tab-archive' : 'tab-denizyolu');
         document.getElementById(activeBtnId).className = "tab-active py-2 px-4 rounded-lg font-bold text-sm shadow-sm transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap";
 
-        const listDiv = document.getElementById('view-list'); const boardDiv = document.getElementById('view-board'); const aiDiv = document.getElementById('view-ai-chat'); const dyDiv = document.getElementById('view-denizyolu');
+        const listDiv = document.getElementById('view-list'); const boardDiv = document.getElementById('view-board'); const dyDiv = document.getElementById('view-denizyolu');
         const filterContainer = document.getElementById('filter-container'); const statsContainer = document.getElementById('stats-container'); const shipAddContainer = document.getElementById('ship-add-container'); const actBtns = document.getElementById('action-buttons-container');
 
-        listDiv.classList.add('hidden'); boardDiv.classList.add('hidden'); aiDiv.classList.add('hidden'); dyDiv.classList.add('hidden');
+        listDiv.classList.add('hidden'); boardDiv.classList.add('hidden'); dyDiv.classList.add('hidden');
 
-        if(tabName === 'AI_CHAT') { 
-            aiDiv.classList.remove('hidden'); filterContainer.style.display = 'none'; statsContainer.style.display = 'none'; shipAddContainer.style.display = 'none'; actBtns.style.display = 'none';
-        } else if(tabName === 'DENIZYOLU') {
+        if(tabName === 'DENIZYOLU') {
             dyDiv.classList.remove('hidden'); filterContainer.style.display = 'none'; statsContainer.style.display = 'none'; shipAddContainer.style.display = 'none'; actBtns.style.display = 'none'; renderDenizyolu();
         } else { 
             filterContainer.style.display = 'flex'; statsContainer.style.display = 'grid'; shipAddContainer.style.display = 'block'; actBtns.style.display = 'flex'; setViewMode(currentDisplayMode); renderShips();
@@ -679,7 +692,7 @@
     
     function setViewMode(mode) {
         currentDisplayMode = mode;
-        if(currentViewTab === 'AI_CHAT' || currentViewTab === 'DENIZYOLU') return;
+        if(currentViewTab === 'DENIZYOLU') return;
         if(mode === 'LIST') {
             document.getElementById('view-list').classList.remove('hidden'); document.getElementById('view-board').classList.add('hidden');
             document.getElementById('btn-view-list').className = "view-btn-active px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer";
@@ -691,7 +704,7 @@
         }
     }
 
-    // --- AKTİF (İTHALAT) GEMİ İŞLEMLERİ (Önceki Kodlar Aynı) ---
+    // --- AKTİF (İTHALAT) GEMİ İŞLEMLERİ ---
     function handleShipSelection() {
         const select = document.getElementById('shipNameSelect'); const manualInput = document.getElementById('shipName'); const imoInput = document.getElementById('imoNumber');
         if (select.value === 'OTHER') { manualInput.classList.remove('hidden'); manualInput.required = true; manualInput.value = ''; imoInput.value = '';
@@ -828,7 +841,7 @@
     }
 
     function renderShips() {
-      if(currentViewTab === 'AI_CHAT' || currentViewTab === 'DENIZYOLU') return;
+      if(currentViewTab === 'DENIZYOLU') return;
       const tbody = document.getElementById('ship-list-body'); const kbNormal = document.getElementById('kb-normal'); const kb12h = document.getElementById('kb-12h'); const kb6h = document.getElementById('kb-6h'); const kbArrived = document.getElementById('kb-arrived');
       kbNormal.innerHTML = ''; kb12h.innerHTML = ''; kb6h.innerHTML = ''; kbArrived.innerHTML = '';
       let cN = 0, c12 = 0, c6 = 0, cA = 0;
@@ -880,13 +893,96 @@
       }
     }
 
-    // AI, Hava Durumu, Excel Yükleme
-    async function getWeatherSummary() { /* ... */ return "Açık"; }
-    function handleAITabKeyPress(e) { if(e.key === 'Enter') sendAITabMessage(); }
-    async function sendAITabMessage() { /* ... */ }
-    function parseCustomDate(dateStr) { /* ... */ return new Date(); }
-    function handleDailyExcel(event) { /* ... */ }
+    // AI Kaldırıldığı İçin İlgili Fonksiyonlar Silindi
+    function parseCustomDate(dateStr) {
+        if (!dateStr) return null;
+        let str = dateStr.toString().trim(); let parts = str.split(/[\sT]+/); let datePart = parts[0], timePart = parts[1] || "00:00";
+        let dParts = datePart.split(/[\.\/\-]/);
+        if (dParts.length === 3) {
+            let p1 = parseInt(dParts[0]), p2 = parseInt(dParts[1]), p3 = parseInt(dParts[2]);
+            let day = p1 > 12 ? p1 : (p2 > 12 ? p2 : p1); let month = p1 > 12 ? p2 - 1 : (p2 > 12 ? p1 - 1 : p2 - 1); let year = p3 < 100 ? p3 + 2000 : p3;
+            let tParts = timePart.split(":"); return new Date(year, month, day, parseInt(tParts[0]) || 0, parseInt(tParts[1]) || 0);
+        }
+        let d = new Date(str); return isNaN(d.getTime()) ? null : d;
+    }
 
+    function handleDailyExcel(event) {
+        const file = event.target.files[0]; if (!file) return;
+        const btnLabel = document.getElementById('excel-label-text'); btnLabel.innerText = "⏳ EXCEL İŞLENİYOR...";
+        const reader = new FileReader();
+        reader.onload = async function(e) {
+            try {
+                const data = new Uint8Array(e.target.result); const workbook = XLSX.read(data, {type: 'array'});
+                const currentMonthNames = ["OCAK", "ŞUBAT", "MART", "NİSAN", "MAYIS", "HAZİRAN", "TEMMUZ", "AĞUSTOS", "EYLÜL", "EKİM", "KASIM", "ARALIK"]; const engMonthNames = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN", "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+                const now = new Date(); const currMonth = currentMonthNames[now.getMonth()]; const altMonth = currMonth.replace(/Ğ/g, 'G').replace(/Ü/g, 'U').replace(/Ş/g, 'S').replace(/İ/g, 'I').replace(/Ö/g, 'O').replace(/Ç/g, 'C'); const engMon = engMonthNames[now.getMonth()];
+                let targetSheet = workbook.SheetNames.find(s => { let su = s.toUpperCase(); return su.includes(currMonth) || su.includes(altMonth) || su.includes(engMon); }) || workbook.SheetNames[0];
+                const aoa = XLSX.utils.sheet_to_json(workbook.Sheets[targetSheet], {header: 1, raw: false, defval: ""});
+                let nameIdx = -1, etaIdx = -1, etbIdx = -1, voyageIdx = -1, startRow = -1;
+                for (let i = 0; i < Math.min(aoa.length, 20); i++) {
+                    const row = aoa[i]; if (!row || row.length === 0) continue;
+                    for (let j = 0; j < row.length; j++) {
+                        let val = (row[j] || '').toString().toUpperCase().trim();
+                        if (val.includes('GEMİ ADI') || val.includes('VESSEL')) nameIdx = j;
+                        if (val === 'ETA' || val.includes('TAHMİNİ VARIŞ') || val.includes('VARIS') || val.includes('VARIŞ') || val.includes('ARRIVAL')) etaIdx = j;
+                        if (val === 'ETB' || val.includes('TAHMİNİ YANAŞMA') || val.includes('YANASMA') || val.includes('YANAŞMA') || val.includes('BERTH')) etbIdx = j;
+                        if (val === 'SEFER' || val.includes('SEFER NO') || val.includes('VOYAGE') || val === 'VOY') voyageIdx = j;
+                    }
+                    if (nameIdx !== -1 && (etaIdx !== -1 || etbIdx !== -1)) { startRow = i + 1; break; }
+                }
+                if (startRow === -1) throw new Error("Excel'de 'GEMİ ADI' ve (ETA/ETB) sütunları bulunamadı!");
+                let futureRuns = {}; const rightNow = new Date(); rightNow.setHours(0,0,0,0);
+                for (let i = startRow; i < aoa.length; i++) {
+                    const row = aoa[i]; if (!row || !row[nameIdx]) continue;
+                    const excelName = row[nameIdx].toString().trim().toUpperCase(); 
+                    const rawEta = (etaIdx !== -1 && row[etaIdx]) ? row[etaIdx].toString().trim() : ''; 
+                    const rawEtb = (etbIdx !== -1 && row[etbIdx]) ? row[etbIdx].toString().trim() : '';
+                    const excelVoyage = (voyageIdx !== -1 && row[voyageIdx]) ? row[voyageIdx].toString().trim().toUpperCase() : '';
+
+                    if (!excelName || (!rawEta && !rawEtb)) continue;
+                    const etaDateObj = parseCustomDate(rawEta); const etbDateObj = parseCustomDate(rawEtb);
+                    let targetDateObj = null; let isEtbUsed = false;
+                    if (etbDateObj && !isNaN(etbDateObj.getTime())) { targetDateObj = etbDateObj; isEtbUsed = true; } else if (etaDateObj && !isNaN(etaDateObj.getTime())) { targetDateObj = etaDateObj; isEtbUsed = false; }
+                    if (targetDateObj && targetDateObj >= rightNow) {
+                        if (!futureRuns[excelName]) futureRuns[excelName] = [];
+                        let dateStr = targetDateObj.toLocaleDateString('tr-TR') + " " + targetDateObj.getHours().toString().padStart(2, '0') + ":" + targetDateObj.getMinutes().toString().padStart(2, '0');
+                        futureRuns[excelName].push({ name: excelName, voyage: excelVoyage, targetDateObj: targetDateObj, isEtbUsed: isEtbUsed, dateStr: dateStr });
+                    }
+                }
+                let updatedCount = 0; let updateLog = []; let activeShips = ships.filter(s => s.status !== 'COMPLETED');
+                for (const [shipName, runs] of Object.entries(futureRuns)) {
+                    runs.sort((a, b) => a.targetDateObj - b.targetDateObj); const closestRun = runs[0]; 
+                    
+                    const activeMatch = activeShips.find(s => {
+                        let isNameMatch = (s.name || '').toUpperCase().trim() === shipName;
+                        if (!isNameMatch) return false;
+                        if (closestRun.voyage && s.voyage) {
+                            let v1 = closestRun.voyage.replace(/\s+/g, '');
+                            let v2 = s.voyage.replace(/\s+/g, '');
+                            if (!v1.includes(v2) && !v2.includes(v1)) { return false; }
+                        }
+                        return true;
+                    });
+
+                    if (activeMatch) {
+                        updateLog.push(`${shipName} (Sefer Onaylı): ETA güncellendi -> ${closestRun.dateStr}`);
+                        await db.collection('ships').doc(activeMatch.firestoreId).update({
+                            eta: closestRun.targetDateObj.toISOString().slice(0,16), 
+                            siteUrl: getSiteUrl(), 
+                            emailSent10h: false, emailSent5h: false, emailSent12h: false, emailSent6h: false, emailSentArrived: false, 
+                            lastUpdated: getTrDateStr() + " (EXCEL OTO)"
+                        });
+                        updatedCount++;
+                    } else {
+                        updateLog.push(`${shipName}: Excel'de var ama sistemde eşleşen aktif sefer yok`);
+                    }
+                }
+                alert(`✅ İŞLEM BAŞARILI!\n📄 Okunan Sayfa: ${targetSheet}\n🔄 Güncellenen Aktif Gemi: ${updatedCount}\n\n${updateLog.join('\n') || 'Excel içinde eşleşen/gelecek tarihli kayıt bulunamadı.'}`); 
+                setTab('ACTIVE');
+            } catch (err) { alert("❌ Yükleme Hatası: " + err.message); }
+            btnLabel.innerHTML = '<i class="fa-solid fa-file-excel"></i> MANUEL EXCEL YÜKLE (.XLSM)'; event.target.value = ''; 
+        };
+        reader.readAsArrayBuffer(file);
+    }
   </script>
 </body>
 </html>
