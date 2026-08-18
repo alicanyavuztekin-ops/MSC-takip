@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="apple-mobile-web-app-capable" content="yes">
-  <title>MSC & MEDLOG Gemi ve Operasyon Paneli</title>
+  <title>MSC & MEDLOG Lojistik ERP</title>
   
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -14,8 +14,8 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   
-  <!-- WORD ÜRETİM KÜTÜPHANELERİ -->
   <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.4/dist/pizzip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docxtemplater@3.37.11/build/docxtemplater.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
@@ -31,6 +31,11 @@
     .col-12h { background-color: #fff7ed; border-top: 4px solid #f97316; }
     .col-6h { background-color: #fef2f2; border-top: 4px solid #ef4444; }
     .col-arrived { background-color: #f1f5f9; border-top: 4px solid #334155; }
+    /* Scrollbar */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #f1f1f1; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
   </style>
 </head>
 <body class="bg-zinc-100 font-sans text-slate-800 antialiased min-h-screen relative">
@@ -40,112 +45,79 @@
     <div class="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full space-y-6 border border-slate-200">
       <div class="text-center space-y-2">
         <div class="bg-[#111111] text-[#FFCC00] w-16 h-16 rounded-2xl flex items-center justify-center mx-auto text-3xl font-bold shadow-md"><i class="fa-solid fa-ship"></i></div>
-        <h2 id="auth-title" class="text-2xl font-bold text-[#111111] uppercase">MSC & MEDLOG GİRİŞ</h2>
+        <h2 id="auth-title" class="text-2xl font-bold text-[#111111] uppercase">MSC & MEDLOG ERP</h2>
       </div>
       <form id="auth-form" onsubmit="handleAuthSubmit(event)" class="space-y-4">
-        <div><input type="email" id="auth-email" placeholder="E-Posta" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-black outline-none text-sm"></div>
+        <div><input type="email" id="auth-email" placeholder="Kurumsal E-Posta" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-black outline-none text-sm"></div>
         <div><input type="password" id="auth-password" placeholder="Şifre" required class="w-full p-3 border rounded-lg focus:ring-2 focus:ring-black outline-none text-sm"></div>
         <button type="submit" id="auth-submit-btn" class="w-full bg-[#111111] hover:bg-black text-[#FFCC00] font-bold p-3 rounded-lg shadow-md cursor-pointer transition-colors text-sm">GİRİŞ YAP</button>
       </form>
       <div class="text-center space-y-2 pt-2 border-t text-xs">
-        <div><button type="button" onclick="toggleAuthMode()" id="auth-toggle-mode-btn" class="text-blue-600 hover:underline font-semibold cursor-pointer">Hesabın yok mu? Kayıt ol</button></div>
-        <div><button type="button" onclick="handleForgotPassword()" class="text-slate-500 hover:underline cursor-pointer">Parolamı Unuttum</button></div>
+        <div><button type="button" onclick="toggleAuthMode()" id="auth-toggle-mode-btn" class="text-blue-600 hover:underline font-semibold cursor-pointer">Sisteme Kayıt Ol</button></div>
       </div>
     </div>
   </div>
 
-  <!-- ANA UYGULAMA -->
+  <!-- YÖNETİCİ ONAY BEKLEME EKRANI -->
+  <div id="waiting-container" class="hidden flex items-center justify-center min-h-screen p-4">
+    <div class="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center border border-slate-200">
+      <i class="fa-solid fa-user-clock text-6xl text-orange-500 mb-4"></i>
+      <h2 class="text-xl font-bold text-slate-800 mb-2">Onay Bekleniyor</h2>
+      <p class="text-sm text-slate-600 mb-6">Hesabınız başarıyla oluşturuldu ancak sistem yöneticisi (Admin) tarafından onaylanana kadar verilere erişemezsiniz.</p>
+      <button onclick="handleLogout()" class="bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-2 px-6 rounded-lg transition-colors text-sm">Çıkış Yap ve Tekrar Dene</button>
+    </div>
+  </div>
+
+  <!-- ANA UYGULAMA ERP -->
   <div id="app-container" class="hidden min-h-screen pb-12">
+    <!-- ÜST MENÜ & ÇAN -->
     <header class="bg-[#111111] text-white shadow-lg p-4 sticky top-0 z-30 border-b-4 border-[#FFCC00]">
       <div class="max-w-7xl mx-auto flex flex-wrap justify-between items-center gap-3">
         <div class="flex items-center gap-3">
-          <div class="bg-[#FFCC00] text-[#111111] p-2.5 rounded-lg font-bold text-xl"><i class="fa-solid fa-ship"></i></div>
-          <div><h1 class="text-lg md:text-xl font-bold uppercase text-white">MSC & MEDLOG TAKİP</h1></div>
+          <div class="bg-[#FFCC00] text-[#111111] p-2.5 rounded-lg font-bold text-xl"><i class="fa-solid fa-globe"></i></div>
+          <div><h1 class="text-lg md:text-xl font-bold uppercase text-white">MSC & MEDLOG ERP</h1></div>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex items-center gap-5">
           <span id="user-display-email" class="hidden md:block text-zinc-300 text-xs font-medium"></span>
-          <button type="button" onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-2 rounded-lg font-semibold flex items-center gap-1 cursor-pointer"><i class="fa-solid fa-right-from-bracket"></i> ÇIKIŞ</button>
+          
+          <!-- BİLDİRİM ÇANI -->
+          <div class="relative cursor-pointer" onclick="toggleBell()">
+              <i class="fa-solid fa-bell text-xl text-[#FFCC00] hover:text-yellow-300 transition-colors"></i>
+              <span id="bell-count" class="absolute -top-1.5 -right-2 bg-red-600 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-full shadow">0</span>
+              <div id="bell-dropdown" class="hidden absolute right-0 mt-3 w-72 bg-white rounded-lg shadow-2xl border border-slate-200 z-50 p-1 max-h-80 overflow-y-auto">
+                  <!-- JS Dolduracak -->
+              </div>
+          </div>
+
+          <button type="button" onclick="handleLogout()" class="bg-red-600 hover:bg-red-700 text-white text-xs px-3 py-2 rounded-lg font-semibold flex items-center gap-1 cursor-pointer transition-colors"><i class="fa-solid fa-right-from-bracket"></i> ÇIKIŞ</button>
         </div>
       </div>
     </header>
 
     <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
       
-      <!-- İSTATİSTİKLER -->
-      <div id="stats-container" class="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div class="bg-white p-4 rounded-xl shadow-sm border flex justify-between"><div class="font-bold"><p class="text-xs text-slate-400">Aktif Gemi</p><h4 id="stat-total" class="text-xl text-[#111111]">0</h4></div><div class="bg-zinc-100 text-[#111111] p-3 rounded-lg"><i class="fa-solid fa-ship"></i></div></div>
-        <div class="bg-white p-4 rounded-xl shadow-sm border flex justify-between"><div class="font-bold"><p class="text-xs text-slate-400">Seyirde</p><h4 id="stat-normal" class="text-xl text-emerald-600">0</h4></div><div class="bg-emerald-50 text-emerald-600 p-3 rounded-lg"><i class="fa-solid fa-circle-check"></i></div></div>
-        <div class="bg-white p-4 rounded-xl shadow-sm border flex justify-between"><div class="font-bold"><p class="text-xs text-slate-400">Kritik (12s/6s)</p><h4 id="stat-critical" class="text-xl text-orange-600">0</h4></div><div class="bg-orange-50 text-orange-600 p-3 rounded-lg"><i class="fa-solid fa-triangle-exclamation"></i></div></div>
-        <div class="bg-white p-4 rounded-xl shadow-sm border flex justify-between"><div class="font-bold"><p class="text-xs text-slate-400">Yanaştı</p><h4 id="stat-arrived" class="text-xl text-slate-800">0</h4></div><div class="bg-slate-100 text-slate-700 p-3 rounded-lg"><i class="fa-solid fa-anchor"></i></div></div>
-      </div>
-
-      <!-- GEMİ EKLEME (İTHALAT/AKTİF) -->
-      <div id="ship-add-container" class="bg-white p-5 rounded-xl shadow-sm border">
-        <h2 class="text-base font-bold mb-4 text-[#111111] flex items-center gap-2 border-b pb-2"><i class="fa-solid fa-plus-circle text-[#FFCC00]"></i> YENİ GEMİ EKLE (İTHALAT)</h2>
-        <form id="ship-form" onsubmit="addShip(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <div>
-            <label class="block text-xs font-bold mb-1">GEMİ ADI</label>
-            <select id="shipNameSelect" onchange="handleShipSelection()" required class="w-full text-sm p-2 border rounded-lg uppercase bg-slate-50 focus:bg-white outline-none transition-colors">
-                <option value="">GEMİ SEÇİNİZ...</option>
-                <option value="MED AYDIN" data-imo="9148025">MED AYDIN</option>
-                <option value="MED CERKEZKOY" data-imo="9147215">MED ÇERKEZKÖY</option>
-                <option value="MED CORLU" data-imo="9106479">MED ÇORLU</option>
-                <option value="MED DENIZLI" data-imo="9106493">MED DENİZLİ</option>
-                <option value="MED SAMSUN" data-imo="9225794">MED SAMSUN</option>
-                <option value="MED TEKIRDAG" data-imo="9265598">MED TEKİRDAĞ</option>
-                <option value="MED TRABZON" data-imo="9141780">MED TRABZON</option>
-                <option value="MED URLA" data-imo="9160920">MED URLA</option>
-                <option value="B.BAYRAKTAR" data-imo="9260536">B.BAYRAKTAR</option>
-                <option value="MED MERSIN" data-imo="9135638">MED MERSİN</option>
-                <option value="MED BEYKOZ" data-imo="9064748">MED BEYKOZ</option>
-                <option value="MED IZMIR" data-imo="9143879">MED İZMİR</option>
-                <option value="MED ANTALYA" data-imo="9359714">MED ANTALYA</option>
-                <option value="MED CESME" data-imo="9256365">MED ÇEŞME</option>
-                <option value="OTHER" class="bg-slate-200 font-bold">FARKLI GEMİ EKLE (MANUEL)...</option>
-            </select>
-            <input type="text" id="shipName" class="hidden w-full text-sm p-2 mt-2 border rounded-lg uppercase transition-colors" placeholder="Gemi Adı Girin">
-          </div>
-          <div><label class="block text-xs font-bold mb-1">SEFER NO</label><input type="text" id="voyageNumber" required class="w-full text-sm p-2 border rounded-lg uppercase"></div>
-          <div><label class="block text-xs font-bold mb-1">IMO NO</label><input type="text" id="imoNumber" class="w-full text-sm p-2 border rounded-lg uppercase transition-all duration-300"></div>
-          <div><label class="block text-xs font-bold mb-1">GELDİĞİ LİMAN</label><input type="text" id="originPort" required class="w-full text-sm p-2 border rounded-lg uppercase"></div>
-          <div><label class="block text-xs font-bold mb-1">VARIŞ LİMANI</label>
-            <select id="destinationPort" required class="w-full text-sm p-2 border rounded-lg">
-                <option value="İZMİR ALSANCAK">İZMİR ALSANCAK</option>
-                <option value="ALİAĞA SOCAR">ALİAĞA SOCAR</option>
-                <option value="ALİAĞA NEMPORT">ALİAĞA NEMPORT</option>
-            </select>
-          </div>
-          <div>
-            <label class="block text-xs font-bold mb-1 flex justify-between items-center">
-                <span>MAİL ADRESLERİ</span> 
-                <button type="button" onclick="openEmailManagerModal()" class="text-blue-600 hover:text-blue-800 font-bold cursor-pointer text-[10px]"><i class="fa-solid fa-address-book"></i> REHBER</button>
-            </label>
-            <input type="text" id="notificationEmail" required class="w-full text-sm p-2 border rounded-lg" placeholder="Örn: mail1@, mail2@" onkeyup="updateEmailChipsState()">
-            <div id="quickEmailChips" class="flex flex-wrap gap-1 mt-1.5 min-h-[24px]"></div>
-          </div>
-          <!-- lang="tr-TR" ile saat formatını Türkçe sisteme zorluyoruz -->
-          <div><label class="block text-xs font-bold mb-1">HEDEF ZAMAN</label><input type="datetime-local" lang="tr-TR" id="eta" required class="w-full text-sm p-2 border rounded-lg"></div>
-          <div><label class="block text-xs font-bold mb-1">BEYANNAME</label><input type="number" id="declarations" min="1" required class="w-full text-sm p-2 border rounded-lg"></div>
-          <div><label class="block text-xs font-bold mb-1">EK NOT</label><input type="text" id="shipNote" class="w-full text-sm p-2 border rounded-lg uppercase" placeholder="ETB vb."></div>
-          <div class="flex items-end"><button type="submit" class="w-full bg-[#FFCC00] text-[#111111] font-bold p-2.5 rounded-lg shadow-md hover:bg-yellow-500 cursor-pointer"><i class="fa-solid fa-check-circle"></i> EKLE</button></div>
-        </form>
-      </div>
-
-      <!-- KONTROL MERKEZİ (SEKMELER) -->
+      <!-- KONTROL MERKEZİ (ANA SEKMELER) -->
       <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
         <div class="p-3 bg-slate-50 border-b flex flex-col xl:flex-row justify-between items-center gap-4">
             <div class="flex gap-2 w-full xl:w-auto overflow-x-auto pb-2 xl:pb-0">
-                <button onclick="setTab('ACTIVE')" id="tab-active" class="tab-active py-2 px-4 rounded-lg font-bold text-sm shadow-sm transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-satellite-dish"></i> AKTİF</button>
-                <button onclick="setTab('ARCHIVE')" id="tab-archive" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-box-archive"></i> ARŞİV</button>
-                <button onclick="setTab('DENIZYOLU')" id="tab-denizyolu" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-ship text-[#111111]"></i> DENİZYOLU GÖNDERME</button>
+                <button onclick="setTab('DASHBOARD')" id="tab-dashboard" class="tab-active py-2 px-4 rounded-lg font-bold text-sm shadow-sm transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-chart-pie"></i> DASHBOARD</button>
+                <button onclick="setTab('ACTIVE')" id="tab-active" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-satellite-dish"></i> İTHALAT (AKTİF)</button>
+                <button onclick="setTab('DENIZYOLU')" id="tab-denizyolu" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-ship text-[#111111]"></i> İHRACAT (GÖNDERME)</button>
+                <button onclick="setTab('ARCHIVE')" id="tab-archive" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-box-archive"></i> ARŞİV KASASI</button>
+                <button onclick="setTab('USERS')" id="tab-users" class="hidden tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-users-cog text-blue-600"></i> KULLANICI YÖNETİMİ</button>
             </div>
             
-            <div id="filter-container" class="flex items-center gap-3 w-full xl:w-auto justify-between flex-wrap">
+            <div id="filter-container" class="hidden items-center gap-3 w-full xl:w-auto justify-between flex-wrap">
+                <!-- Arşiv Tarih Filtresi (Sadece Arşivde Görünür) -->
+                <select id="filterArchiveDate" onchange="renderArchive()" class="hidden text-xs p-2.5 border border-slate-300 rounded-lg font-bold text-slate-700 shadow-sm outline-none shrink-0 bg-blue-50">
+                    <!-- JS Dolduracak (Ağustos 2026'dan itibaren) -->
+                </select>
+
                 <div class="relative w-full sm:w-48">
-                    <input type="text" id="searchInput" onkeyup="renderShips()" placeholder="Ad, Sefer, IMO, HT..." class="w-full text-xs p-2.5 pl-8 border border-slate-300 rounded-lg outline-none focus:border-[#111111] focus:ring-1 focus:ring-[#111111]">
+                    <input type="text" id="searchInput" onkeyup="if(currentViewTab==='ACTIVE') renderShips(); else if(currentViewTab==='ARCHIVE') renderArchive();" placeholder="Ad, Sefer, IMO, HT..." class="w-full text-xs p-2.5 pl-8 border border-slate-300 rounded-lg outline-none focus:border-[#111111] focus:ring-1 focus:ring-[#111111]">
                     <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400"></i>
                 </div>
-                <div class="flex bg-slate-200 p-1 rounded-lg shrink-0">
+                <div id="view-mode-toggles" class="flex bg-slate-200 p-1 rounded-lg shrink-0">
                     <button onclick="setViewMode('LIST')" id="btn-view-list" class="view-btn-active px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"><i class="fa-solid fa-list"></i> LİSTE</button>
                     <button onclick="setViewMode('BOARD')" id="btn-view-board" class="view-btn-inactive px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"><i class="fa-brands fa-trello"></i> PANO</button>
                 </div>
@@ -161,46 +133,177 @@
             </div>
         </div>
 
-        <!-- AKTİF/ARŞİV GÖRÜNÜMÜ -->
-        <div id="view-list" class="overflow-x-auto block">
-          <table class="w-full text-left border-collapse min-w-[800px]">
-            <thead><tr class="bg-zinc-100 text-slate-600 text-[11px] font-bold border-b"><th class="p-3">GEMİ / IMO</th><th class="p-3">GÜZERGAH / NOT</th><th class="p-3">HEDEF ZAMAN</th><th class="p-3">DURUM SÜRESİ</th><th class="p-3 text-right">İŞLEMLER</th></tr></thead>
-            <tbody id="ship-list-body" class="divide-y divide-slate-100 text-sm"></tbody>
-          </table>
-        </div>
+        <!-- 1. DASHBOARD GÖRÜNÜMÜ -->
+        <div id="view-dashboard" class="p-4 md:p-6 bg-slate-50 min-h-[500px] flex flex-col gap-6">
+            <!-- 4'lü Kartlar -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-l-4 border-l-slate-800 flex justify-between"><div class="font-bold"><p class="text-[11px] text-slate-400 uppercase">Toplam Kayıtlı</p><h4 id="dash-total" class="text-2xl text-[#111111]">0</h4></div><div class="bg-zinc-100 text-[#111111] p-3 rounded-lg"><i class="fa-solid fa-database"></i></div></div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-l-4 border-l-blue-500 flex justify-between"><div class="font-bold"><p class="text-[11px] text-slate-400 uppercase">Aktif İthalat</p><h4 id="dash-import" class="text-2xl text-blue-600">0</h4></div><div class="bg-blue-50 text-blue-600 p-3 rounded-lg"><i class="fa-solid fa-satellite-dish"></i></div></div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-l-4 border-l-emerald-500 flex justify-between"><div class="font-bold"><p class="text-[11px] text-slate-400 uppercase">Aktif İhracat</p><h4 id="dash-export" class="text-2xl text-emerald-600">0</h4></div><div class="bg-emerald-50 text-emerald-600 p-3 rounded-lg"><i class="fa-solid fa-ship"></i></div></div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-l-4 border-l-purple-500 flex justify-between"><div class="font-bold"><p class="text-[11px] text-slate-400 uppercase">Arşivlenmiş İşlem</p><h4 id="dash-archive" class="text-2xl text-purple-600">0</h4></div><div class="bg-purple-50 text-purple-600 p-3 rounded-lg"><i class="fa-solid fa-box-archive"></i></div></div>
+            </div>
 
-        <div id="view-board" class="hidden p-4 bg-slate-50">
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-                <div class="kanban-col col-normal"><h3 class="text-sm font-bold text-emerald-700 mb-3 flex items-center gap-2"><i class="fa-solid fa-route"></i> SEYİRDE <span id="kb-count-normal" class="ml-auto bg-emerald-200 px-2 py-0.5 rounded-full text-xs">0</span></h3><div id="kb-normal" class="space-y-3"></div></div>
-                <div class="kanban-col col-12h"><h3 class="text-sm font-bold text-orange-700 mb-3 flex items-center gap-2"><i class="fa-solid fa-clock"></i> 12 SAAT KALA <span id="kb-count-12h" class="ml-auto bg-orange-200 px-2 py-0.5 rounded-full text-xs">0</span></h3><div id="kb-12h" class="space-y-3"></div></div>
-                <div class="kanban-col col-6h"><h3 class="text-sm font-bold text-red-700 mb-3 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i> 6 SAAT KALA <span id="kb-count-6h" class="ml-auto bg-red-200 px-2 py-0.5 rounded-full text-xs">0</span></h3><div id="kb-6h" class="space-y-3"></div></div>
-                <div class="kanban-col col-arrived"><h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2"><i class="fa-solid fa-anchor"></i> LİMANDA <span id="kb-count-arrived" class="ml-auto bg-slate-200 px-2 py-0.5 rounded-full text-xs">0</span></h3><div id="kb-arrived" class="space-y-3"></div></div>
+            <!-- Grafikler -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-sm text-slate-800 mb-4 border-b pb-2"><i class="fa-solid fa-chart-column text-blue-600"></i> BU AYKİ İŞ HACMİ (BEYANNAME BAZLI)</h3>
+                    <div class="relative h-64 w-full"><canvas id="volumeChart"></canvas></div>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-sm text-slate-800 mb-4 border-b pb-2"><i class="fa-solid fa-chart-pie text-emerald-600"></i> AKTİF LİMAN DAĞILIMI</h3>
+                    <div class="relative h-64 w-full flex justify-center"><canvas id="portChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Canlı Darboğaz Analizi -->
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                <h3 class="font-bold text-sm text-slate-800 mb-4 border-b pb-2"><i class="fa-solid fa-bolt text-[#FFCC00]"></i> CANLI SİSTEM ANALİZİ</h3>
+                <div id="live-analytics-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <!-- JS Dolduracak -->
+                </div>
             </div>
         </div>
 
-        <!-- DENİZYOLU GÖNDERME GÖRÜNÜMÜ -->
-        <div id="view-denizyolu" class="hidden p-4 md:p-6 bg-slate-50 min-h-[500px] flex flex-col gap-6">
-            
-            <!-- MASTER: GEMİ OLUŞTURMA -->
-            <div class="bg-white p-5 rounded-xl shadow-sm border border-blue-200">
+        <!-- 2. İTHALAT (AKTİF GEMİLER) GÖRÜNÜMÜ -->
+        <div id="view-ithalat" class="hidden">
+            <!-- Gemi Ekleme Formu -->
+            <div class="bg-white p-5 shadow-sm border-b border-slate-200">
+                <h2 class="text-base font-bold mb-4 text-[#111111] flex items-center gap-2 border-b pb-2"><i class="fa-solid fa-plus-circle text-[#FFCC00]"></i> YENİ GEMİ EKLE (İTHALAT)</h2>
+                <form id="ship-form" onsubmit="addShip(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+                    <div>
+                        <label class="block text-[11px] font-bold mb-1">GEMİ ADI</label>
+                        <select id="shipNameSelect" onchange="handleShipSelection()" required class="w-full text-xs p-2.5 border rounded-lg uppercase bg-slate-50 focus:bg-white outline-none transition-colors">
+                            <option value="">GEMİ SEÇİNİZ...</option>
+                            <option value="MED AYDIN" data-imo="9148025">MED AYDIN</option>
+                            <option value="MED CERKEZKOY" data-imo="9147215">MED ÇERKEZKÖY</option>
+                            <option value="MED CORLU" data-imo="9106479">MED ÇORLU</option>
+                            <option value="MED DENIZLI" data-imo="9106493">MED DENİZLİ</option>
+                            <option value="MED SAMSUN" data-imo="9225794">MED SAMSUN</option>
+                            <option value="MED TEKIRDAG" data-imo="9265598">MED TEKİRDAĞ</option>
+                            <option value="MED TRABZON" data-imo="9141780">MED TRABZON</option>
+                            <option value="MED URLA" data-imo="9160920">MED URLA</option>
+                            <option value="B.BAYRAKTAR" data-imo="9260536">B.BAYRAKTAR</option>
+                            <option value="MED MERSIN" data-imo="9135638">MED MERSİN</option>
+                            <option value="MED BEYKOZ" data-imo="9064748">MED BEYKOZ</option>
+                            <option value="MED IZMIR" data-imo="9143879">MED İZMİR</option>
+                            <option value="MED ANTALYA" data-imo="9359714">MED ANTALYA</option>
+                            <option value="MED CESME" data-imo="9256365">MED ÇEŞME</option>
+                            <option value="OTHER" class="bg-slate-200 font-bold">FARKLI GEMİ EKLE...</option>
+                        </select>
+                        <input type="text" id="shipName" class="hidden w-full text-xs p-2.5 mt-2 border rounded-lg uppercase transition-colors" placeholder="Gemi Adı Girin">
+                    </div>
+                    <div><label class="block text-[11px] font-bold mb-1">SEFER NO</label><input type="text" id="voyageNumber" required class="w-full text-xs p-2.5 border rounded-lg uppercase"></div>
+                    <div><label class="block text-[11px] font-bold mb-1">IMO NO</label><input type="text" id="imoNumber" class="w-full text-xs p-2.5 border rounded-lg uppercase transition-all duration-300"></div>
+                    <div><label class="block text-[11px] font-bold mb-1">GELDİĞİ LİMAN</label><input type="text" id="originPort" required class="w-full text-xs p-2.5 border rounded-lg uppercase"></div>
+                    <div><label class="block text-[11px] font-bold mb-1">VARIŞ LİMANI</label>
+                        <select id="destinationPort" required class="w-full text-xs p-2.5 border rounded-lg">
+                            <option value="İZMİR ALSANCAK">İZMİR ALSANCAK</option>
+                            <option value="ALİAĞA SOCAR">ALİAĞA SOCAR</option>
+                            <option value="ALİAĞA NEMPORT">ALİAĞA NEMPORT</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold mb-1 flex justify-between items-center">
+                            <span>MAİL ADRESLERİ</span> 
+                            <button type="button" onclick="openEmailManagerModal()" class="text-blue-600 hover:text-blue-800 font-bold cursor-pointer text-[9px]"><i class="fa-solid fa-address-book"></i> REHBER</button>
+                        </label>
+                        <input type="text" id="notificationEmail" required class="w-full text-xs p-2.5 border rounded-lg" placeholder="Örn: mail1@, mail2@" onkeyup="updateEmailChipsState()">
+                        <div id="quickEmailChips" class="flex flex-wrap gap-1 mt-1.5 min-h-[24px]"></div>
+                    </div>
+                    <div><label class="block text-[11px] font-bold mb-1">HEDEF ZAMAN</label><input type="datetime-local" lang="tr-TR" id="eta" required class="w-full text-xs p-2.5 border rounded-lg"></div>
+                    <div><label class="block text-[11px] font-bold mb-1">BEYANNAME</label><input type="number" id="declarations" min="1" required class="w-full text-xs p-2.5 border rounded-lg"></div>
+                    <div><label class="block text-[11px] font-bold mb-1">EK NOT</label><input type="text" id="shipNote" class="w-full text-xs p-2.5 border rounded-lg uppercase" placeholder="ETB vb."></div>
+                    <div class="flex items-end"><button type="submit" class="w-full bg-[#FFCC00] text-[#111111] font-bold p-2.5 rounded-lg shadow-md hover:bg-yellow-500 cursor-pointer"><i class="fa-solid fa-check-circle"></i> SİSTEME EKLE</button></div>
+                </form>
+            </div>
+
+            <!-- Liste ve Pano Görünümleri -->
+            <div id="view-list" class="overflow-x-auto block">
+                <table class="w-full text-left border-collapse min-w-[800px]">
+                    <thead><tr class="bg-zinc-100 text-slate-600 text-[11px] font-bold border-b"><th class="p-3">GEMİ / IMO</th><th class="p-3">GÜZERGAH / NOT</th><th class="p-3">HEDEF ZAMAN</th><th class="p-3">DURUM SÜRESİ</th><th class="p-3 text-right">İŞLEMLER</th></tr></thead>
+                    <tbody id="ship-list-body" class="divide-y divide-slate-100 text-sm"></tbody>
+                </table>
+            </div>
+            <div id="view-board" class="hidden p-4 bg-slate-50">
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <div class="kanban-col col-normal"><h3 class="text-sm font-bold text-emerald-700 mb-3 flex items-center gap-2"><i class="fa-solid fa-route"></i> SEYİRDE <span id="kb-count-normal" class="ml-auto bg-emerald-200 px-2 py-0.5 rounded-full text-xs">0</span></h3><div id="kb-normal" class="space-y-3"></div></div>
+                    <div class="kanban-col col-12h"><h3 class="text-sm font-bold text-orange-700 mb-3 flex items-center gap-2"><i class="fa-solid fa-clock"></i> 12 SAAT KALA <span id="kb-count-12h" class="ml-auto bg-orange-200 px-2 py-0.5 rounded-full text-xs">0</span></h3><div id="kb-12h" class="space-y-3"></div></div>
+                    <div class="kanban-col col-6h"><h3 class="text-sm font-bold text-red-700 mb-3 flex items-center gap-2"><i class="fa-solid fa-triangle-exclamation"></i> 6 SAAT KALA <span id="kb-count-6h" class="ml-auto bg-red-200 px-2 py-0.5 rounded-full text-xs">0</span></h3><div id="kb-6h" class="space-y-3"></div></div>
+                    <div class="kanban-col col-arrived"><h3 class="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2"><i class="fa-solid fa-anchor"></i> LİMANDA <span id="kb-count-arrived" class="ml-auto bg-slate-200 px-2 py-0.5 rounded-full text-xs">0</span></h3><div id="kb-arrived" class="space-y-3"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. İHRACAT (DENİZYOLU) GÖRÜNÜMÜ -->
+        <div id="view-denizyolu" class="hidden bg-slate-50 flex flex-col">
+            <!-- Gemi Oluşturma -->
+            <div class="bg-white p-5 shadow-sm border-b border-slate-200">
                 <h2 class="text-base font-bold mb-4 text-blue-800 flex items-center gap-2 border-b border-blue-100 pb-2"><i class="fa-solid fa-ship"></i> YENİ İHRACAT GEMİSİ OLUŞTUR</h2>
                 <form id="denizyolu-form" onsubmit="addDenizyolu(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     <div class="lg:col-span-2"><label class="block text-[11px] font-bold text-slate-600 mb-1">GEMİ ADI</label><input type="text" id="dy-ship" required class="w-full text-xs p-3 border border-slate-300 rounded-lg uppercase bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Örn: MED CESME DO632R"></div>
                     <div><label class="block text-[11px] font-bold text-slate-600 mb-1">NEREDEN (KALKIŞ)</label><input type="text" id="dy-from" value="ALİAĞA" required class="w-full text-xs p-3 border border-slate-300 rounded-lg uppercase bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-blue-500 outline-none"></div>
                     <div><label class="block text-[11px] font-bold text-slate-600 mb-1">NEREYE (VARIŞ)</label><input type="text" id="dy-to" required class="w-full text-xs p-3 border border-slate-300 rounded-lg uppercase bg-slate-50 focus:bg-white transition-colors focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Örn: TEKİRDAĞ / ASYAPORT"></div>
-                    <div class="sm:col-span-2 lg:col-span-4 flex justify-end mt-2"><button id="btn-dy-submit" type="submit" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-blue-700 cursor-pointer transition-colors"><i class="fa-solid fa-anchor mr-2"></i> ANA GEMİ KAYDINI OLUŞTUR</button></div>
+                    <div class="sm:col-span-2 lg:col-span-4 flex justify-end mt-2"><button id="btn-dy-submit" type="submit" class="bg-blue-600 text-white font-bold py-3 px-8 rounded-lg shadow-md hover:bg-blue-700 cursor-pointer transition-colors"><i class="fa-solid fa-anchor mr-2"></i> İHRACAT GEMİSİNİ OLUŞTUR</button></div>
                 </form>
             </div>
+            <!-- İhracat Gemi Listesi -->
+            <div class="p-4 md:p-6">
+                <div class="bg-white rounded-xl shadow-sm border border-blue-200 overflow-hidden">
+                    <div class="p-3 bg-blue-50 border-b border-blue-100 flex justify-between items-center gap-3">
+                        <h3 class="font-bold text-sm text-blue-900 flex items-center gap-2"><i class="fa-solid fa-list-check"></i> AKTİF İHRACAT OPERASYONLARI</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse min-w-[800px]">
+                            <thead><tr class="bg-white text-slate-600 text-[11px] font-bold border-b"><th class="p-3">İHRACAT GEMİSİ</th><th class="p-3">ROTA (NEREDEN &rarr; NEREYE)</th><th class="p-3 text-center">BEYANNAME DURUMU</th><th class="p-3 text-right">İŞLEMLER</th></tr></thead>
+                            <tbody id="denizyolu-list-body" class="divide-y divide-slate-100 text-sm"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
 
-            <!-- MASTER: GEMİ LİSTESİ -->
+        <!-- 4. ARŞİV KASASI (AY/YIL FİLTRELİ) -->
+        <div id="view-archive" class="hidden p-4 md:p-6 bg-slate-50 flex flex-col gap-6">
+            <!-- İthalat Arşivi -->
             <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
-                <div class="p-3 bg-blue-50 border-b border-blue-100 flex justify-between items-center gap-3">
-                    <h3 class="font-bold text-sm text-blue-900 flex items-center gap-2"><i class="fa-solid fa-list-check"></i> İHRACAT GEMİLERİ VE ROTALAR</h3>
+                <div class="p-3 bg-slate-100 border-b flex justify-between items-center">
+                    <h3 class="font-bold text-slate-700 text-sm"><i class="fa-solid fa-box-archive text-slate-500 mr-2"></i> İTHALAT (KARŞILAMA) ARŞİVİ</h3>
+                </div>
+                <div class="overflow-x-auto max-h-[400px] overflow-y-auto">
+                    <table class="w-full text-left border-collapse min-w-[800px]">
+                        <thead class="sticky top-0 z-10"><tr class="bg-zinc-100 text-slate-600 text-[11px] font-bold border-b shadow-sm"><th class="p-3">GEMİ / IMO</th><th class="p-3">GÜZERGAH / NOT</th><th class="p-3">KAYIT ZAMANI</th><th class="p-3 text-right">İŞLEMLER</th></tr></thead>
+                        <tbody id="archive-ships-body" class="divide-y divide-slate-100 text-sm bg-white"></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- İhracat Arşivi -->
+            <div class="bg-white rounded-xl shadow-sm border border-blue-200 overflow-hidden">
+                <div class="p-3 bg-blue-50 border-b border-blue-100 flex justify-between items-center">
+                    <h3 class="font-bold text-blue-900 text-sm"><i class="fa-solid fa-ship text-blue-600 mr-2"></i> İHRACAT (GÖNDERME) ARŞİVİ</h3>
+                </div>
+                <div class="overflow-x-auto max-h-[400px] overflow-y-auto">
+                    <table class="w-full text-left border-collapse min-w-[800px]">
+                        <thead class="sticky top-0 z-10"><tr class="bg-blue-50 text-slate-600 text-[11px] font-bold border-b shadow-sm"><th class="p-3">İHRACAT GEMİSİ</th><th class="p-3">ROTA</th><th class="p-3 text-center">BEYANNAME DURUMU</th><th class="p-3 text-right">İŞLEMLER</th></tr></thead>
+                        <tbody id="archive-dy-body" class="divide-y divide-slate-100 text-sm bg-white"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. KULLANICI YÖNETİMİ (SADECE ADMİN) -->
+        <div id="view-users" class="hidden p-4 md:p-6 bg-slate-50 min-h-[500px]">
+            <div class="bg-white rounded-xl shadow-sm border overflow-hidden max-w-4xl mx-auto">
+                <div class="p-4 bg-slate-800 border-b flex justify-between items-center">
+                    <h3 class="font-bold text-white text-sm"><i class="fa-solid fa-users-cog text-[#FFCC00] mr-2"></i> KULLANICI & YETKİ YÖNETİMİ</h3>
+                </div>
+                <div class="p-4 text-xs text-slate-600 bg-yellow-50 border-b border-yellow-200">
+                    Sisteme kayıt olan yeni personelleri buradan <b>Onaylayabilir</b> veya silebilirsiniz. Sadece onaylı kullanıcılar ERP verilerini görebilir.
                 </div>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse min-w-[800px]">
-                        <thead><tr class="bg-white text-slate-600 text-[11px] font-bold border-b"><th class="p-3">İHRACAT GEMİSİ</th><th class="p-3">ROTA (NEREDEN &rarr; NEREYE)</th><th class="p-3 text-center">BEYANNAME DURUMU</th><th class="p-3 text-right">İŞLEMLER</th></tr></thead>
-                        <tbody id="denizyolu-list-body" class="divide-y divide-slate-100 text-sm"></tbody>
+                    <table class="w-full text-left border-collapse">
+                        <thead><tr class="bg-zinc-100 text-slate-600 text-[11px] font-bold border-b"><th class="p-3">E-POSTA ADRESİ</th><th class="p-3">KAYIT TARİHİ</th><th class="p-3 text-center">DURUM</th><th class="p-3 text-center">YETKİ ROLÜ</th><th class="p-3 text-right">İŞLEMLER</th></tr></thead>
+                        <tbody id="users-tbody" class="divide-y divide-slate-100 text-sm bg-white"></tbody>
                     </table>
                 </div>
             </div>
@@ -208,9 +311,10 @@
 
       </div>
       
+      <!-- EXCEL YÜKLEME BUTONU -->
       <div id="action-buttons-container" class="hidden text-center my-8 flex justify-center gap-4 flex-wrap">
         <label for="excel-file-input" style="background-color: #111111; color: #FFCC00; padding: 15px 25px; font-size: 16px; font-weight: bold; border-radius: 8px; cursor: pointer; box-shadow: 0 4px 6px rgba(0,0,0,0.2); display: inline-flex; align-items: center; gap: 8px;">
-            <span id="excel-label-text"><i class="fa-solid fa-file-excel"></i> MANUEL EXCEL YÜKLE (.XLSM)</span>
+            <span id="excel-label-text"><i class="fa-solid fa-file-excel"></i> İTHALAT (AKTİF) EXCEL YÜKLE (.XLSM)</span>
         </label>
         <input type="file" id="excel-file-input" accept=".xlsx, .xls, .xlsm" style="display: none;" onchange="handleDailyExcel(event)">
       </div>
@@ -218,7 +322,9 @@
     </main>
   </div>
 
-  <!-- AKTİF GEMİLER DÜZENLEME MODALI -->
+  <!-- ================= MODALLAR ================= -->
+
+  <!-- İTHALAT: DÜZENLEME MODALI -->
   <div id="editModal" class="fixed inset-0 bg-slate-900/80 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm">
       <div class="bg-white rounded-2xl max-w-xl w-full p-6 space-y-4 shadow-2xl relative">
         <h3 class="font-bold text-lg text-slate-800 uppercase border-b pb-3"><i class="fa-solid fa-pen text-[#FFCC00]"></i> DÜZENLE & NOT EKLE</h3>
@@ -233,7 +339,7 @@
       </div>
   </div>
 
-  <!-- AKTİF GEMİLER BEYANNAME MODALI -->
+  <!-- İTHALAT: BEYANNAME MODALI -->
   <div id="declarationsModal" class="fixed inset-0 bg-slate-900/80 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm">
       <div class="bg-white rounded-2xl max-w-xl w-full p-6 space-y-4 shadow-2xl relative max-h-[95vh] overflow-y-auto flex flex-col">
         <h3 id="decl-modal-title" class="font-bold text-lg text-slate-800 uppercase border-b pb-3 shrink-0"><i class="fa-solid fa-file-lines text-[#FFCC00]"></i> HT BEYANNAMELERİ</h3>
@@ -273,7 +379,7 @@
       </div>
   </div>
 
-  <!-- YENİ: DENİZYOLU İHRACAT ANA GEMİ DÜZENLEME MODALI -->
+  <!-- İHRACAT: ANA GEMİ DÜZENLEME MODALI -->
   <div id="dyEditModal" class="fixed inset-0 bg-slate-900/80 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm">
       <div class="bg-white rounded-2xl max-w-xl w-full p-6 space-y-4 shadow-2xl relative">
         <h3 class="font-bold text-lg text-blue-900 uppercase border-b border-blue-200 pb-3"><i class="fa-solid fa-pen text-blue-600"></i> İHRACAT GEMİSİNİ DÜZENLE</h3>
@@ -288,20 +394,15 @@
       </div>
   </div>
 
-  <!-- YENİ: DENİZYOLU İHRACAT BEYANNAMELERİ MODALI (DETAIL) -->
+  <!-- İHRACAT: BEYANNAMELER (TOPLU EKLEME EKLENDİ) MODALI -->
   <div id="dyDeclarationsModal" class="fixed inset-0 bg-slate-900/80 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm">
       <div class="bg-white rounded-2xl max-w-4xl w-full p-6 space-y-4 shadow-2xl relative max-h-[95vh] overflow-y-auto flex flex-col">
         <h3 id="dy-decl-modal-title" class="font-bold text-lg text-blue-900 uppercase border-b border-blue-200 pb-3 shrink-0"><i class="fa-solid fa-ship text-blue-600"></i> İHRACAT BEYANNAMELERİ</h3>
         <button onclick="document.getElementById('dyDeclarationsModal').classList.add('hidden')" class="absolute top-4 right-6 text-slate-400 hover:text-red-600 text-2xl font-bold cursor-pointer">&times;</button>
         
-        <!-- AMBAR ÇIKIŞ LİSTESİ BUTONU (SADECE SEÇİLİ OLANLAR) -->
         <div class="flex flex-col sm:flex-row gap-4 shrink-0 bg-blue-50 p-3 rounded-lg border border-blue-200 shadow-inner justify-between items-center">
-            <div class="text-xs font-bold text-blue-900 ml-1">
-                Aşağıdan kutucuklarını işaretlediğiniz beyannamelerin ambar çıkış Excel dosyasını alabilirsiniz.
-            </div>
-            <button onclick="exportAmbarCikis()" class="bg-emerald-600 text-white font-bold px-4 py-2.5 rounded-lg text-xs hover:bg-emerald-700 transition-all flex items-center gap-2 shadow-sm shrink-0 cursor-pointer">
-                <i class="fa-solid fa-file-excel text-lg"></i> SEÇİLİ OLANLARI İNDİR (EXCEL)
-            </button>
+            <div class="text-xs font-bold text-blue-900 ml-1">Kutucuklarını işaretlediğiniz beyannamelerin ambar çıkış Excel dosyasını alabilirsiniz.</div>
+            <button onclick="exportAmbarCikis()" class="bg-emerald-600 text-white font-bold px-4 py-2.5 rounded-lg text-xs hover:bg-emerald-700 transition-all flex items-center gap-2 shadow-sm shrink-0 cursor-pointer"><i class="fa-solid fa-file-excel text-lg"></i> SEÇİLİLERİ İNDİR (EXCEL)</button>
         </div>
 
         <div class="flex justify-between items-center text-[10px] text-slate-500 font-bold px-1 pt-2">
@@ -312,17 +413,27 @@
             </div>
         </div>
 
-        <div id="dy-declarations-list" class="space-y-2 flex-1 overflow-y-auto min-h-[200px] p-1"></div>
+        <div id="dy-declarations-list" class="space-y-2 flex-1 overflow-y-auto min-h-[150px] p-1"></div>
         
-        <!-- YENİ İHRACAT BEYANNAME EKLEME BÖLÜMÜ -->
         <div class="border-t pt-4 shrink-0 space-y-4">
-            <h4 class="text-xs font-bold text-slate-700 mb-2"><i class="fa-solid fa-plus-circle text-blue-600"></i> YENİ BEYANNAME / TALİMAT EKLE</h4>
+            <!-- YENİ: İHRACAT TOPLU EKLEME -->
+            <div>
+                <label class="block text-xs font-bold text-slate-600 mb-1 flex justify-between items-center">
+                    <span><i class="fa-solid fa-paste text-blue-600"></i> TOPLU EKLE (SADECE IM NUMARALARINI ALT ALTA YAPIŞTIRIN)</span>
+                </label>
+                <div class="flex gap-2">
+                    <textarea id="dy-bulk-input" rows="2" class="w-full text-xs p-2.5 border border-slate-300 rounded-lg uppercase bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none" placeholder="IM Numaralarını kopyalayıp buraya yapıştırın..."></textarea>
+                    <button onclick="addDYBulk()" class="bg-blue-600 text-white font-bold px-4 rounded-lg text-xs hover:bg-blue-700 shadow-sm shrink-0 whitespace-nowrap cursor-pointer transition-colors"><i class="fa-solid fa-bolt mb-1"></i><br>HIZLI<br>EKLE</button>
+                </div>
+            </div>
+
+            <!-- İhracat Tekli Ekleme -->
             <form id="dy-decl-form" onsubmit="addDYDeclaration(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 bg-slate-50 p-4 rounded-lg border border-slate-200">
               <div><label class="block text-[10px] font-bold text-slate-600 mb-1">TALİMAT ADI</label><input type="text" id="dy-decl-talimat" required class="w-full text-xs p-2.5 border border-slate-300 rounded-md uppercase outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"></div>
               <div><label class="block text-[10px] font-bold text-slate-600 mb-1">IM NUMARASI</label><input type="text" id="dy-decl-im" required class="w-full text-xs p-2.5 border border-slate-300 rounded-md uppercase outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"></div>
               <div><label class="block text-[10px] font-bold text-slate-600 mb-1">HT NUMARASI (Opsiyonel)</label><input type="text" id="dy-decl-ht" class="w-full text-xs p-2.5 border border-slate-300 rounded-md uppercase outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="Tescil sonrası.."></div>
               <div><label class="block text-[10px] font-bold text-slate-600 mb-1">EK NOT / AÇIKLAMA</label><input type="text" id="dy-decl-note" class="w-full text-xs p-2.5 border border-slate-300 rounded-md uppercase outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500" placeholder="Örn: X-Ray.."></div>
-              <div class="sm:col-span-2 lg:col-span-4"><button type="submit" class="w-full bg-blue-600 text-white font-bold p-3 rounded-md text-xs cursor-pointer shadow hover:bg-blue-700 transition-colors">LİSTEYE BEYANNAME EKLE</button></div>
+              <div class="sm:col-span-2 lg:col-span-4"><button type="submit" class="w-full bg-blue-600 text-white font-bold p-3 rounded-md text-xs cursor-pointer shadow hover:bg-blue-700 transition-colors">TEK BEYANNAME EKLE</button></div>
             </form>
         </div>
       </div>
@@ -346,6 +457,7 @@
       </div>
   </div>
 
+  <!-- SİSTEM MİMARİSİ VE KODLAR -->
   <script>
     // 1. FIREBASE BAĞLANTISI VE GLOBAL DEĞİŞKENLER
     const firebaseConfig = {
@@ -358,16 +470,140 @@
     const db = firebase.firestore();
     
     let currentUser = null;
+    let userRole = 'user'; // Varsayılan yetki
     let ships = [];
     let denizyoluList = [];
-    let currentViewTab = 'ACTIVE'; 
+    let currentViewTab = 'DASHBOARD'; 
     let currentDisplayMode = 'LIST'; 
     let isRegisterMode = false;
     let currentDeclShipId = null;
-    let currentDYShipId = null; // Denizyolu modalı için aktif gemi ID'si
+    let currentDYShipId = null; 
+    let portChartInstance = null;
+    let volumeChartInstance = null;
 
     function getSiteUrl() { return window.location.origin + window.location.pathname; }
     function getTrDateStr() { const d = new Date(); return d.toLocaleDateString('tr-TR') + " " + d.getHours().toString().padStart(2, '0') + ":" + d.getMinutes().toString().padStart(2, '0'); }
+
+    // --- BİLDİRİM ÇANI MANTIĞI ---
+    function updateBell() {
+        let alerts = [];
+        
+        // 1. İthalat Yanaşma Uyarıları (12 Saatten az kalanlar)
+        ships.filter(s => s.status !== 'COMPLETED').forEach(s => {
+            if(!s.eta) return;
+            const diff = (new Date(s.eta) - new Date()) / 3600000;
+            if(diff > 0 && diff <= 12) {
+                alerts.push(`<div class="text-[11px] text-slate-700 p-3 border-b border-slate-100 hover:bg-slate-50"><i class="fa-solid fa-triangle-exclamation text-orange-500 mr-1"></i> <b>${s.name}</b> gemisinin yanaşmasına yaklaşık ${Math.round(diff)} saat kaldı!</div>`);
+            }
+        });
+        
+        // 2. İhracat HT Bekleyenler Uyarıları
+        let missingHT = 0;
+        denizyoluList.filter(s => s.status !== 'COMPLETED').forEach(s => {
+            (s.declarations || []).forEach(d => { if(!d.htNo) missingHT++; });
+        });
+        if(missingHT > 0) {
+            alerts.push(`<div class="text-[11px] text-slate-700 p-3 border-b border-slate-100 hover:bg-slate-50"><i class="fa-solid fa-file-circle-exclamation text-red-500 mr-1"></i> İhracat listesinde HT numarası girilmemiş (Tescil bekleyen) toplam <b>${missingHT} adet</b> beyanname var.</div>`);
+        }
+
+        document.getElementById('bell-count').innerText = alerts.length;
+        const dropdown = document.getElementById('bell-dropdown');
+        if(alerts.length === 0) {
+            dropdown.innerHTML = `<div class="text-xs text-slate-500 text-center p-4">Harika! Şu an kritik bir operasyon uyarısı yok.</div>`;
+        } else {
+            dropdown.innerHTML = alerts.join('');
+        }
+    }
+
+    function toggleBell() {
+        document.getElementById('bell-dropdown').classList.toggle('hidden');
+    }
+
+    // Ekranın herhangi bir yerine tıklayınca zili kapat
+    document.addEventListener('click', function(event) {
+        const bell = document.querySelector('.relative.cursor-pointer');
+        const dropdown = document.getElementById('bell-dropdown');
+        if (bell && !bell.contains(event.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
+
+    // --- DASHBOARD (CHART.JS) VE CANLI VERİ MANTIĞI ---
+    function renderDashboard() {
+        const activeShips = ships.filter(s => s.status !== 'COMPLETED');
+        const activeDY = denizyoluList.filter(s => s.status !== 'COMPLETED');
+        const compShips = ships.filter(s => s.status === 'COMPLETED');
+        const compDY = denizyoluList.filter(s => s.status === 'COMPLETED');
+
+        // Üst Sayaçlar
+        document.getElementById('dash-total').innerText = activeShips.length + activeDY.length + compShips.length + compDY.length;
+        document.getElementById('dash-import').innerText = activeShips.length;
+        document.getElementById('dash-export').innerText = activeDY.length;
+        document.getElementById('dash-archive').innerText = compShips.length + compDY.length;
+
+        // Liman Dağılımı (Sadece İthalat İçin)
+        const izmirCount = activeShips.filter(s => s.destinationPort.includes('İZMİR')).length;
+        const aliagaCount = activeShips.filter(s => s.destinationPort.includes('ALİAĞA')).length;
+        const otherCount = activeShips.length - (izmirCount + aliagaCount);
+
+        if(portChartInstance) portChartInstance.destroy();
+        const ctxPort = document.getElementById('portChart').getContext('2d');
+        portChartInstance = new Chart(ctxPort, {
+            type: 'doughnut',
+            data: { 
+                labels: ['İzmir Alsancak', 'Aliağa Limanları', 'Diğer'], 
+                datasets: [{ data: [izmirCount, aliagaCount, otherCount], backgroundColor: ['#3b82f6', '#10b981', '#64748b'], borderWidth: 0 }] 
+            },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' } } }
+        });
+
+        // İş Hacmi (İthalat vs İhracat) - Bu Ay Kapananlar / Toplam
+        const currentMonthIso = new Date().toISOString().substring(0,7); // Örn: "2026-08"
+        
+        // Aktif Beyannameler
+        let ithalatActiveDecls = 0; activeShips.forEach(s => ithalatActiveDecls += (s.htDeclarations || []).length);
+        let ihracatActiveDecls = 0; activeDY.forEach(s => ihracatActiveDecls += (s.declarations || []).length);
+        
+        // Bu Ay Arşive Kalkan Beyannameler
+        let ithalatCompDecls = 0; 
+        compShips.filter(s => s.createdAt && s.createdAt.startsWith(currentMonthIso)).forEach(s => ithalatCompDecls += (s.htDeclarations || []).length);
+        let ihracatCompDecls = 0; 
+        compDY.filter(s => s.createdAt && s.createdAt.startsWith(currentMonthIso)).forEach(s => ihracatCompDecls += (s.declarations || []).length);
+
+        if(volumeChartInstance) volumeChartInstance.destroy();
+        const ctxVol = document.getElementById('volumeChart').getContext('2d');
+        volumeChartInstance = new Chart(ctxVol, {
+            type: 'bar',
+            data: {
+                labels: ['İthalat (Karşılama)', 'İhracat (Gönderme)'],
+                datasets: [
+                    { label: 'Aktif Bekleyen', data: [ithalatActiveDecls, ihracatActiveDecls], backgroundColor: '#f59e0b' },
+                    { label: 'Bu Ay Tamamlanan (Arşiv)', data: [ithalatCompDecls, ihracatCompDecls], backgroundColor: '#8b5cf6' }
+                ]
+            },
+            options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
+        });
+
+        // Canlı Analiz Yorumları (Live Analytics)
+        const alertsContainer = document.getElementById('live-analytics-list');
+        let htsBekleyen = 0; activeDY.forEach(s => { (s.declarations||[]).forEach(d => { if(!d.htNo) htsBekleyen++; }) });
+        let yanasacakGemi = activeShips.filter(s => { const diff = (new Date(s.eta)-new Date())/3600000; return diff > 0 && diff <= 24; }).length;
+        
+        alertsContainer.innerHTML = `
+            <div class="p-4 bg-orange-50 border border-orange-200 rounded-lg text-sm text-orange-800">
+                <i class="fa-solid fa-ship mb-2 text-xl block"></i>
+                Önümüzdeki 24 saat içinde limanlara yanaşması beklenen tam <b>${yanasacakGemi} adet</b> aktif gemi bulunuyor.
+            </div>
+            <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
+                <i class="fa-solid fa-file-signature mb-2 text-xl block"></i>
+                İhracat operasyonlarında tescil onayı (HT Numarası) bekleyen <b>${htsBekleyen} adet</b> beyanname kaydı mevcut.
+            </div>
+            <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-800">
+                <i class="fa-solid fa-check-double mb-2 text-xl block"></i>
+                Sistem bu ay (İthalat + İhracat) toplam <b>${ithalatCompDecls + ihracatCompDecls} adet</b> beyannameyi başarıyla tamamlayıp arşive kaldırdı.
+            </div>
+        `;
+    }
 
     // --- E-POSTA REHBERİ MANTIĞI ---
     const DEFAULT_PRESET_EMAILS = ["gumruk.izmir@medlog.com.tr"];
@@ -405,9 +641,41 @@
     function addSavedEmail(e) { e.preventDefault(); const input = document.getElementById('newPresetEmail'); const newEm = input.value.trim().toLowerCase(); if (!newEm) return; const saved = getSavedEmails(); if (!saved.map(s => s.toLowerCase()).includes(newEm)) { saved.push(newEm); saveSavedEmails(saved); input.value = ''; } else { alert("Bu e-posta adresi zaten rehberde kayıtlı!"); } }
     function deleteSavedEmail(idx) { if(!confirm("Bu mail adresini rehberden silmek istediğinize emin misiniz?")) return; const saved = getSavedEmails(); if (idx >= 0 && idx < saved.length) { saved.splice(idx, 1); saveSavedEmails(saved); } }
 
+    // --- ARŞİV FİLTRESİ OLUŞTURMA (AĞUSTOS 2026'DAN BAŞLAYARAK) ---
+    function populateArchiveMonths() {
+        const select = document.getElementById('filterArchiveDate');
+        if(select.options.length > 0) return; // Zaten doluysa tekrar doldurma
+        
+        select.innerHTML = '<option value="ALL">TÜM ZAMANLAR (Filtresiz)</option>';
+        
+        // Başlangıç: Ağustos 2026
+        let d = new Date(2026, 7, 1); // Aylar 0 indexlidir. 7 = Ağustos.
+        const now = new Date();
+        const monthNames = ["Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran", "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"];
+        
+        // Bugüne kadar ayları üret (Eğer gelecek zamandaysak diye kontrol)
+        while(d <= now || (d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth())) {
+            const val = d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, '0'); // Örn: 2026-08
+            const label = monthNames[d.getMonth()] + " " + d.getFullYear();
+            
+            // Seçeneği başa ekle ki en yeniler üstte görünsün
+            select.insertAdjacentHTML('afterbegin', `<option value="${val}">${label}</option>`);
+            
+            d.setMonth(d.getMonth() + 1); // 1 ay ileri git
+        }
+        
+        // En üstte "TÜM ZAMANLAR" kalsın diye tekrar düzenle
+        const allOption = select.querySelector('option[value="ALL"]');
+        select.prepend(allOption);
+        
+        // Varsayılan olarak bulunduğumuz ayı seçili yap
+        const currentMonthIso = new Date().toISOString().substring(0,7);
+        if(select.querySelector(`option[value="${currentMonthIso}"]`)) {
+            select.value = currentMonthIso;
+        }
+    }
+
     // --- DENİZYOLU İHRACAT (MASTER-DETAIL) İŞLEMLERİ ---
-    
-    // 1. Ana Gemiyi Oluştur
     function addDenizyolu(event) {
         event.preventDefault();
         if(!currentUser) return;
@@ -420,6 +688,7 @@
             fromPort: document.getElementById('dy-from').value.trim().toUpperCase(),
             toPort: document.getElementById('dy-to').value.trim().toUpperCase(),
             declarations: [],
+            status: 'PENDING', // Aktif olduğunu belirtir
             createdAt: new Date().toISOString()
         };
 
@@ -432,16 +701,18 @@
         });
     }
 
-    // 2. Ana Gemi Listesini Çiz
     function renderDenizyolu() {
         const tbody = document.getElementById('denizyolu-list-body');
         if(!tbody) return; tbody.innerHTML = '';
-        if(denizyoluList.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-500 text-sm">Henüz kayıtlı bir ihracat/gönderme gemisi bulunmamaktadır. Yukarıdan ekleyebilirsiniz.</td></tr>`;
+        
+        const activeDY = denizyoluList.filter(d => d.status !== 'COMPLETED');
+
+        if(activeDY.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" class="p-6 text-center text-slate-500 text-sm">Henüz kayıtlı aktif bir ihracat gemisi bulunmamaktadır.</td></tr>`;
             return;
         }
 
-        denizyoluList.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).forEach(d => {
+        activeDY.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).forEach(d => {
             const decList = d.declarations || [];
             const declCount = decList.length;
             
@@ -464,64 +735,52 @@
                         <i class="fa-solid fa-list-check mr-1"></i> BEYANNAMELER VE LİSTE
                     </button>
                     <button onclick="openDYEditModal('${d.firestoreId}')" class="text-blue-600 bg-blue-50 w-8 h-8 rounded-lg border border-blue-200 shadow-sm hover:bg-blue-100 transition-colors cursor-pointer mr-1" title="Gemiyi Düzenle"><i class="fa-solid fa-pen"></i></button>
+                    <button onclick="completeDY('${d.firestoreId}')" class="text-emerald-600 bg-emerald-50 w-8 h-8 rounded-lg border border-emerald-200 shadow-sm hover:bg-emerald-100 transition-colors cursor-pointer mr-1" title="Arşive Gönder (Tamamla)"><i class="fa-solid fa-check"></i></button>
                     <button onclick="deleteDY('${d.firestoreId}')" class="text-red-600 bg-red-50 w-8 h-8 rounded-lg border border-red-200 shadow-sm hover:bg-red-100 transition-colors cursor-pointer" title="Gemiyi Tamamen Sil"><i class="fa-solid fa-trash"></i></button>
                 </td>
             </tr>`;
         });
     }
 
-    // 3. Gemiyi Düzenle ve Sil (Ana Gemi İşlemleri)
     function openDYEditModal(id) {
-        const dy = denizyoluList.find(d => d.firestoreId === id);
-        if(!dy) return;
+        const dy = denizyoluList.find(d => d.firestoreId === id); if(!dy) return;
         document.getElementById('dy-edit-id').value = dy.firestoreId;
         document.getElementById('dy-edit-shipName').value = dy.shipName || '';
         document.getElementById('dy-edit-from').value = dy.fromPort || '';
         document.getElementById('dy-edit-to').value = dy.toPort || '';
         document.getElementById('dyEditModal').classList.remove('hidden');
     }
-
     function saveDYEdit(e) {
-        e.preventDefault();
-        const id = document.getElementById('dy-edit-id').value;
+        e.preventDefault(); const id = document.getElementById('dy-edit-id').value;
         db.collection('denizyolu').doc(id).update({
             shipName: document.getElementById('dy-edit-shipName').value.trim().toUpperCase(),
             fromPort: document.getElementById('dy-edit-from').value.trim().toUpperCase(),
             toPort: document.getElementById('dy-edit-to').value.trim().toUpperCase()
-        }).then(() => {
-            document.getElementById('dyEditModal').classList.add('hidden');
-        });
+        }).then(() => { document.getElementById('dyEditModal').classList.add('hidden'); });
     }
-
     function deleteDY(id) {
         if(confirm("Bu gemiyi ve içindeki TÜM BEYANNAMELERİ tamamen silmek istediğinize emin misiniz? Bu işlem geri alınamaz!")) {
             db.collection('denizyolu').doc(id).delete();
         }
     }
+    function completeDY(id) {
+        if(confirm("Bu ihracat operasyonunu tamamlayıp ARŞİV KASASINA göndermek istediğinize emin misiniz?")) {
+            db.collection('denizyolu').doc(id).update({ status: 'COMPLETED' });
+        }
+    }
 
-    // 4. Modal İşlemleri (Alt Beyannameler)
     function openDYModal(shipId) {
-        currentDYShipId = shipId;
-        const ship = denizyoluList.find(s => s.firestoreId === shipId);
-        if (!ship) return;
-        
+        currentDYShipId = shipId; const ship = denizyoluList.find(s => s.firestoreId === shipId); if (!ship) return;
         document.getElementById('dy-decl-modal-title').innerHTML = `<i class="fa-solid fa-ship text-blue-600"></i> ${ship.shipName} - İHRACAT BEYANNAMELERİ`;
-        document.getElementById('dy-decl-form').reset();
-        renderDYDeclarationsList();
-        document.getElementById('dyDeclarationsModal').classList.remove('hidden');
+        document.getElementById('dy-decl-form').reset(); document.getElementById('dy-bulk-input').value = '';
+        renderDYDeclarationsList(); document.getElementById('dyDeclarationsModal').classList.remove('hidden');
     }
 
     function renderDYDeclarationsList() {
         if (!currentDYShipId) return;
-        const ship = denizyoluList.find(s => s.firestoreId === currentDYShipId);
-        const container = document.getElementById('dy-declarations-list');
-        if (!ship || !container) return;
-        
+        const ship = denizyoluList.find(s => s.firestoreId === currentDYShipId); const container = document.getElementById('dy-declarations-list'); if (!ship || !container) return;
         const list = ship.declarations || [];
-        if (list.length === 0) {
-            container.innerHTML = `<div class="text-xs text-slate-400 text-center py-6 bg-slate-50 rounded-lg border border-dashed border-slate-300">Bu gemi için henüz talimat/beyanname eklenmemiş.<br>Aşağıdaki formdan eklemeye başlayabilirsiniz.</div>`;
-            return;
-        }
+        if (list.length === 0) { container.innerHTML = `<div class="text-xs text-slate-400 text-center py-6 bg-slate-50 rounded-lg border border-dashed border-slate-300">Bu gemi için henüz talimat/beyanname eklenmemiş.<br>Aşağıdaki formdan eklemeye başlayabilirsiniz.</div>`; return; }
         
         container.innerHTML = list.map(d => `
             <div class="flex items-center justify-between p-3 border rounded-lg bg-white border-slate-200 hover:shadow-sm transition-shadow">
@@ -542,15 +801,37 @@
         `).join('');
     }
 
-    function toggleAllDYCheckboxes(state) {
-        document.querySelectorAll('.dy-decl-checkbox').forEach(cb => cb.checked = state);
+    function toggleAllDYCheckboxes(state) { document.querySelectorAll('.dy-decl-checkbox').forEach(cb => cb.checked = state); }
+
+    // 4. Madde: İhracat Toplu Excel Ekleme
+    function addDYBulk() {
+        if (!currentDYShipId) return;
+        const inputEl = document.getElementById('dy-bulk-input');
+        const text = inputEl.value.trim();
+        if (!text) return;
+
+        const lines = text.split(/[\n,\t]+/).map(l => l.trim().toUpperCase()).filter(l => l.length > 0);
+        if(lines.length === 0) return;
+
+        const ship = denizyoluList.find(s => s.firestoreId === currentDYShipId);
+        
+        const newDecls = lines.map(line => ({ 
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 5), 
+            talimat: 'TOPLU GİRİŞ', 
+            imNo: line, 
+            htNo: '', 
+            note: '' 
+        }));
+
+        const updated = [...(ship.declarations || []), ...newDecls];
+        db.collection('denizyolu').doc(currentDYShipId).update({ declarations: updated }).then(() => {
+            inputEl.value = '';
+        });
     }
 
     function addDYDeclaration(event) {
-        event.preventDefault();
-        if (!currentDYShipId) return;
+        event.preventDefault(); if (!currentDYShipId) return;
         const ship = denizyoluList.find(s => s.firestoreId === currentDYShipId);
-        
         const newDecl = { 
             id: Date.now().toString() + Math.random().toString(36).substr(2, 5), 
             talimat: document.getElementById('dy-decl-talimat').value.trim().toUpperCase(), 
@@ -558,11 +839,9 @@
             htNo: document.getElementById('dy-decl-ht').value.trim().toUpperCase(), 
             note: document.getElementById('dy-decl-note').value.trim().toUpperCase()
         };
-        
         const updated = [...(ship.declarations || []), newDecl];
         db.collection('denizyolu').doc(currentDYShipId).update({ declarations: updated }).then(() => {
-            document.getElementById('dy-decl-form').reset();
-            document.getElementById('dy-decl-talimat').focus();
+            document.getElementById('dy-decl-form').reset(); document.getElementById('dy-decl-talimat').focus();
         });
     }
 
@@ -575,95 +854,226 @@
 
     function editDYDeclaration(declId) {
         const ship = denizyoluList.find(s => s.firestoreId === currentDYShipId);
-        const decl = (ship.declarations || []).find(d => d.id === declId);
-        if (!decl) return;
-
-        const newHT = prompt(`[${decl.imNo}] için HT Numarası:`, decl.htNo || "");
-        if (newHT === null) return; 
-
-        const newNote = prompt(`Ek Not / Açıklama:`, decl.note || "");
-        if (newNote === null) return; 
-
+        const decl = (ship.declarations || []).find(d => d.id === declId); if (!decl) return;
+        const newHT = prompt(`[${decl.imNo}] için HT Numarası:`, decl.htNo || ""); if (newHT === null) return; 
+        const newNote = prompt(`Ek Not / Açıklama:`, decl.note || ""); if (newNote === null) return; 
         const updated = (ship.declarations || []).map(d => d.id === declId ? { ...d, htNo: newHT.trim().toUpperCase(), note: newNote.trim().toUpperCase() } : d);
         db.collection('denizyolu').doc(currentDYShipId).update({ declarations: updated });
     }
 
-    // 5. Excel (Ambar Çıkış Listesi) Üretimi
     function exportAmbarCikis() {
         if (!currentDYShipId) return;
         const checkedBoxes = Array.from(document.querySelectorAll('.dy-decl-checkbox:checked'));
-        if(checkedBoxes.length === 0) {
-            alert("⚠️ Lütfen Excel tablosu oluşturmak için listeden en az bir adet beyanname (kutucuk) seçin!");
-            return;
-        }
+        if(checkedBoxes.length === 0) { alert("⚠️ Lütfen Excel tablosu oluşturmak için listeden en az bir adet beyanname (kutucuk) seçin!"); return; }
         const ids = checkedBoxes.map(cb => cb.value);
-        const ship = denizyoluList.find(d => d.firestoreId === currentDYShipId);
-        if(!ship) return;
-
+        const ship = denizyoluList.find(d => d.firestoreId === currentDYShipId); if(!ship) return;
         const selectedData = (ship.declarations || []).filter(d => ids.includes(d.id));
         
         let reportData = selectedData.map(d => ({
-            "AMBAR ÇIKIŞI YAPILACAK HT": d.htNo || "BEKLİYOR / GİRİLMEDİ",
+            "AMBAR ÇIKIŞI YAPILACAK HT": d.htNo || "BEKLİYOR",
             "IM ÖZET BEYAN": d.imNo
         }));
 
         reportData.push({ "AMBAR ÇIKIŞI YAPILACAK HT": "", "IM ÖZET BEYAN": "" });
         reportData.push({ "AMBAR ÇIKIŞI YAPILACAK HT": "Vergi No: 6230002830", "IM ÖZET BEYAN": "" });
 
-        const ws = XLSX.utils.json_to_sheet(reportData);
-        ws['!cols'] = [{wch: 35}, {wch: 30}];
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Ambar_Cikis");
-        
+        const ws = XLSX.utils.json_to_sheet(reportData); ws['!cols'] = [{wch: 35}, {wch: 30}];
+        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Ambar_Cikis");
         const safeName = ship.shipName.replace(/ /g,"_");
         XLSX.writeFile(wb, `Ambar_Cikis_${safeName}_${getTrDateStr().replace(/[: ]/g,"_")}.xlsx`);
     }
+
+    // --- ARŞİV EKRANI RENDER (İTHALAT + İHRACAT BİRLEŞİK) ---
+    function renderArchive() {
+        const month = document.getElementById('filterArchiveDate').value;
+        const searchQ = document.getElementById('searchInput').value.trim().toUpperCase();
+        
+        const tbodyShips = document.getElementById('archive-ships-body');
+        const tbodyDY = document.getElementById('archive-dy-body');
+        tbodyShips.innerHTML = ''; tbodyDY.innerHTML = '';
+
+        // 1. İthalat (Aktif Gemiler) Arşivi
+        let fShips = ships.filter(s => s.status === 'COMPLETED');
+        if(month !== 'ALL') fShips = fShips.filter(s => s.createdAt && s.createdAt.startsWith(month));
+        if(searchQ) fShips = fShips.filter(s => (s.name||"").toUpperCase().includes(searchQ) || (s.imo||"").toUpperCase().includes(searchQ));
+
+        if(fShips.length === 0) tbodyShips.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-xs text-slate-500">Bu kritere uygun ithalat arşivi bulunamadı.</td></tr>`;
+        else {
+            fShips.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).forEach(ship => {
+                let isIzmir = ship.destinationPort && ship.destinationPort.toUpperCase().includes('İZMİR');
+                let rowBg = isIzmir ? 'bg-sky-50/60' : '';
+                tbodyShips.innerHTML += `
+                <tr class="border-b hover:bg-zinc-50 ${rowBg}">
+                    <td class="p-3"><div class="font-bold text-sm text-slate-800">${ship.name}</div><div class="text-[10px] text-gray-500">IMO: ${ship.imo || '-'} | SF: ${ship.voyage || '-'}</div></td>
+                    <td class="p-3 text-xs"><div class="font-semibold text-slate-700">${ship.originPort || '-'} &rarr; ${ship.destinationPort}</div><span class="text-[10px] bg-slate-200 px-2 py-0.5 rounded">${ship.note || '-'}</span></td>
+                    <td class="p-3 text-xs text-slate-500">${new Date(ship.createdAt).toLocaleString('tr-TR')}</td>
+                    <td class="p-3 text-right">
+                        <button onclick="openDeclarationsModal('${ship.firestoreId}')" class="text-purple-600 bg-purple-50 px-3 py-1.5 rounded border border-purple-200 text-xs font-bold hover:bg-purple-100 mr-1"><i class="fa-solid fa-file-lines"></i> EVRAK</button>
+                        <button onclick="deleteShip('${ship.firestoreId}')" class="text-red-600 bg-red-50 w-8 h-8 rounded border border-red-200 hover:bg-red-100" title="Kalıcı Olarak Sil"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            });
+        }
+
+        // 2. İhracat (Denizyolu) Arşivi
+        let fDY = denizyoluList.filter(d => d.status === 'COMPLETED');
+        if(month !== 'ALL') fDY = fDY.filter(d => d.createdAt && d.createdAt.startsWith(month));
+        if(searchQ) fDY = fDY.filter(d => (d.shipName||"").toUpperCase().includes(searchQ) || (d.imNo||"").toUpperCase().includes(searchQ));
+
+        if(fDY.length === 0) tbodyDY.innerHTML = `<tr><td colspan="4" class="p-4 text-center text-xs text-slate-500">Bu kritere uygun ihracat arşivi bulunamadı.</td></tr>`;
+        else {
+            fDY.sort((a,b)=>new Date(b.createdAt)-new Date(a.createdAt)).forEach(d => {
+                const declCount = (d.declarations||[]).length;
+                tbodyDY.innerHTML += `
+                <tr class="border-b hover:bg-slate-50">
+                    <td class="p-3"><div class="font-bold text-[13px] text-blue-900">${d.shipName}</div><div class="text-[10px] text-slate-400">Oluşturulma: ${new Date(d.createdAt).toLocaleDateString('tr-TR')}</div></td>
+                    <td class="p-3"><div class="text-xs font-semibold text-slate-700">${d.fromPort} &rarr; ${d.toPort}</div></td>
+                    <td class="p-3 text-center"><span class="text-[11px] bg-slate-100 border px-2 py-1 rounded-full">${declCount} Beyanname</span></td>
+                    <td class="p-3 text-right">
+                        <button onclick="openDYModal('${d.firestoreId}')" class="text-blue-700 bg-blue-50 px-3 py-1.5 rounded border border-blue-200 text-xs font-bold hover:bg-blue-100 mr-1"><i class="fa-solid fa-list-check"></i> DETAY</button>
+                        <button onclick="deleteDY('${d.firestoreId}')" class="text-red-600 bg-red-50 w-8 h-8 rounded border border-red-200 hover:bg-red-100" title="Kalıcı Olarak Sil"><i class="fa-solid fa-trash"></i></button>
+                    </td>
+                </tr>`;
+            });
+        }
+    }
+
+
+    // --- KULLANICI YÖNETİMİ (SADECE ADMİN) ---
+    function renderUsers() {
+        if(userRole !== 'admin') return;
+        const tbody = document.getElementById('users-tbody');
+        tbody.innerHTML = '<tr><td colspan="5" class="p-4 text-center">Yükleniyor...</td></tr>';
+        
+        db.collection('users').get().then(snap => {
+            let html = '';
+            snap.forEach(doc => {
+                const u = doc.data();
+                const statusBadge = u.isApproved ? '<span class="bg-emerald-100 text-emerald-800 px-2 py-1 rounded font-bold text-[10px]">ONAYLI</span>' : '<span class="bg-orange-100 text-orange-800 px-2 py-1 rounded font-bold text-[10px] animate-pulse">BEKLİYOR</span>';
+                const roleBadge = u.role === 'admin' ? '<span class="bg-purple-100 text-purple-800 px-2 py-1 rounded font-bold text-[10px]">YÖNETİCİ</span>' : '<span class="bg-slate-100 text-slate-600 px-2 py-1 rounded font-bold text-[10px]">PERSONEL</span>';
+                
+                html += `
+                <tr class="border-b hover:bg-slate-50">
+                    <td class="p-3 font-semibold text-slate-700">${u.email}</td>
+                    <td class="p-3 text-xs text-slate-500">${u.registeredAt || '-'}</td>
+                    <td class="p-3 text-center">${statusBadge}</td>
+                    <td class="p-3 text-center">${roleBadge}</td>
+                    <td class="p-3 text-right whitespace-nowrap">
+                        ${!u.isApproved ? `<button onclick="approveUser('${doc.id}')" class="bg-emerald-500 text-white px-3 py-1.5 rounded shadow text-xs font-bold hover:bg-emerald-600 mr-1">ONAYLA</button>` : ''}
+                        ${(u.isApproved && u.role !== 'admin') ? `<button onclick="makeAdmin('${doc.id}')" class="bg-purple-500 text-white px-3 py-1.5 rounded shadow text-xs font-bold hover:bg-purple-600 mr-1">ADMİN YAP</button>` : ''}
+                        <button onclick="deleteUserDoc('${doc.id}')" class="bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded text-xs font-bold hover:bg-red-100">SİL</button>
+                    </td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        });
+    }
+
+    function approveUser(uid) {
+        if(confirm("Kullanıcıya erişim onayı vermek istiyor musunuz?")) {
+            db.collection('users').doc(uid).update({isApproved: true}).then(() => renderUsers());
+        }
+    }
+    function makeAdmin(uid) {
+        if(confirm("DİKKAT: Bu kişiye YÖNETİCİ yetkisi vermek istediğinize emin misiniz? Sistemdeki her şeyi silebilir!")) {
+            db.collection('users').doc(uid).update({role: 'admin'}).then(() => renderUsers());
+        }
+    }
+    function deleteUserDoc(uid) {
+        if(confirm("Kullanıcıyı sistemden tamamen silmek ve erişimini kesmek istediğinize emin misiniz?")) {
+            db.collection('users').doc(uid).delete().then(() => renderUsers());
+        }
+    }
+
 
     // --- AUTH VE TEMEL SEKMELER MANTIĞI ---
     auth.onAuthStateChanged(user => {
       if (user) {
         currentUser = user;
         document.getElementById('user-display-email').innerText = user.email;
-        document.getElementById('auth-container').classList.add('hidden');
-        document.getElementById('app-container').classList.remove('hidden');
-        document.getElementById('action-buttons-container').classList.remove('hidden');
-        document.getElementById('action-buttons-container').style.display = 'flex';
-        
-        initEmailPresets();
 
+        // Kullanıcı Onay Kontrolü (Güvenlik)
+        db.collection('users').doc(user.uid).get().then(doc => {
+            if(!doc.exists) {
+                // Eğer eski bir kullanıcıysa (yani önceden kayıt olmuş ama users tablosunda yoksa)
+                // Sistemi kitlememek için ilk gireni veya eski üyeyi direkt admin/onaylı yapalım.
+                db.collection('users').doc(user.uid).set({
+                    email: user.email, isApproved: true, role: 'admin', registeredAt: getTrDateStr()
+                }).then(() => initApp(true, 'admin'));
+            } else {
+                const uData = doc.data();
+                if(uData.isApproved) {
+                    initApp(true, uData.role);
+                } else {
+                    document.getElementById('auth-container').classList.add('hidden');
+                    document.getElementById('app-container').classList.add('hidden');
+                    document.getElementById('waiting-container').classList.remove('hidden');
+                }
+            }
+        });
+      } else {
+        document.getElementById('app-container').classList.add('hidden');
+        document.getElementById('waiting-container').classList.add('hidden');
+        document.getElementById('action-buttons-container').classList.add('hidden');
+        document.getElementById('auth-container').classList.remove('hidden');
+      }
+    });
+
+    function initApp(isApproved, role) {
+        userRole = role;
+        document.getElementById('auth-container').classList.add('hidden');
+        document.getElementById('waiting-container').classList.add('hidden');
+        document.getElementById('app-container').classList.remove('hidden');
+        
+        if(role === 'admin') {
+            document.getElementById('tab-users').classList.remove('hidden');
+        }
+
+        initEmailPresets();
+        populateArchiveMonths();
+
+        // İthalat Dinleyici
         db.collection('ships').where('userId', '==', currentUser.uid).onSnapshot(snap => {
           ships = []; snap.forEach(doc => ships.push({ firestoreId: doc.id, ...doc.data() })); 
-          renderShips();
+          if(currentViewTab === 'ACTIVE') renderShips();
+          if(currentViewTab === 'ARCHIVE') renderArchive();
+          if(currentViewTab === 'DASHBOARD') renderDashboard();
+          updateBell();
         });
 
+        // İhracat Dinleyici
         db.collection('denizyolu').where('userId', '==', currentUser.uid).onSnapshot(snap => {
           denizyoluList = []; snap.forEach(doc => denizyoluList.push({ firestoreId: doc.id, ...doc.data() })); 
           if(currentViewTab === 'DENIZYOLU') renderDenizyolu();
+          if(currentViewTab === 'ARCHIVE') renderArchive();
+          if(currentViewTab === 'DASHBOARD') renderDashboard();
+          updateBell();
           
           if(currentDYShipId && !document.getElementById('dyDeclarationsModal').classList.contains('hidden')) {
               renderDYDeclarationsList();
           }
         });
 
-      } else {
-        document.getElementById('app-container').classList.add('hidden');
-        document.getElementById('action-buttons-container').classList.add('hidden');
-        document.getElementById('auth-container').classList.remove('hidden');
-      }
-    });
+        setTab('DASHBOARD'); // İlk açılışta Dashboard gelsin
+    }
 
     function toggleAuthMode() {
         isRegisterMode = !isRegisterMode;
         const title = document.getElementById('auth-title'); const submitBtn = document.getElementById('auth-submit-btn'); const toggleBtn = document.getElementById('auth-toggle-mode-btn');
         if(isRegisterMode) { title.innerText = "MSC & MEDLOG KAYIT"; submitBtn.innerText = "KAYIT OL"; toggleBtn.innerText = "Zaten hesabın var mı? Giriş yap";
-        } else { title.innerText = "MSC & MEDLOG GİRİŞ"; submitBtn.innerText = "GİRİŞ YAP"; toggleBtn.innerText = "Hesabın yok mu? Kayıt ol"; }
+        } else { title.innerText = "MSC & MEDLOG GİRİŞ"; submitBtn.innerText = "GİRİŞ YAP"; toggleBtn.innerText = "Sisteme Kayıt Ol"; }
     }
     function handleAuthSubmit(e) {
         e.preventDefault(); const email = document.getElementById('auth-email').value.trim(); const password = document.getElementById('auth-password').value;
-        if(isRegisterMode) { auth.createUserWithEmailAndPassword(email, password).then((cred) => { 
-            db.collection('newRegistrations').doc(cred.user.uid).set({ email: email, registeredAt: getTrDateStr(), notified: false }); alert("✅ Kayıt başarılı! Giriş yapıldı."); 
-        }).catch(err => { alert("❌ Kayıt Olma Hatası: " + err.message); });
-        } else { auth.signInWithEmailAndPassword(email, password).catch(err => { alert("❌ Giriş Hatası: " + err.message); }); }
+        if(isRegisterMode) { 
+            auth.createUserWithEmailAndPassword(email, password).then((cred) => { 
+                // Yeni kayıt direkt BEKLEYEN (isApproved: false) olarak düşer
+                db.collection('users').doc(cred.user.uid).set({ email: email, isApproved: false, role: 'user', registeredAt: getTrDateStr() });
+                alert("✅ Kayıt başarılı! Lütfen yöneticinin hesabınızı onaylamasını bekleyin."); 
+            }).catch(err => { alert("❌ Kayıt Olma Hatası: " + err.message); });
+        } else { 
+            auth.signInWithEmailAndPassword(email, password).catch(err => { alert("❌ Giriş Hatası: " + err.message); }); 
+        }
     }
     function handleForgotPassword() {
         const email = document.getElementById('auth-email').value.trim();
@@ -674,25 +1084,52 @@
 
     function setTab(tabName) {
         currentViewTab = tabName;
-        ['tab-active', 'tab-archive', 'tab-denizyolu'].forEach(id => { document.getElementById(id).className = "tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"; });
-        let activeBtnId = tabName === 'ACTIVE' ? 'tab-active' : (tabName === 'ARCHIVE' ? 'tab-archive' : 'tab-denizyolu');
-        document.getElementById(activeBtnId).className = "tab-active py-2 px-4 rounded-lg font-bold text-sm shadow-sm transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap";
+        
+        ['tab-dashboard', 'tab-active', 'tab-archive', 'tab-denizyolu', 'tab-users'].forEach(id => { 
+            const el = document.getElementById(id);
+            if(el) el.className = "tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap" + (id==='tab-users' && userRole!=='admin' ? ' hidden' : ''); 
+        });
+        
+        let activeBtnId = 'tab-' + tabName.toLowerCase();
+        if(tabName === 'ACTIVE') activeBtnId = 'tab-active'; // override for css id mismatch
+        if(document.getElementById(activeBtnId)) document.getElementById(activeBtnId).className = "tab-active py-2 px-4 rounded-lg font-bold text-sm shadow-sm transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap";
 
-        const listDiv = document.getElementById('view-list'); const boardDiv = document.getElementById('view-board'); const dyDiv = document.getElementById('view-denizyolu');
-        const filterContainer = document.getElementById('filter-container'); const statsContainer = document.getElementById('stats-container'); const shipAddContainer = document.getElementById('ship-add-container'); const actBtns = document.getElementById('action-buttons-container');
+        ['view-dashboard', 'view-ithalat', 'view-denizyolu', 'view-archive', 'view-users'].forEach(id => document.getElementById(id).classList.add('hidden'));
+        document.getElementById('filter-container').style.display = 'none';
+        document.getElementById('action-buttons-container').style.display = 'none';
 
-        listDiv.classList.add('hidden'); boardDiv.classList.add('hidden'); dyDiv.classList.add('hidden');
-
-        if(tabName === 'DENIZYOLU') {
-            dyDiv.classList.remove('hidden'); filterContainer.style.display = 'none'; statsContainer.style.display = 'none'; shipAddContainer.style.display = 'none'; actBtns.style.display = 'none'; renderDenizyolu();
-        } else { 
-            filterContainer.style.display = 'flex'; statsContainer.style.display = 'grid'; shipAddContainer.style.display = 'block'; actBtns.style.display = 'flex'; setViewMode(currentDisplayMode); renderShips();
+        if(tabName === 'DASHBOARD') {
+            document.getElementById('view-dashboard').classList.remove('hidden');
+            renderDashboard();
+        } else if(tabName === 'ACTIVE') {
+            document.getElementById('view-ithalat').classList.remove('hidden');
+            document.getElementById('filter-container').style.display = 'flex';
+            document.getElementById('filterArchiveDate').classList.add('hidden');
+            document.getElementById('view-mode-toggles').style.display = 'flex';
+            document.getElementById('filterPort').style.display = 'block';
+            document.getElementById('action-buttons-container').style.display = 'flex'; // Excel Yükle sadece Aktif Gemilerde
+            setViewMode(currentDisplayMode);
+            renderShips();
+        } else if(tabName === 'DENIZYOLU') {
+            document.getElementById('view-denizyolu').classList.remove('hidden');
+            renderDenizyolu();
+        } else if(tabName === 'ARCHIVE') {
+            document.getElementById('view-archive').classList.remove('hidden');
+            document.getElementById('filter-container').style.display = 'flex';
+            document.getElementById('filterArchiveDate').classList.remove('hidden');
+            document.getElementById('view-mode-toggles').style.display = 'none'; // Arşivde Pano yok
+            document.getElementById('filterPort').style.display = 'none'; // Arşivde liman filtresi kapalı
+            renderArchive();
+        } else if(tabName === 'USERS') {
+            document.getElementById('view-users').classList.remove('hidden');
+            renderUsers();
         }
+        updateBell();
     }
     
     function setViewMode(mode) {
         currentDisplayMode = mode;
-        if(currentViewTab === 'DENIZYOLU') return;
+        if(currentViewTab !== 'ACTIVE') return;
         if(mode === 'LIST') {
             document.getElementById('view-list').classList.remove('hidden'); document.getElementById('view-board').classList.add('hidden');
             document.getElementById('btn-view-list').className = "view-btn-active px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer";
@@ -727,7 +1164,7 @@
             email: document.getElementById('notificationEmail').value.trim().toLowerCase(), status: 'PENDING', emailSentNew: false, emailSent10h: false, emailSent5h: false, emailSent12h: false, emailSent6h: false, emailSentArrived: false, docAmbar: false, docTescil: false, htDeclarations: [],
             siteUrl: getSiteUrl(), lastUpdated: getTrDateStr(), createdAt: new Date().toISOString()
         };
-        db.collection('ships').add(newShipData).then(() => { document.getElementById('ship-form').reset(); document.getElementById('shipName').classList.add('hidden'); initEmailPresets(); setTab('ACTIVE'); });
+        db.collection('ships').add(newShipData).then(() => { document.getElementById('ship-form').reset(); document.getElementById('shipName').classList.add('hidden'); initEmailPresets(); });
     }
 
     function openEditModal(id) {
@@ -741,7 +1178,7 @@
       db.collection('ships').doc(id).update({ name: document.getElementById('edit-shipName').value.trim().toUpperCase(), eta: document.getElementById('edit-eta').value, note: document.getElementById('edit-note').value.trim().toUpperCase(), emailSent10h: false, emailSent5h: false, emailSent12h: false, emailSent6h: false, emailSentArrived: false, siteUrl: getSiteUrl(), lastUpdated: getTrDateStr() }).then(() => { document.getElementById('editModal').classList.add('hidden'); });
     }
     function completeShip(id) { if(confirm("Arşive aktarılacak.")) db.collection('ships').doc(id).update({ status: 'COMPLETED' }); }
-    function deleteShip(id) { if(confirm("Silmek istediğinize emin misiniz?")) db.collection('ships').doc(id).delete(); }
+    function deleteShip(id) { if(confirm("Kalıcı olarak silmek istediğinize emin misiniz?")) db.collection('ships').doc(id).delete(); }
     function openRadar(imo) { if(!imo || imo === '-' || imo === 'BELİRTİLMEDİ') { alert("IMO numarası yok."); return; } window.open(`https://www.vesselfinder.com/vessels/details/${imo}`, '_blank'); }
 
     function openDeclarationsModal(shipId) {
@@ -774,7 +1211,7 @@
     function editDeclaration(declId) {
         const ship = ships.find(s => s.firestoreId === currentDeclShipId); const decl = (ship.htDeclarations || []).find(d => d.id === declId); if (!decl) return;
         const newNo = prompt("Lütfen yeni Beyanname / HT Numarasını girin:", decl.no); if (newNo === null) return; 
-        const newNote = prompt("Varsa yeni Açıklama / Notu girin (Örn: X-RAY, Muayene):", decl.note || ""); if (newNote === null) return; 
+        const newNote = prompt("Varsa yeni Açıklama / Notu girin:", decl.note || ""); if (newNote === null) return; 
         const updated = (ship.htDeclarations || []).map(d => d.id === declId ? { ...d, no: newNo.trim().toUpperCase(), note: newNote.trim().toUpperCase() } : d);
         db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: updated, docAmbar: false, docTescil: false }).then(() => renderDeclarationsList());
     }
@@ -789,9 +1226,10 @@
         const ship = ships.find(s => s.firestoreId === currentDeclShipId); const newHT = { id: Date.now().toString(), no: no, note: note, completed: false };
         db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: [...(ship.htDeclarations || []), newHT], docAmbar: false, docTescil: false }).then(() => { document.getElementById('decl-form').reset(); });
     }
+
     function exportMonthlyReport() {
         const filterPort = document.getElementById('filterPort').value; let exportShips = ships.filter(s => currentViewTab === 'ACTIVE' ? s.status !== 'COMPLETED' : s.status === 'COMPLETED');
-        if(filterPort !== 'ALL') exportShips = exportShips.filter(s => s.destinationPort === filterPort);
+        if(filterPort !== 'ALL' && currentViewTab === 'ACTIVE') exportShips = exportShips.filter(s => s.destinationPort === filterPort);
         const searchQuery = document.getElementById('searchInput').value.trim().toUpperCase();
         if(searchQuery) exportShips = exportShips.filter(s => { const q = searchQuery; return (s.name || "").toUpperCase().includes(q) || (s.voyage || "").toUpperCase().includes(q) || (s.imo || "").toUpperCase().includes(q) || (s.htDeclarations || []).some(ht => ht.no.toUpperCase().includes(q)); });
         if(exportShips.length === 0) { alert("Raporlanacak gemi bulunamadı. Lütfen filtrelerinizi kontrol edin."); return; }
@@ -812,7 +1250,10 @@
         const ws = XLSX.utils.json_to_sheet(reportData); ws['!cols'] = [ {wch: 25}, {wch: 15}, {wch: 22}, {wch: 20}, {wch: 20}, {wch: 15}, {wch: 25}, {wch: 35}, {wch: 40} ];
         const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "MSC_Medlog_Rapor"); XLSX.writeFile(wb, `Gemi_Operasyon_Raporu_${getTrDateStr().replace(/[: ]/g,"_")}.xlsx`);
     }
+
     function toggleAllDeclCheckboxes(state) { document.querySelectorAll('.decl-checkbox').forEach(cb => cb.checked = state); }
+
+    // WORD ÜRETİMİ
     async function generateDoc(docType) {
         if (typeof window.PizZip === 'undefined' || typeof window.docxtemplater === 'undefined') { alert("⏳ Kütüphaneler yükleniyor. Lütfen 3 saniye bekleyip tekrar basın."); return; }
         const ship = ships.find(s => s.firestoreId === currentDeclShipId); if (!ship) return;
@@ -841,24 +1282,21 @@
     }
 
     function renderShips() {
-      if(currentViewTab === 'DENIZYOLU') return;
+      if(currentViewTab !== 'ACTIVE') return;
       const tbody = document.getElementById('ship-list-body'); const kbNormal = document.getElementById('kb-normal'); const kb12h = document.getElementById('kb-12h'); const kb6h = document.getElementById('kb-6h'); const kbArrived = document.getElementById('kb-arrived');
       kbNormal.innerHTML = ''; kb12h.innerHTML = ''; kb6h.innerHTML = ''; kbArrived.innerHTML = '';
       let cN = 0, c12 = 0, c6 = 0, cA = 0;
       const filterPort = document.getElementById('filterPort').value; const searchQuery = document.getElementById('searchInput').value.trim().toUpperCase();
-      let filtered = ships.filter(s => currentViewTab === 'ACTIVE' ? s.status !== 'COMPLETED' : s.status === 'COMPLETED');
+      let filtered = ships.filter(s => s.status !== 'COMPLETED');
       if(filterPort !== 'ALL') filtered = filtered.filter(s => s.destinationPort === filterPort);
       if(searchQuery) { filtered = filtered.filter(s => { const q = searchQuery; return (s.name || "").toUpperCase().includes(q) || (s.voyage || "").toUpperCase().includes(q) || (s.imo || "").toUpperCase().includes(q) || (s.htDeclarations || []).some(ht => ht.no.toUpperCase().includes(q)); }); }
 
-      let tot = 0, nrm = 0, crit = 0, arr = 0;
-      ships.filter(s => s.status !== 'COMPLETED').forEach(s => { const dh = (new Date(s.eta) - new Date()) / 3600000; if (dh <= 0) arr++; else if (dh <= 12) crit++; else nrm++; tot++; });
       tbody.innerHTML = '';
       
       filtered.sort((a, b) => new Date(a.eta) - new Date(b.eta)).forEach(ship => {
         const diffHours = (new Date(ship.eta) - new Date()) / 3600000;
         let bClass = 'bg-blue-100 text-blue-700', bText = '<i class="fa-solid fa-route"></i> SEYİRDE'; let progressWidth = '40%'; let progressColor = 'bg-blue-500'; let targetCol = kbNormal;
-        if (ship.status === 'COMPLETED') { bClass = 'bg-slate-100 text-slate-600'; bText = '<i class="fa-solid fa-box-archive"></i> ARŞİVLENDİ'; progressWidth = '100%'; targetCol = kbArrived; cA++; progressColor = 'bg-slate-400';
-        } else if (diffHours <= 0) { bClass = 'bg-slate-800 text-white'; bText = '<i class="fa-solid fa-anchor"></i> YANAŞTI'; progressWidth = '100%'; progressColor = 'bg-emerald-500'; targetCol = kbArrived; cA++;
+        if (diffHours <= 0) { bClass = 'bg-slate-800 text-white'; bText = '<i class="fa-solid fa-anchor"></i> YANAŞTI'; progressWidth = '100%'; progressColor = 'bg-emerald-500'; targetCol = kbArrived; cA++;
         } else if (diffHours <= 6) { bClass = 'bg-red-100 text-red-700 animate-pulse'; bText = '<i class="fa-solid fa-triangle-exclamation"></i> 6 SAAT KALA'; progressWidth = '90%'; progressColor = 'bg-red-600'; targetCol = kb6h; c6++;
         } else if (diffHours <= 12) { bClass = 'bg-orange-100 text-orange-700'; bText = '<i class="fa-solid fa-clock"></i> 12 SAAT KALA'; progressWidth = '75%'; progressColor = 'bg-orange-500'; targetCol = kb12h; c12++;
         } else { cN++; }
@@ -877,23 +1315,18 @@
             <td class="p-3 text-right whitespace-nowrap">
                 <button onclick="openRadar('${ship.imo}')" class="text-blue-600 bg-blue-50 w-8 h-8 rounded-lg border text-xs font-bold hover:bg-blue-100 transition-colors cursor-pointer" title="Radarda Gör"><i class="fa-solid fa-location-dot"></i></button> 
                 <button onclick="openDeclarationsModal('${ship.firestoreId}')" class="${evrakHazir ? 'text-emerald-700 bg-emerald-100 border-emerald-300' : 'text-purple-600 bg-purple-50 border'} px-3 py-1.5 rounded-lg border hover:shadow-md transition-all mx-1 cursor-pointer relative font-semibold text-xs" title="HT Beyannameleri ve Evraklar"><i class="fa-solid ${evrakHazir ? 'fa-check-double' : 'fa-file-lines'}"></i> BEYANNAME VE EVRAK ${declTotal > 0 && !evrakHazir ? `<span class="absolute -top-1.5 -right-1.5 bg-[#111111] text-white text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center">${declDone}/${declTotal}</span>` : ''}</button>
-                ${ship.status !== 'COMPLETED' ? `<button onclick="openEditModal('${ship.firestoreId}')" class="text-[#111111] bg-yellow-100 w-8 h-8 rounded-lg border border-yellow-300 shadow-sm hover:bg-[#FFCC00] transition-colors cursor-pointer" title="Düzenle"><i class="fa-solid fa-pen"></i></button> <button onclick="completeShip('${ship.firestoreId}')" class="text-emerald-600 bg-emerald-50 w-8 h-8 rounded-lg border hover:bg-emerald-100 transition-colors mx-1 cursor-pointer" title="Arşive Gönder (Tamamla)"><i class="fa-solid fa-check"></i></button>` : ''} 
+                <button onclick="openEditModal('${ship.firestoreId}')" class="text-[#111111] bg-yellow-100 w-8 h-8 rounded-lg border border-yellow-300 shadow-sm hover:bg-[#FFCC00] transition-colors cursor-pointer" title="Düzenle"><i class="fa-solid fa-pen"></i></button> <button onclick="completeShip('${ship.firestoreId}')" class="text-emerald-600 bg-emerald-50 w-8 h-8 rounded-lg border hover:bg-emerald-100 transition-colors mx-1 cursor-pointer" title="Arşive Gönder (Tamamla)"><i class="fa-solid fa-check"></i></button>
                 <button onclick="deleteShip('${ship.firestoreId}')" class="text-red-600 bg-red-50 w-8 h-8 rounded-lg border border-red-200 shadow-sm hover:bg-red-100 transition-colors cursor-pointer" title="Sil"><i class="fa-solid fa-trash"></i></button>
             </td>
         </tr>`;
 
-        targetCol.innerHTML += `<div class="${cardBg} p-3 rounded-lg shadow-sm border ${evrakHazir ? 'border-emerald-400' : 'border-slate-200'} hover:shadow-md transition-shadow relative"><div class="flex justify-between items-start mb-2"><div class="font-bold text-[#111111] text-sm flex items-center gap-1"><div class="${avatarBg} w-5 h-5 rounded-full flex items-center justify-center text-[9px] shadow-sm">${avatarText}</div> ${ship.name}</div><div class="flex items-center gap-2"><button onclick="openDeclarationsModal('${ship.firestoreId}')" class="${evrakHazir ? 'text-emerald-600' : 'text-purple-500 hover:text-purple-700'} cursor-pointer relative" title="HT Beyannameleri ve Evraklar"><i class="fa-solid ${evrakHazir ? 'fa-check-double' : 'fa-file-lines'}"></i>${declTotal > 0 && !evrakHazir ? `<span class="absolute -top-2 -right-2 bg-[#111111] text-white text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center">${declDone}/${declTotal}</span>` : ''}</button><button onclick="openRadar('${ship.imo}')" class="text-blue-500 hover:text-blue-700 cursor-pointer" title="Haritada Gör"><i class="fa-solid fa-location-crosshairs"></i></button></div></div><div class="text-[10px] text-slate-500 mb-2 font-medium"><i class="fa-solid fa-arrow-right-arrow-left"></i> ${ship.originPort || '-'} > ${ship.destinationPort}</div><div class="bg-slate-50 p-1.5 rounded border text-xs font-bold text-center mb-2">${new Date(ship.eta).toLocaleString('tr-TR')}</div><div class="mb-3 text-[10px] font-bold text-zinc-800 bg-[#FFCC00] px-2 py-1 rounded shadow-sm leading-tight border border-yellow-400"><i class="fa-solid fa-clipboard"></i> ${ship.note || 'NOT YOK'}</div><div class="w-full bg-slate-200 rounded-full h-1.5 mb-2"><div class="${progressColor} h-1.5 rounded-full" style="width: ${progressWidth}"></div></div><div class="flex justify-between items-center mt-2 pt-2 border-t border-dashed"><span class="text-[9px] font-bold ${bClass} px-1.5 py-0.5 rounded">${bText}</span> ${ship.status !== 'COMPLETED' ? `<div class="flex gap-1"><button onclick="openEditModal('${ship.firestoreId}')" class="text-[10px] bg-yellow-100 text-[#111111] px-2 py-1 rounded font-bold hover:bg-[#FFCC00] cursor-pointer">DÜZENLE</button><button onclick="completeShip('${ship.firestoreId}')" class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded font-bold hover:bg-emerald-100 cursor-pointer">TAMAMLA</button></div>` : ''} </div></div>`;
+        targetCol.innerHTML += `<div class="${cardBg} p-3 rounded-lg shadow-sm border ${evrakHazir ? 'border-emerald-400' : 'border-slate-200'} hover:shadow-md transition-shadow relative"><div class="flex justify-between items-start mb-2"><div class="font-bold text-[#111111] text-sm flex items-center gap-1"><div class="${avatarBg} w-5 h-5 rounded-full flex items-center justify-center text-[9px] shadow-sm">${avatarText}</div> ${ship.name}</div><div class="flex items-center gap-2"><button onclick="openDeclarationsModal('${ship.firestoreId}')" class="${evrakHazir ? 'text-emerald-600' : 'text-purple-500 hover:text-purple-700'} cursor-pointer relative" title="HT Beyannameleri ve Evraklar"><i class="fa-solid ${evrakHazir ? 'fa-check-double' : 'fa-file-lines'}"></i>${declTotal > 0 && !evrakHazir ? `<span class="absolute -top-2 -right-2 bg-[#111111] text-white text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center">${declDone}/${declTotal}</span>` : ''}</button><button onclick="openRadar('${ship.imo}')" class="text-blue-500 hover:text-blue-700 cursor-pointer" title="Haritada Gör"><i class="fa-solid fa-location-crosshairs"></i></button></div></div><div class="text-[10px] text-slate-500 mb-2 font-medium"><i class="fa-solid fa-arrow-right-arrow-left"></i> ${ship.originPort || '-'} > ${ship.destinationPort}</div><div class="bg-slate-50 p-1.5 rounded border text-xs font-bold text-center mb-2">${new Date(ship.eta).toLocaleString('tr-TR')}</div><div class="mb-3 text-[10px] font-bold text-zinc-800 bg-[#FFCC00] px-2 py-1 rounded shadow-sm leading-tight border border-yellow-400"><i class="fa-solid fa-clipboard"></i> ${ship.note || 'NOT YOK'}</div><div class="w-full bg-slate-200 rounded-full h-1.5 mb-2"><div class="${progressColor} h-1.5 rounded-full" style="width: ${progressWidth}"></div></div><div class="flex justify-between items-center mt-2 pt-2 border-t border-dashed"><span class="text-[9px] font-bold ${bClass} px-1.5 py-0.5 rounded">${bText}</span> <div class="flex gap-1"><button onclick="openEditModal('${ship.firestoreId}')" class="text-[10px] bg-yellow-100 text-[#111111] px-2 py-1 rounded font-bold hover:bg-[#FFCC00] cursor-pointer">DÜZENLE</button><button onclick="completeShip('${ship.firestoreId}')" class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded font-bold hover:bg-emerald-100 cursor-pointer">TAMAMLA</button></div> </div></div>`;
       });
       
-      document.getElementById('stat-total').innerText = tot; document.getElementById('stat-normal').innerText = nrm; document.getElementById('stat-critical').innerText = crit; document.getElementById('stat-arrived').innerText = arr; document.getElementById('kb-count-normal').innerText = cN; document.getElementById('kb-count-12h').innerText = c12; document.getElementById('kb-count-6h').innerText = c6; document.getElementById('kb-count-arrived').innerText = cA;
-      
-      if (currentDeclShipId && !document.getElementById('declarationsModal').classList.contains('hidden')) { 
-          const updatedShip = ships.find(s => s.firestoreId === currentDeclShipId);
-          if (updatedShip) { renderDeclarationsList(); updateDocButtons(updatedShip); }
-      }
+      document.getElementById('kb-count-normal').innerText = cN; document.getElementById('kb-count-12h').innerText = c12; document.getElementById('kb-count-6h').innerText = c6; document.getElementById('kb-count-arrived').innerText = cA;
     }
 
-    // AI Kaldırıldığı İçin İlgili Fonksiyonlar Silindi
+    // EXCEL İŞLEME (AKTİF İTHALAT İÇİN)
     function parseCustomDate(dateStr) {
         if (!dateStr) return null;
         let str = dateStr.toString().trim(); let parts = str.split(/[\sT]+/); let datePart = parts[0], timePart = parts[1] || "00:00";
@@ -977,9 +1410,8 @@
                     }
                 }
                 alert(`✅ İŞLEM BAŞARILI!\n📄 Okunan Sayfa: ${targetSheet}\n🔄 Güncellenen Aktif Gemi: ${updatedCount}\n\n${updateLog.join('\n') || 'Excel içinde eşleşen/gelecek tarihli kayıt bulunamadı.'}`); 
-                setTab('ACTIVE');
             } catch (err) { alert("❌ Yükleme Hatası: " + err.message); }
-            btnLabel.innerHTML = '<i class="fa-solid fa-file-excel"></i> MANUEL EXCEL YÜKLE (.XLSM)'; event.target.value = ''; 
+            btnLabel.innerHTML = '<i class="fa-solid fa-file-excel"></i> İTHALAT (AKTİF) EXCEL YÜKLE (.XLSM)'; event.target.value = ''; 
         };
         reader.readAsArrayBuffer(file);
     }
