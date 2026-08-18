@@ -15,19 +15,16 @@
   <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   
-  <!-- WORD ÜRETİM KÜTÜPHANELERİ (BİRİNCİL - JSDELIVR) -->
   <script src="https://cdn.jsdelivr.net/npm/pizzip@3.1.4/dist/pizzip.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/docxtemplater@3.37.11/build/docxtemplater.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/file-saver@2.0.5/dist/FileSaver.min.js"></script>
   
-  <!-- YEDEK KÜTÜPHANELER (GÜVENLİK DUVARI AŞICI) -->
   <script>
     window.onload = function() {
         if (typeof window.PizZip === 'undefined') {
             var s1 = document.createElement('script'); s1.src = "https://unpkg.com/pizzip@3.1.4/dist/pizzip.min.js"; document.head.appendChild(s1);
             var s2 = document.createElement('script'); s2.src = "https://unpkg.com/docxtemplater@3.37.11/build/docxtemplater.js"; document.head.appendChild(s2);
             var s3 = document.createElement('script'); s3.src = "https://unpkg.com/file-saver@2.0.5/dist/FileSaver.min.js"; document.head.appendChild(s3);
-            console.log("Birincil kütüphaneler engellendi, yedek kütüphaneler arka planda yüklendi.");
         }
     };
   </script>
@@ -53,7 +50,7 @@
 </head>
 <body class="bg-zinc-100 font-sans text-slate-800 antialiased min-h-screen relative">
 
-  <!-- GİRİŞ / KAYIT EKRANI -->
+  <!-- GİRİŞ EKRANI -->
   <div id="auth-container" class="flex items-center justify-center min-h-screen p-4">
     <div class="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full space-y-6 border border-slate-200">
       <div class="text-center space-y-2">
@@ -90,15 +87,15 @@
     <main class="max-w-7xl mx-auto p-4 md:p-6 space-y-6">
       
       <!-- İSTATİSTİKLER -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div id="stats-container" class="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div class="bg-white p-4 rounded-xl shadow-sm border flex justify-between"><div class="font-bold"><p class="text-xs text-slate-400">Aktif Gemi</p><h4 id="stat-total" class="text-xl text-[#111111]">0</h4></div><div class="bg-zinc-100 text-[#111111] p-3 rounded-lg"><i class="fa-solid fa-ship"></i></div></div>
         <div class="bg-white p-4 rounded-xl shadow-sm border flex justify-between"><div class="font-bold"><p class="text-xs text-slate-400">Seyirde</p><h4 id="stat-normal" class="text-xl text-emerald-600">0</h4></div><div class="bg-emerald-50 text-emerald-600 p-3 rounded-lg"><i class="fa-solid fa-circle-check"></i></div></div>
         <div class="bg-white p-4 rounded-xl shadow-sm border flex justify-between"><div class="font-bold"><p class="text-xs text-slate-400">Kritik (12s/6s)</p><h4 id="stat-critical" class="text-xl text-orange-600">0</h4></div><div class="bg-orange-50 text-orange-600 p-3 rounded-lg"><i class="fa-solid fa-triangle-exclamation"></i></div></div>
         <div class="bg-white p-4 rounded-xl shadow-sm border flex justify-between"><div class="font-bold"><p class="text-xs text-slate-400">Yanaştı</p><h4 id="stat-arrived" class="text-xl text-slate-800">0</h4></div><div class="bg-slate-100 text-slate-700 p-3 rounded-lg"><i class="fa-solid fa-anchor"></i></div></div>
       </div>
 
-      <!-- YENİ GEMİ EKLEME -->
-      <div class="bg-white p-5 rounded-xl shadow-sm border">
+      <!-- GEMİ EKLEME (AKTİF/ARŞİV SEKME İÇİN GÖRÜNÜR) -->
+      <div id="ship-add-container" class="bg-white p-5 rounded-xl shadow-sm border">
         <h2 class="text-base font-bold mb-4 text-[#111111] flex items-center gap-2 border-b pb-2"><i class="fa-solid fa-plus-circle text-[#FFCC00]"></i> YENİ GEMİ EKLE</h2>
         <form id="ship-form" onsubmit="addShip(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
           <div>
@@ -133,7 +130,6 @@
                 <option value="ALİAĞA NEMPORT">ALİAĞA NEMPORT</option>
             </select>
           </div>
-          <!-- E-POSTA AKILLI REHBERİ -->
           <div>
             <label class="block text-xs font-bold mb-1 flex justify-between items-center">
                 <span>MAİL ADRESLERİ</span> 
@@ -142,7 +138,6 @@
             <input type="text" id="notificationEmail" required class="w-full text-sm p-2 border rounded-lg" placeholder="Örn: mail1@, mail2@" onkeyup="updateEmailChipsState()">
             <div id="quickEmailChips" class="flex flex-wrap gap-1 mt-1.5 min-h-[24px]"></div>
           </div>
-          
           <div><label class="block text-xs font-bold mb-1">HEDEF ZAMAN</label><input type="datetime-local" id="eta" required class="w-full text-sm p-2 border rounded-lg"></div>
           <div><label class="block text-xs font-bold mb-1">BEYANNAME</label><input type="number" id="declarations" min="1" required class="w-full text-sm p-2 border rounded-lg"></div>
           <div><label class="block text-xs font-bold mb-1">EK NOT</label><input type="text" id="shipNote" class="w-full text-sm p-2 border rounded-lg uppercase" placeholder="ETB vb."></div>
@@ -150,42 +145,38 @@
         </form>
       </div>
 
-      <!-- KONTROL MERKEZİ -->
+      <!-- KONTROL MERKEZİ (SEKMELER) -->
       <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
-        <div class="p-3 bg-slate-50 border-b flex flex-col sm:flex-row justify-between items-center gap-4">
-            <div class="flex gap-2 w-full sm:w-auto overflow-x-auto">
+        <div class="p-3 bg-slate-50 border-b flex flex-col xl:flex-row justify-between items-center gap-4">
+            <div class="flex gap-2 w-full xl:w-auto overflow-x-auto pb-2 xl:pb-0">
                 <button onclick="setTab('ACTIVE')" id="tab-active" class="tab-active py-2 px-4 rounded-lg font-bold text-sm shadow-sm transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-satellite-dish"></i> AKTİF</button>
                 <button onclick="setTab('ARCHIVE')" id="tab-archive" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-box-archive"></i> ARŞİV</button>
+                <button onclick="setTab('DENIZYOLU')" id="tab-denizyolu" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-ship text-[#111111]"></i> DENİZYOLU GÖNDERME</button>
                 <button onclick="setTab('AI_CHAT')" id="tab-ai" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-robot text-[#111111]"></i> AI ASİSTAN</button>
             </div>
             
-            <!-- ARAMA MOTORU VE FİLTRELER -->
-            <div id="filter-container" class="flex items-center gap-3 w-full sm:w-auto justify-between flex-wrap">
-                <!-- Arama Çubuğu -->
+            <div id="filter-container" class="flex items-center gap-3 w-full xl:w-auto justify-between flex-wrap">
                 <div class="relative w-full sm:w-48">
                     <input type="text" id="searchInput" onkeyup="renderShips()" placeholder="Ad, Sefer, IMO, HT..." class="w-full text-xs p-2.5 pl-8 border border-slate-300 rounded-lg outline-none focus:border-[#111111] focus:ring-1 focus:ring-[#111111]">
                     <i class="fa-solid fa-search absolute left-3 top-3 text-slate-400"></i>
                 </div>
-                
                 <div class="flex bg-slate-200 p-1 rounded-lg shrink-0">
                     <button onclick="setViewMode('LIST')" id="btn-view-list" class="view-btn-active px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"><i class="fa-solid fa-list"></i> LİSTE</button>
                     <button onclick="setViewMode('BOARD')" id="btn-view-board" class="view-btn-inactive px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer"><i class="fa-brands fa-trello"></i> PANO</button>
                 </div>
-                
                 <select id="filterPort" onchange="renderShips()" class="text-xs p-2.5 border rounded-lg font-medium shadow-sm outline-none shrink-0">
                     <option value="ALL">TÜM LİMANLAR</option>
                     <option value="İZMİR ALSANCAK">İZMİR ALSANCAK</option>
                     <option value="ALİAĞA SOCAR">ALİAĞA SOCAR</option>
                     <option value="ALİAĞA NEMPORT">ALİAĞA NEMPORT</option>
                 </select>
-
-                <!-- EXCEL RAPORU BUTONU -->
                 <button onclick="exportMonthlyReport()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2.5 rounded-lg text-xs flex items-center gap-2 shadow-sm transition-colors cursor-pointer shrink-0">
                     <i class="fa-solid fa-file-excel"></i> RAPOR AL
                 </button>
             </div>
         </div>
 
+        <!-- AKTİF/ARŞİV GÖRÜNÜMLERİ -->
         <div id="view-list" class="overflow-x-auto block">
           <table class="w-full text-left border-collapse min-w-[800px]">
             <thead><tr class="bg-zinc-100 text-slate-600 text-[11px] font-bold border-b"><th class="p-3">GEMİ / IMO</th><th class="p-3">GÜZERGAH / NOT</th><th class="p-3">HEDEF ZAMAN</th><th class="p-3">DURUM SÜRESİ</th><th class="p-3 text-right">İŞLEMLER</th></tr></thead>
@@ -202,6 +193,43 @@
             </div>
         </div>
 
+        <!-- DENİZYOLU GÖNDERME GÖRÜNÜMÜ -->
+        <div id="view-denizyolu" class="hidden p-4 md:p-6 bg-slate-50 min-h-[500px] flex flex-col gap-6">
+            <div class="bg-white p-5 rounded-xl shadow-sm border border-blue-200">
+                <h2 class="text-base font-bold mb-4 text-blue-800 flex items-center gap-2 border-b border-blue-100 pb-2"><i class="fa-solid fa-ship"></i> YENİ İHRACAT / GÖNDERME (ALİAĞA ÇIKIŞLI)</h2>
+                <form id="denizyolu-form" onsubmit="addDenizyolu(event)" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    <div><label class="block text-[11px] font-bold text-slate-600 mb-1">GEMİ ADI</label><input type="text" id="dy-ship" required class="w-full text-xs p-2.5 border rounded-lg uppercase bg-slate-50 focus:bg-white transition-colors" placeholder="Örn: MED AYDIN"></div>
+                    <div><label class="block text-[11px] font-bold text-slate-600 mb-1">NEREDEN</label><input type="text" id="dy-from" value="ALİAĞA" required class="w-full text-xs p-2.5 border rounded-lg uppercase bg-slate-50 focus:bg-white transition-colors"></div>
+                    <div><label class="block text-[11px] font-bold text-slate-600 mb-1">NEREYE</label><input type="text" id="dy-to" required class="w-full text-xs p-2.5 border rounded-lg uppercase bg-slate-50 focus:bg-white transition-colors" placeholder="Gideceği Liman"></div>
+                    <div><label class="block text-[11px] font-bold text-slate-600 mb-1">TALİMAT ADI</label><input type="text" id="dy-talimat" required class="w-full text-xs p-2.5 border rounded-lg uppercase bg-slate-50 focus:bg-white transition-colors"></div>
+                    <div><label class="block text-[11px] font-bold text-slate-600 mb-1">IM NUMARASI</label><input type="text" id="dy-im" required class="w-full text-xs p-2.5 border rounded-lg uppercase bg-slate-50 focus:bg-white transition-colors"></div>
+                    <div><label class="block text-[11px] font-bold text-slate-600 mb-1">HT NUMARASI <span class="text-[9px] text-red-500 font-normal">(Boş bırakılabilir)</span></label><input type="text" id="dy-ht" class="w-full text-xs p-2.5 border rounded-lg uppercase bg-slate-50 focus:bg-white transition-colors" placeholder="Tescil sonrası girilebilir"></div>
+                    <div><label class="block text-[11px] font-bold text-slate-600 mb-1">EK NOT</label><input type="text" id="dy-note" class="w-full text-xs p-2.5 border rounded-lg uppercase bg-slate-50 focus:bg-white transition-colors" placeholder="Örn: X-RAY, MUAYENE"></div>
+                    <div class="flex items-end"><button type="submit" class="w-full bg-blue-600 text-white font-bold p-2.5 rounded-lg shadow hover:bg-blue-700 cursor-pointer transition-colors"><i class="fa-solid fa-plus"></i> SİSTEME EKLE</button></div>
+                </form>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+                <div class="p-3 bg-blue-50 border-b border-blue-100 flex flex-col sm:flex-row justify-between items-center gap-3">
+                    <h3 class="font-bold text-sm text-blue-900 flex items-center gap-2"><i class="fa-solid fa-list-check"></i> DENİZYOLU BEYANNAME LİSTESİ</h3>
+                    <div class="flex items-center gap-3">
+                        <div class="flex gap-2 text-[10px] font-bold text-slate-600 border-r border-blue-200 pr-3">
+                            <button onclick="toggleAllDY(true)" class="hover:text-blue-700 cursor-pointer">TÜMÜNÜ SEÇ</button> | 
+                            <button onclick="toggleAllDY(false)" class="hover:text-red-600 cursor-pointer">SEÇİMİ KALDIR</button>
+                        </div>
+                        <button onclick="exportAmbarCikis()" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2 rounded-lg text-xs shadow-sm transition-colors cursor-pointer flex items-center gap-2"><i class="fa-solid fa-file-excel"></i> AMBAR ÇIKIŞ LİSTESİ</button>
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse min-w-[800px]">
+                        <thead><tr class="bg-white text-slate-600 text-[11px] font-bold border-b"><th class="p-3 w-8 text-center">✓</th><th class="p-3">GEMİ & ROTA</th><th class="p-3">TALİMAT & NOT</th><th class="p-3">IM NO</th><th class="p-3">HT BEYANNAME</th><th class="p-3 text-right">İŞLEMLER</th></tr></thead>
+                        <tbody id="denizyolu-list-body" class="divide-y divide-slate-100 text-sm"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI ASİSTAN GÖRÜNÜMÜ -->
         <div id="view-ai-chat" class="hidden p-6 bg-slate-50 min-h-[500px] flex flex-col">
             <div class="max-w-3xl mx-auto w-full bg-white rounded-2xl shadow-md border border-slate-200 flex flex-col h-[550px] overflow-hidden">
                 <div class="bg-[#111111] p-4 text-white flex items-center gap-3 border-b-4 border-[#FFCC00]">
@@ -251,13 +279,11 @@
         <h3 id="decl-modal-title" class="font-bold text-lg text-slate-800 uppercase border-b pb-3 shrink-0"><i class="fa-solid fa-file-lines text-[#FFCC00]"></i> HT BEYANNAMELERİ</h3>
         <button onclick="document.getElementById('declarationsModal').classList.add('hidden')" class="absolute top-4 right-6 text-slate-400 hover:text-red-600 text-2xl font-bold cursor-pointer">&times;</button>
         
-        <!-- EVRAK ÜRETME BUTONLARI -->
         <div class="flex gap-2 shrink-0 bg-slate-100 p-2 rounded-lg border border-slate-200 shadow-inner">
             <button onclick="generateDoc('AMBAR')" id="btn-doc-ambar" class="flex-1 bg-white border border-slate-300 text-slate-700 p-2.5 rounded-lg text-xs font-bold hover:shadow-md transition-all flex flex-col items-center gap-1"><i class="fa-solid fa-file-word text-blue-600 text-lg"></i> <span>SEÇİLİ OLANLARIN AMBAR LİSTESİNİ ÜRET</span></button>
             <button onclick="generateDoc('TESCIL')" id="btn-doc-tescil" class="flex-1 bg-white border border-slate-300 text-slate-700 p-2.5 rounded-lg text-xs font-bold hover:shadow-md transition-all flex flex-col items-center gap-1"><i class="fa-solid fa-file-signature text-purple-600 text-lg"></i> <span>SEÇİLİ OLANLARIN HT TESCİLİNİ ÜRET</span></button>
         </div>
 
-        <!-- TOPLU SEÇİM BUTONLARI -->
         <div class="flex justify-between items-center text-[10px] text-slate-500 font-bold px-1 pt-2">
             <span>BEYANNAMELER LİSTESİ</span>
             <div class="flex gap-2">
@@ -268,9 +294,7 @@
 
         <div id="declarations-list" class="space-y-2 flex-1 overflow-y-auto min-h-[150px] p-1"></div>
         
-        <!-- HT EKLEME BÖLÜMÜ -->
         <div class="border-t pt-4 shrink-0 space-y-4">
-            <!-- EXCEL'DEN TOPLU EKLE -->
             <div>
                 <label class="block text-xs font-bold text-slate-600 mb-1 flex justify-between items-center">
                     <span><i class="fa-solid fa-paste text-emerald-600"></i> EXCEL'DEN TOPLU EKLE (Alt Alta)</span>
@@ -280,8 +304,6 @@
                     <button onclick="addBulkHT()" class="bg-emerald-600 text-white font-bold px-4 rounded-lg text-xs hover:bg-emerald-700 shadow-sm shrink-0 whitespace-nowrap cursor-pointer transition-colors"><i class="fa-solid fa-bolt mb-1"></i><br>HIZLI<br>EKLE</button>
                 </div>
             </div>
-
-            <!-- TEKLİ EKLE -->
             <form id="decl-form" onsubmit="addDeclaration(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border">
               <div><label class="block text-[10px] font-bold text-slate-600 mb-1">TEK BEYANNAME NO</label><input type="text" id="decl-no" required class="w-full text-xs p-2 border rounded-md uppercase outline-none"></div>
               <div><label class="block text-[10px] font-bold text-slate-600 mb-1">AÇIKLAMA / NOT</label><input type="text" id="decl-note" class="w-full text-xs p-2 border rounded-md uppercase outline-none"></div>
@@ -315,6 +337,7 @@
 
   <script>
     let currentDeclShipId = null;
+    let denizyoluList = [];
 
     // --- E-POSTA REHBERİ MANTIĞI ---
     const DEFAULT_PRESET_EMAILS = ["gumruk.izmir@medlog.com.tr"];
@@ -388,11 +411,7 @@
         const lowerList = list.map(e => e.toLowerCase());
         const idx = lowerList.indexOf(emailToToggle.toLowerCase());
 
-        if (idx !== -1) {
-            list.splice(idx, 1);
-        } else {
-            list.push(emailToToggle);
-        }
+        if (idx !== -1) { list.splice(idx, 1); } else { list.push(emailToToggle); }
 
         emailInput.value = list.join(', ');
         renderEmailChips();
@@ -466,7 +485,6 @@
             const selectedOption = select.options[select.selectedIndex];
             imoInput.value = selectedOption.getAttribute('data-imo') || '';
             
-            // Başarılı doldurma animasyonu
             imoInput.classList.add('bg-emerald-100', 'border-emerald-500');
             setTimeout(() => imoInput.classList.remove('bg-emerald-100', 'border-emerald-500'), 1000);
         }
@@ -533,12 +551,7 @@
                         });
                     } else {
                         reportData.push({
-                            "GEMİ ADI": "",
-                            "SEFER NO": "",
-                            "HEDEF ZAMAN": "",
-                            "GELDİĞİ LİMAN": "",
-                            "VARIŞ LİMANI": "",
-                            "TOPLAM HT": "",
+                            "GEMİ ADI": "", "SEFER NO": "", "HEDEF ZAMAN": "", "GELDİĞİ LİMAN": "", "VARIŞ LİMANI": "", "TOPLAM HT": "",
                             "HT NUMARALARI": ht.no,
                             "HT DURUM / NOT": tamNot,
                             "GEMİ EK NOTU": ""
@@ -546,19 +559,11 @@
                     }
                 });
             }
-            
-            // Gemiler arası karışmaması için temiz bir boş satır ekle
-            reportData.push({
-                "GEMİ ADI": "", "SEFER NO": "", "HEDEF ZAMAN": "", 
-                "GELDİĞİ LİMAN": "", "VARIŞ LİMANI": "", "TOPLAM HT": "", 
-                "HT NUMARALARI": "", "HT DURUM / NOT": "", "GEMİ EK NOTU": ""
-            });
+            reportData.push({ "GEMİ ADI": "", "SEFER NO": "", "HEDEF ZAMAN": "", "GELDİĞİ LİMAN": "", "VARIŞ LİMANI": "", "TOPLAM HT": "", "HT NUMARALARI": "", "HT DURUM / NOT": "", "GEMİ EK NOTU": "" });
         });
 
         const ws = XLSX.utils.json_to_sheet(reportData);
-        const wscols = [
-            {wch: 25}, {wch: 15}, {wch: 22}, {wch: 20}, {wch: 20}, {wch: 15}, {wch: 25}, {wch: 35}, {wch: 40}
-        ];
+        const wscols = [ {wch: 25}, {wch: 15}, {wch: 22}, {wch: 20}, {wch: 20}, {wch: 15}, {wch: 25}, {wch: 35}, {wch: 40} ];
         ws['!cols'] = wscols;
 
         const wb = XLSX.utils.book_new();
@@ -568,13 +573,11 @@
         XLSX.writeFile(wb, `Gemi_Operasyon_Raporu_${tarih}.xlsx`);
     }
 
-    // --- SEÇİM KUTUCUKLARI (TÜMÜNÜ SEÇ/KALDIR) ---
     function toggleAllDeclCheckboxes(state) {
         const checkboxes = document.querySelectorAll('.decl-checkbox');
         checkboxes.forEach(cb => cb.checked = state);
     }
 
-    // --- EVRAK (DOCX) ÜRETİM SİSTEMİ ---
     async function generateDoc(docType) {
         try {
             if (typeof window.PizZip === 'undefined' || typeof window.docxtemplater === 'undefined') {
@@ -586,7 +589,6 @@
             const ship = ships.find(s => s.firestoreId === currentDeclShipId);
             if (!ship) return;
 
-            // SADECE SEÇİLİ OLAN KUTUCUKLARI BUL
             const checkedBoxes = Array.from(document.querySelectorAll('.decl-checkbox:checked'));
             const checkedIds = checkedBoxes.map(cb => cb.value);
 
@@ -604,18 +606,14 @@
             const safeName = (ship.name || "GEMI").replace(/ /g, "_");
             const outputName = docType === 'AMBAR' ? `AMBAR_LISTESI_${safeName}.docx` : `HT_TESCIL_${safeName}.docx`;
             
-            // YALNIZCA SEÇİLEN HT'LERİ FİLTRELE
             const selectedDeclarations = (ship.htDeclarations || []).filter(ht => checkedIds.includes(ht.id));
             const htList = selectedDeclarations.map(ht => ({ htNo: ht.no }));
 
             try {
                 const response = await fetch(fileName);
-                if (!response.ok) {
-                    throw new Error("Şablon GitHub'da bulunamadı (HTTP " + response.status + "). Lütfen dosyaların tam adıyla yüklü olduğuna emin olun.");
-                }
+                if (!response.ok) throw new Error("Şablon GitHub'da bulunamadı (HTTP " + response.status + ").");
                 
                 const arrayBuffer = await response.arrayBuffer();
-                
                 const zip = new PizZip(arrayBuffer);
                 const doc = new window.docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
 
@@ -625,11 +623,7 @@
                     htListesi: htList
                 });
 
-                const out = doc.getZip().generate({
-                    type: "blob",
-                    mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-                });
-                
+                const out = doc.getZip().generate({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
                 saveAs(out, outputName);
 
                 const updateData = {};
@@ -675,7 +669,6 @@
         }
     }
 
-    // --- HT İŞLEMLERİ (DÜZENLEME VE SİLME EKLENDİ) ---
     function openDeclarationsModal(shipId) {
         currentDeclShipId = shipId;
         const ship = ships.find(s => s.firestoreId === shipId);
@@ -731,7 +724,6 @@
         if (!currentDeclShipId) return;
         const ship = ships.find(s => s.firestoreId === currentDeclShipId);
         const updated = (ship.htDeclarations || []).filter(d => d.id !== declId);
-        // Yeni bir kayıt silindiğinde evrakları sıfırlıyoruz ki güncel hali basılabilsin.
         db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: updated, docAmbar: false, docTescil: false }).then(() => renderDeclarationsList());
     }
 
@@ -763,17 +755,9 @@
         const ship = ships.find(s => s.firestoreId === currentDeclShipId);
         let currentHTs = ship.htDeclarations || [];
         
-        const newHTs = lines.map(line => ({ 
-            id: Date.now().toString() + Math.random().toString(36).substr(2, 5), 
-            no: line, 
-            note: 'TOPLU GİRİŞ', 
-            completed: false 
-        }));
-
+        const newHTs = lines.map(line => ({ id: Date.now().toString() + Math.random().toString(36).substr(2, 5), no: line, note: 'TOPLU GİRİŞ', completed: false }));
         const updated = [...currentHTs, ...newHTs];
-        db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: updated, docAmbar: false, docTescil: false }).then(() => {
-            inputEl.value = '';
-        });
+        db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: updated, docAmbar: false, docTescil: false }).then(() => { inputEl.value = ''; });
     }
 
     function addDeclaration(event) {
@@ -785,8 +769,97 @@
         const ship = ships.find(s => s.firestoreId === currentDeclShipId);
         const updated = [...(ship.htDeclarations || []), { id: Date.now().toString(), no: no, note: note, completed: false }];
         
-        db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: updated, docAmbar: false, docTescil: false }).then(() => {
-            document.getElementById('decl-form').reset();
+        db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: updated, docAmbar: false, docTescil: false }).then(() => { document.getElementById('decl-form').reset(); });
+    }
+
+    // --- DENİZYOLU GÖNDERME İŞLEMLERİ ---
+    function addDenizyolu(event) {
+        event.preventDefault();
+        const data = {
+            userId: currentUser.uid,
+            shipName: document.getElementById('dy-ship').value.trim().toUpperCase(),
+            fromPort: document.getElementById('dy-from').value.trim().toUpperCase(),
+            toPort: document.getElementById('dy-to').value.trim().toUpperCase(),
+            talimat: document.getElementById('dy-talimat').value.trim().toUpperCase(),
+            imNo: document.getElementById('dy-im').value.trim().toUpperCase(),
+            htNo: document.getElementById('dy-ht').value.trim().toUpperCase(),
+            note: document.getElementById('dy-note').value.trim().toUpperCase(),
+            createdAt: new Date().toISOString()
+        };
+        db.collection('denizyolu').add(data).then(() => {
+            document.getElementById('denizyolu-form').reset();
+            document.getElementById('dy-from').value = "ALİAĞA";
+        });
+    }
+
+    function updateDYHT(id) {
+        const dy = denizyoluList.find(d => d.firestoreId === id);
+        if(!dy) return;
+        const newHt = prompt("HT Numarasını girin veya güncelleyin:", dy.htNo || "");
+        if(newHt !== null) {
+            db.collection('denizyolu').doc(id).update({ htNo: newHt.trim().toUpperCase() });
+        }
+    }
+
+    function deleteDY(id) {
+        if(confirm("Bu deniz yolu kayıt bilgisini tamamen silmek istediğinize emin misiniz?")) {
+            db.collection('denizyolu').doc(id).delete();
+        }
+    }
+
+    function toggleAllDY(checked) {
+        document.querySelectorAll('.dy-checkbox').forEach(cb => cb.checked = checked);
+    }
+
+    function exportAmbarCikis() {
+        const checkedBoxes = Array.from(document.querySelectorAll('.dy-checkbox:checked'));
+        if(checkedBoxes.length === 0) {
+            alert("⚠️ Lütfen listeden en az bir adet kayıt (Kutucuk) seçin!");
+            return;
+        }
+        const ids = checkedBoxes.map(cb => cb.value);
+        const selectedData = denizyoluList.filter(d => ids.includes(d.firestoreId));
+        
+        let reportData = selectedData.map(d => ({
+            "IM NUMARASI": d.imNo,
+            "HT BEYANNAME": d.htNo || "BEKLİYOR / GİRİLMEDİ"
+        }));
+
+        const ws = XLSX.utils.json_to_sheet(reportData);
+        ws['!cols'] = [{wch: 30}, {wch: 30}];
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Ambar_Cikis");
+        XLSX.writeFile(wb, `Ambar_Cikis_Listesi_${getTrDateStr().replace(/[: ]/g,"_")}.xlsx`);
+    }
+
+    function renderDenizyolu() {
+        const tbody = document.getElementById('denizyolu-list-body');
+        if(!tbody) return;
+        tbody.innerHTML = '';
+        if(denizyoluList.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="6" class="p-4 text-center text-slate-500 text-xs">Henüz kayıtlı ihracat/gönderme işlemi bulunmamaktadır.</td></tr>`;
+            return;
+        }
+        denizyoluList.sort((a,b) => new Date(b.createdAt) - new Date(a.createdAt)).forEach(d => {
+            const htBadge = d.htNo ? `<span class="bg-emerald-100 text-emerald-800 px-2.5 py-1 rounded-full font-bold text-[10px]">${d.htNo}</span>` : `<button onclick="updateDYHT('${d.firestoreId}')" class="bg-yellow-100 text-yellow-800 border border-yellow-300 px-2 py-1 rounded text-[10px] font-bold hover:bg-yellow-200 cursor-pointer transition-colors">+ HT GİR</button>`;
+            tbody.innerHTML += `
+            <tr class="border-b bg-white hover:bg-slate-50 transition-colors">
+                <td class="p-3 text-center"><input type="checkbox" class="dy-checkbox w-4 h-4 text-blue-600 rounded cursor-pointer" value="${d.firestoreId}" checked title="Ambar Çıkış Listesine Ekle"></td>
+                <td class="p-3">
+                    <div class="font-bold text-[13px] text-slate-800">${d.shipName}</div>
+                    <div class="text-[10px] font-semibold text-blue-600">${d.fromPort} &rarr; ${d.toPort}</div>
+                </td>
+                <td class="p-3">
+                    <div class="font-bold text-[12px] text-slate-700">${d.talimat}</div>
+                    <div class="text-[10px] text-slate-500 italic">${d.note || '-'}</div>
+                </td>
+                <td class="p-3 font-mono text-[13px] font-bold text-slate-800">${d.imNo}</td>
+                <td class="p-3 text-xs">${htBadge}</td>
+                <td class="p-3 text-right whitespace-nowrap">
+                    <button onclick="updateDYHT('${d.firestoreId}')" class="text-blue-600 bg-blue-50 w-7 h-7 rounded border border-blue-200 shadow-sm hover:bg-blue-100 transition-colors mr-1 cursor-pointer" title="HT & Düzenle"><i class="fa-solid fa-pen text-[10px]"></i></button>
+                    <button onclick="deleteDY('${d.firestoreId}')" class="text-red-600 bg-red-50 w-7 h-7 rounded border border-red-200 shadow-sm hover:bg-red-100 transition-colors cursor-pointer" title="Kayıt Sil"><i class="fa-solid fa-trash text-[10px]"></i></button>
+                </td>
+            </tr>`;
         });
     }
 
@@ -818,13 +891,20 @@
         document.getElementById('action-buttons-container').classList.remove('hidden');
         document.getElementById('action-buttons-container').style.display = 'flex';
         
-        // REHBERİ YÜKLE
         initEmailPresets();
 
+        // Gemi veritabanı dinleyicisi
         db.collection('ships').where('userId', '==', currentUser.uid).onSnapshot(snap => {
           ships = []; snap.forEach(doc => ships.push({ firestoreId: doc.id, ...doc.data() })); 
           renderShips();
         });
+
+        // Denizyolu gönderme veritabanı dinleyicisi
+        db.collection('denizyolu').where('userId', '==', currentUser.uid).onSnapshot(snap => {
+          denizyoluList = []; snap.forEach(doc => denizyoluList.push({ firestoreId: doc.id, ...doc.data() })); 
+          if(currentViewTab === 'DENIZYOLU') renderDenizyolu();
+        });
+
       } else {
         document.getElementById('app-container').classList.add('hidden');
         document.getElementById('action-buttons-container').classList.add('hidden');
@@ -858,18 +938,56 @@
 
     function setTab(tabName) {
         currentViewTab = tabName;
-        document.getElementById('tab-active').className = tabName === 'ACTIVE' ? "tab-active py-2 px-4 rounded-lg font-bold text-sm shadow-sm transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap" : "tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap";
-        document.getElementById('tab-archive').className = tabName === 'ARCHIVE' ? "tab-active py-2 px-4 rounded-lg font-bold text-sm shadow-sm transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap" : "tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap";
-        document.getElementById('tab-ai').className = tabName === 'AI_CHAT' ? "tab-active py-2 px-4 rounded-lg font-bold text-sm shadow-sm transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap" : "tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap";
-        const listDiv = document.getElementById('view-list'); const boardDiv = document.getElementById('view-board'); const aiDiv = document.getElementById('view-ai-chat'); const filterContainer = document.getElementById('filter-container');
-        if(tabName === 'AI_CHAT') { listDiv.classList.add('hidden'); boardDiv.classList.add('hidden'); aiDiv.classList.remove('hidden'); filterContainer.style.display = 'none';
-        } else { aiDiv.classList.add('hidden'); filterContainer.style.display = 'flex'; setViewMode(currentDisplayMode); }
-        renderShips();
+        
+        // Buton renklerini sıfırla
+        ['tab-active', 'tab-archive', 'tab-denizyolu', 'tab-ai'].forEach(id => {
+            document.getElementById(id).className = "tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap";
+        });
+        
+        // Aktif butonu renklendir
+        let activeBtnId = tabName === 'ACTIVE' ? 'tab-active' : (tabName === 'ARCHIVE' ? 'tab-archive' : (tabName === 'DENIZYOLU' ? 'tab-denizyolu' : 'tab-ai'));
+        document.getElementById(activeBtnId).className = "tab-active py-2 px-4 rounded-lg font-bold text-sm shadow-sm transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap";
+
+        const listDiv = document.getElementById('view-list'); 
+        const boardDiv = document.getElementById('view-board'); 
+        const aiDiv = document.getElementById('view-ai-chat'); 
+        const dyDiv = document.getElementById('view-denizyolu');
+        const filterContainer = document.getElementById('filter-container');
+        const statsContainer = document.getElementById('stats-container');
+        const shipAddContainer = document.getElementById('ship-add-container');
+        const actBtns = document.getElementById('action-buttons-container');
+
+        listDiv.classList.add('hidden');
+        boardDiv.classList.add('hidden');
+        aiDiv.classList.add('hidden');
+        dyDiv.classList.add('hidden');
+
+        if(tabName === 'AI_CHAT') { 
+            aiDiv.classList.remove('hidden'); 
+            filterContainer.style.display = 'none';
+            statsContainer.style.display = 'none';
+            shipAddContainer.style.display = 'none';
+            actBtns.style.display = 'none';
+        } else if(tabName === 'DENIZYOLU') {
+            dyDiv.classList.remove('hidden');
+            filterContainer.style.display = 'none';
+            statsContainer.style.display = 'none';
+            shipAddContainer.style.display = 'none';
+            actBtns.style.display = 'none';
+            renderDenizyolu();
+        } else { 
+            filterContainer.style.display = 'flex'; 
+            statsContainer.style.display = 'grid';
+            shipAddContainer.style.display = 'block';
+            actBtns.style.display = 'flex';
+            setViewMode(currentDisplayMode); 
+            renderShips();
+        }
     }
     
     function setViewMode(mode) {
         currentDisplayMode = mode;
-        if(currentViewTab === 'AI_CHAT') return;
+        if(currentViewTab === 'AI_CHAT' || currentViewTab === 'DENIZYOLU') return;
         if(mode === 'LIST') {
             document.getElementById('view-list').classList.remove('hidden'); document.getElementById('view-board').classList.add('hidden');
             document.getElementById('btn-view-list').className = "view-btn-active px-3 py-1.5 rounded-md text-xs font-bold flex items-center gap-1 transition-colors cursor-pointer";
@@ -925,30 +1043,6 @@
         });
     }
 
-    function openEditModal(id) {
-        const ship = ships.find(s => s.firestoreId === id); if(!ship) return;
-        document.getElementById('edit-id').value = ship.firestoreId; document.getElementById('edit-shipName').value = ship.name || '';
-        document.getElementById('edit-eta').value = ship.eta || ''; document.getElementById('edit-note').value = ship.note || '';
-        document.getElementById('editModal').classList.remove('hidden');
-    }
-
-    function saveEdit(e) {
-      e.preventDefault(); const id = document.getElementById('edit-id').value;
-      db.collection('ships').doc(id).update({
-        name: document.getElementById('edit-shipName').value.trim().toUpperCase(), eta: document.getElementById('edit-eta').value,
-        note: document.getElementById('edit-note').value.trim().toUpperCase(), 
-        emailSent10h: false, emailSent5h: false, emailSent12h: false, emailSent6h: false, emailSentArrived: false,
-        siteUrl: getSiteUrl(), lastUpdated: getTrDateStr()
-      }).then(() => { document.getElementById('editModal').classList.add('hidden'); });
-    }
-
-    function completeShip(id) { if(confirm("Arşive aktarılacak.")) db.collection('ships').doc(id).update({ status: 'COMPLETED' }); }
-    function deleteShip(id) { if(confirm("Silmek istediğinize emin misiniz?")) db.collection('ships').doc(id).delete(); }
-    function openRadar(imo) { if(!imo || imo === '-' || imo === 'BELİRTİLMEDİ') { alert("IMO numarası yok."); return; } window.open(`https://www.vesselfinder.com/vessels/details/${imo}`, '_blank'); }
-
-    // --- AI SEKME ASİSTAN MANTIĞI ---
-    function handleAITabKeyPress(e) { if(e.key === 'Enter') sendAITabMessage(); }
-
     async function getWeatherSummary() {
         const ports = [ { name: 'İZMİR ALSANCAK', lat: 38.44, lon: 27.15 }, { name: 'ALİAĞA SOCAR', lat: 38.80, lon: 26.97 } ];
         const codeMap = { 0:'Açık', 1:'Az bulutlu', 2:'Parçalı bulutlu', 3:'Kapalı', 45:'Sisli', 48:'Kırağı sisi', 51:'Hafif çisenti', 53:'Çisenti', 55:'Yoğun çisenti', 61:'Hafif yağmur', 63:'Yağmur', 65:'Kuvvetli yağmur', 71:'Hafif kar', 73:'Kar', 75:'Kuvvetli kar', 80:'Sağanak', 81:'Kuvvetli sağanak', 82:'Şiddetli sağanak', 95:'Fırtına', 96:'Dolulu fırtına', 99:'Şiddetli dolulu fırtına' };
@@ -957,6 +1051,8 @@
             return ports.map((p, i) => { const c = results[i].current; const durum = codeMap[c.weather_code] || 'Bilinmiyor'; return `${p.name}: ${c.temperature_2m}°C, rüzgar ${c.wind_speed_10m} km/s, ${durum}`; }).join(" | ");
         } catch (e) { return "Hava durumu şu an alınamadı."; }
     }
+
+    function handleAITabKeyPress(e) { if(e.key === 'Enter') sendAITabMessage(); }
 
     async function sendAITabMessage() {
         const input = document.getElementById('ai-tab-input'); const text = input.value.trim(); if(!text) return;
@@ -979,19 +1075,6 @@
             if (aiText === null) throw (lastError || new Error('Hiçbir model yanıt vermedi.'));
             document.getElementById(typingId).outerHTML = `<div class="ai-message">${aiText.replace(/\n/g, '<br>')}</div>`; chatBox.scrollTop = chatBox.scrollHeight;
         } catch (error) { document.getElementById(typingId).outerHTML = `<div class="ai-message text-red-600">Bağlantı hatası: ${error.message}</div>`; }
-    }
-
-    // --- MANUEL EXCEL İŞLEME (.XLSM / .XLSX Desteği) ---
-    function parseCustomDate(dateStr) {
-        if (!dateStr) return null;
-        let str = dateStr.toString().trim(); let parts = str.split(/[\sT]+/); let datePart = parts[0], timePart = parts[1] || "00:00";
-        let dParts = datePart.split(/[\.\/\-]/);
-        if (dParts.length === 3) {
-            let p1 = parseInt(dParts[0]), p2 = parseInt(dParts[1]), p3 = parseInt(dParts[2]);
-            let day = p1 > 12 ? p1 : (p2 > 12 ? p2 : p1); let month = p1 > 12 ? p2 - 1 : (p2 > 12 ? p1 - 1 : p2 - 1); let year = p3 < 100 ? p3 + 2000 : p3;
-            let tParts = timePart.split(":"); return new Date(year, month, day, parseInt(tParts[0]) || 0, parseInt(tParts[1]) || 0);
-        }
-        let d = new Date(str); return isNaN(d.getTime()) ? null : d;
     }
 
     function handleDailyExcel(event) {
@@ -1043,15 +1126,10 @@
                     const activeMatch = activeShips.find(s => {
                         let isNameMatch = (s.name || '').toUpperCase().trim() === shipName;
                         if (!isNameMatch) return false;
-
-                        // Sefer no (Voyage) Teyidi
                         if (closestRun.voyage && s.voyage) {
                             let v1 = closestRun.voyage.replace(/\s+/g, '');
                             let v2 = s.voyage.replace(/\s+/g, '');
-                            // Eğer biri diğerini içermiyorsa, seferler farklı demektir. (Örn 632R vs A632R)
-                            if (!v1.includes(v2) && !v2.includes(v1)) {
-                                return false; 
-                            }
+                            if (!v1.includes(v2) && !v2.includes(v1)) { return false; }
                         }
                         return true;
                     });
@@ -1078,7 +1156,7 @@
     }
 
     function renderShips() {
-      if(currentViewTab === 'AI_CHAT') return;
+      if(currentViewTab === 'AI_CHAT' || currentViewTab === 'DENIZYOLU') return;
       const tbody = document.getElementById('ship-list-body');
       const kbNormal = document.getElementById('kb-normal'); const kb12h = document.getElementById('kb-12h'); const kb6h = document.getElementById('kb-6h'); const kbArrived = document.getElementById('kb-arrived');
       kbNormal.innerHTML = ''; kb12h.innerHTML = ''; kb6h.innerHTML = ''; kbArrived.innerHTML = '';
@@ -1090,7 +1168,6 @@
       let filtered = ships.filter(s => currentViewTab === 'ACTIVE' ? s.status !== 'COMPLETED' : s.status === 'COMPLETED');
       if(filterPort !== 'ALL') filtered = filtered.filter(s => s.destinationPort === filterPort);
       
-      // Arama Filtresi
       if(searchQuery) {
           filtered = filtered.filter(s => {
               const q = searchQuery;
@@ -1118,8 +1195,13 @@
         let avatarBg = ship.name.includes("MED") ? "bg-[#FFCC00] text-[#111111]" : "bg-[#111111] text-[#FFCC00]"; let avatarText = ship.name.includes("MED") ? "MD" : "MS";
         const declList = ship.htDeclarations || []; const declDone = declList.filter(d => d.completed).length; const declTotal = declList.length;
         const evrakHazir = (ship.docAmbar && ship.docTescil);
+
+        // İZMİR LİMANI İÇİN MAVİ TONLAMA (LIST VE BOARD İÇİN)
+        let isIzmir = ship.destinationPort && ship.destinationPort.toUpperCase().includes('İZMİR');
+        let rowBg = isIzmir ? 'bg-sky-50/60 hover:bg-sky-100/80 border-l-4 border-l-blue-400' : 'bg-white hover:bg-zinc-50 border-l-4 border-l-transparent';
+        let cardBg = isIzmir ? 'bg-sky-50/60 border-t border-t-4 border-t-blue-400' : 'bg-white';
         
-        tbody.innerHTML += `<tr class="border-b hover:bg-zinc-50">
+        tbody.innerHTML += `<tr class="border-b ${rowBg} transition-colors">
             <td class="p-3"><div class="flex items-center gap-3"><div class="${avatarBg} w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shadow-sm">${avatarText}</div><div><div class="font-bold text-sm text-slate-800">${ship.name}</div><div class="text-[10px] text-gray-500">IMO: ${ship.imo || '-'} | SF: ${ship.voyage || '-'}</div></div></div></td>
             <td class="p-3 text-xs"><div class="font-semibold text-slate-700 mb-1">${ship.originPort || '-'} <i class="fa-solid fa-arrow-right text-slate-400 mx-1"></i> ${ship.destinationPort}</div><span class="text-[10px] text-zinc-800 font-bold bg-[#FFCC00] px-2 py-0.5 rounded shadow-sm">${ship.note || 'NOT YOK'}</span></td>
             <td class="p-3 text-xs font-medium"><div class="mb-1 text-slate-800">${new Date(ship.eta).toLocaleString('tr-TR')}</div><div class="text-[9px] text-slate-500 font-bold"><i class="fa-solid fa-clock-rotate-left"></i> ${ship.lastUpdated ? ship.lastUpdated : 'GÜNCELLEME YOK'}</div></td>
@@ -1132,12 +1214,11 @@
             </td>
         </tr>`;
 
-        targetCol.innerHTML += `<div class="bg-white p-3 rounded-lg shadow-sm border ${evrakHazir ? 'border-emerald-400' : 'border-slate-200'} hover:shadow-md transition-shadow relative"><div class="flex justify-between items-start mb-2"><div class="font-bold text-[#111111] text-sm flex items-center gap-1"><div class="${avatarBg} w-5 h-5 rounded-full flex items-center justify-center text-[9px] shadow-sm">${avatarText}</div> ${ship.name}</div><div class="flex items-center gap-2"><button onclick="openDeclarationsModal('${ship.firestoreId}')" class="${evrakHazir ? 'text-emerald-600' : 'text-purple-500 hover:text-purple-700'} cursor-pointer relative" title="HT Beyannameleri ve Evraklar"><i class="fa-solid ${evrakHazir ? 'fa-check-double' : 'fa-file-lines'}"></i>${declTotal > 0 && !evrakHazir ? `<span class="absolute -top-2 -right-2 bg-[#111111] text-white text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center">${declDone}/${declTotal}</span>` : ''}</button><button onclick="openRadar('${ship.imo}')" class="text-blue-500 hover:text-blue-700 cursor-pointer" title="Haritada Gör"><i class="fa-solid fa-location-crosshairs"></i></button></div></div><div class="text-[10px] text-slate-500 mb-2 font-medium"><i class="fa-solid fa-arrow-right-arrow-left"></i> ${ship.originPort || '-'} > ${ship.destinationPort}</div><div class="bg-slate-50 p-1.5 rounded border text-xs font-bold text-center mb-2">${new Date(ship.eta).toLocaleString('tr-TR')}</div><div class="mb-3 text-[10px] font-bold text-zinc-800 bg-[#FFCC00] px-2 py-1 rounded shadow-sm leading-tight border border-yellow-400"><i class="fa-solid fa-clipboard"></i> ${ship.note || 'NOT YOK'}</div><div class="w-full bg-slate-200 rounded-full h-1.5 mb-2"><div class="${progressColor} h-1.5 rounded-full" style="width: ${progressWidth}"></div></div><div class="flex justify-between items-center mt-2 pt-2 border-t border-dashed"><span class="text-[9px] font-bold ${bClass} px-1.5 py-0.5 rounded">${bText}</span> ${ship.status !== 'COMPLETED' ? `<div class="flex gap-1"><button onclick="openEditModal('${ship.firestoreId}')" class="text-[10px] bg-yellow-100 text-[#111111] px-2 py-1 rounded font-bold hover:bg-[#FFCC00] cursor-pointer">DÜZENLE</button><button onclick="completeShip('${ship.firestoreId}')" class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded font-bold hover:bg-emerald-100 cursor-pointer">TAMAMLA</button></div>` : ''} </div></div>`;
+        targetCol.innerHTML += `<div class="${cardBg} p-3 rounded-lg shadow-sm border ${evrakHazir ? 'border-emerald-400' : 'border-slate-200'} hover:shadow-md transition-shadow relative"><div class="flex justify-between items-start mb-2"><div class="font-bold text-[#111111] text-sm flex items-center gap-1"><div class="${avatarBg} w-5 h-5 rounded-full flex items-center justify-center text-[9px] shadow-sm">${avatarText}</div> ${ship.name}</div><div class="flex items-center gap-2"><button onclick="openDeclarationsModal('${ship.firestoreId}')" class="${evrakHazir ? 'text-emerald-600' : 'text-purple-500 hover:text-purple-700'} cursor-pointer relative" title="HT Beyannameleri ve Evraklar"><i class="fa-solid ${evrakHazir ? 'fa-check-double' : 'fa-file-lines'}"></i>${declTotal > 0 && !evrakHazir ? `<span class="absolute -top-2 -right-2 bg-[#111111] text-white text-[8px] font-bold rounded-full w-4 h-4 flex items-center justify-center">${declDone}/${declTotal}</span>` : ''}</button><button onclick="openRadar('${ship.imo}')" class="text-blue-500 hover:text-blue-700 cursor-pointer" title="Haritada Gör"><i class="fa-solid fa-location-crosshairs"></i></button></div></div><div class="text-[10px] text-slate-500 mb-2 font-medium"><i class="fa-solid fa-arrow-right-arrow-left"></i> ${ship.originPort || '-'} > ${ship.destinationPort}</div><div class="bg-slate-50 p-1.5 rounded border text-xs font-bold text-center mb-2">${new Date(ship.eta).toLocaleString('tr-TR')}</div><div class="mb-3 text-[10px] font-bold text-zinc-800 bg-[#FFCC00] px-2 py-1 rounded shadow-sm leading-tight border border-yellow-400"><i class="fa-solid fa-clipboard"></i> ${ship.note || 'NOT YOK'}</div><div class="w-full bg-slate-200 rounded-full h-1.5 mb-2"><div class="${progressColor} h-1.5 rounded-full" style="width: ${progressWidth}"></div></div><div class="flex justify-between items-center mt-2 pt-2 border-t border-dashed"><span class="text-[9px] font-bold ${bClass} px-1.5 py-0.5 rounded">${bText}</span> ${ship.status !== 'COMPLETED' ? `<div class="flex gap-1"><button onclick="openEditModal('${ship.firestoreId}')" class="text-[10px] bg-yellow-100 text-[#111111] px-2 py-1 rounded font-bold hover:bg-[#FFCC00] cursor-pointer">DÜZENLE</button><button onclick="completeShip('${ship.firestoreId}')" class="text-[10px] bg-emerald-50 text-emerald-700 px-2 py-1 rounded font-bold hover:bg-emerald-100 cursor-pointer">TAMAMLA</button></div>` : ''} </div></div>`;
       });
       
       document.getElementById('stat-total').innerText = tot; document.getElementById('stat-normal').innerText = nrm; document.getElementById('stat-critical').innerText = crit; document.getElementById('stat-arrived').innerText = arr; document.getElementById('kb-count-normal').innerText = cN; document.getElementById('kb-count-12h').innerText = c12; document.getElementById('kb-count-6h').innerText = c6; document.getElementById('kb-count-arrived').innerText = cA;
       
-      // Modal açıksa butonları güncelle
       if (currentDeclShipId && !document.getElementById('declarationsModal').classList.contains('hidden')) { 
           const updatedShip = ships.find(s => s.firestoreId === currentDeclShipId);
           if (updatedShip) { renderDeclarationsList(); updateDocButtons(updatedShip); }
