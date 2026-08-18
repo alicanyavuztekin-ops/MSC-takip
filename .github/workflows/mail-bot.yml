@@ -1,0 +1,21 @@
+name: MSC Gemi AIS ve Mail Robotu
+on:
+  schedule:
+    - cron: '0 5,11 * * *' # Günde 2 kez (TSİ 08:00 ve 14:00)
+  workflow_dispatch:
+jobs:
+  run-bot:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      - run: npm install firebase-admin nodemailer node-fetch
+      - name: Run Script
+        env:
+          FIREBASE_CREDENTIALS: ${{ secrets.FIREBASE_CREDENTIALS }}
+          MAIL_USER: ${{ secrets.MAIL_USER }}
+          MAIL_PASS: ${{ secrets.MAIL_PASS }}
+          MARINE_TRAFFIC_API_KEY: ${{ secrets.MARINE_TRAFFIC_API_KEY }}
+        run: node check-ships.js
