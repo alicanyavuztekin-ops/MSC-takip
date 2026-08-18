@@ -35,6 +35,16 @@ const transporter = nodemailer.createTransport({
 async function checkShips() {
     console.log("Zaman kontrolü başlıyor (Grup Mail Uyumlu Mod)...");
     
+    // Sağlık Paneli (Health Check) İçin Sistem Nabzı Kaydı
+    try {
+        await db.collection('system_status').doc('health').set({
+            lastRun: new Date().toISOString(),
+            status: 'OK'
+        });
+    } catch (e) {
+        console.error("Nabız (Health) güncellenemedi:", e);
+    }
+
     // Türkiye Saati (UTC+3)
     const nowUTC = new Date();
     const nowTR = new Date(nowUTC.getTime() + (3 * 60 * 60 * 1000));
@@ -157,7 +167,6 @@ Sisteme Giriş: ${siteLink}
                     </div>
                 `;
 
-                // Çoklu e-posta desteği (virgülle ayrılmışsa temizle)
                 const cleanRecipients = emailField.split(',').map(e => e.trim()).filter(e => e.length > 0).join(', ');
 
                 try {
@@ -166,8 +175,8 @@ Sisteme Giriş: ${siteLink}
                         replyTo: 'mscgemitakip@gmail.com',
                         to: cleanRecipients,
                         subject: emailSubject,
-                        text: textContent, // Filtreleri aşan Düz Metin
-                        html: htmlContent  // Renkli Görsel Şablon
+                        text: textContent, 
+                        html: htmlContent  
                     });
                     
                     await shipsRef.doc(doc.id).update(updates);
