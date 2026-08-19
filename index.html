@@ -94,10 +94,10 @@
       <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
         <div class="p-3 bg-slate-50 border-b flex flex-col xl:flex-row justify-between items-center gap-4">
             <div class="flex gap-2 w-full xl:w-auto overflow-x-auto pb-2 xl:pb-0">
-                <button onclick="setTab('DASHBOARD')" id="tab-dashboard" class="tab-active py-2 px-4 rounded-lg font-bold text-sm shadow-sm transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-chart-pie"></i> DASHBOARD</button>
-                <button onclick="setTab('ACTIVE')" id="tab-active" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-satellite-dish"></i> İTHALAT (AKTİF)</button>
+                <button onclick="setTab('ACTIVE')" id="tab-active" class="tab-active py-2 px-4 rounded-lg font-bold text-sm shadow-sm transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-satellite-dish"></i> İTHALAT (AKTİF)</button>
                 <button onclick="setTab('DENIZYOLU')" id="tab-denizyolu" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-ship text-[#111111]"></i> İHRACAT (GÖNDERME)</button>
                 <button onclick="setTab('ARCHIVE')" id="tab-archive" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-box-archive"></i> ARŞİV KASASI</button>
+                <button onclick="setTab('DASHBOARD')" id="tab-dashboard" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-chart-pie"></i> DASHBOARD (RAPOR)</button>
                 <button onclick="setTab('USERS')" id="tab-users" class="hidden tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-users-cog text-blue-600"></i> KULLANICI YÖNETİMİ</button>
             </div>
             
@@ -125,7 +125,7 @@
         </div>
 
         <!-- 1. DASHBOARD GÖRÜNÜMÜ -->
-        <div id="view-dashboard" class="p-4 md:p-6 bg-slate-50 min-h-[500px] flex flex-col gap-6">
+        <div id="view-dashboard" class="hidden p-4 md:p-6 bg-slate-50 min-h-[500px] flex flex-col gap-6">
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-l-4 border-l-slate-800 flex justify-between"><div class="font-bold"><p class="text-[11px] text-slate-400 uppercase">Toplam Kayıtlı</p><h4 id="dash-total" class="text-2xl text-[#111111]">0</h4></div><div class="bg-zinc-100 text-[#111111] p-3 rounded-lg"><i class="fa-solid fa-database"></i></div></div>
                 <div class="bg-white p-4 rounded-xl shadow-sm border border-l-4 border-l-blue-500 flex justify-between"><div class="font-bold"><p class="text-[11px] text-slate-400 uppercase">Aktif İthalat</p><h4 id="dash-import" class="text-2xl text-blue-600">0</h4></div><div class="bg-blue-50 text-blue-600 p-3 rounded-lg"><i class="fa-solid fa-satellite-dish"></i></div></div>
@@ -344,7 +344,7 @@
   </div>
 
   <div id="declarationsModal" class="fixed inset-0 bg-slate-900/80 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm">
-      <div class="bg-white rounded-2xl max-w-xl w-full p-6 space-y-4 shadow-2xl relative max-h-[95vh] overflow-y-auto flex flex-col">
+      <div class="bg-white rounded-2xl max-w-4xl w-full p-6 space-y-4 shadow-2xl relative max-h-[95vh] overflow-y-auto flex flex-col">
         <h3 id="decl-modal-title" class="font-bold text-lg text-slate-800 uppercase border-b pb-3 shrink-0"><i class="fa-solid fa-file-lines text-[#FFCC00]"></i> HT BEYANNAMELERİ</h3>
         <button onclick="document.getElementById('declarationsModal').classList.add('hidden')" class="absolute top-4 right-6 text-slate-400 hover:text-red-600 text-2xl font-bold cursor-pointer">&times;</button>
         
@@ -373,10 +373,11 @@
                     <button onclick="addBulkHT()" class="bg-emerald-600 text-white font-bold px-4 rounded-lg text-xs hover:bg-emerald-700 shadow-sm shrink-0 whitespace-nowrap cursor-pointer transition-colors"><i class="fa-solid fa-bolt mb-1"></i><br>HIZLI<br>EKLE</button>
                 </div>
             </div>
-            <form id="decl-form" onsubmit="addDeclaration(event)" class="grid grid-cols-1 sm:grid-cols-2 gap-3 bg-slate-50 p-3 rounded-lg border">
-              <div><label class="block text-[10px] font-bold text-slate-600 mb-1">TEK BEYANNAME NO</label><input type="text" id="decl-no" required class="w-full text-xs p-2 border rounded-md uppercase outline-none"></div>
-              <div><label class="block text-[10px] font-bold text-slate-600 mb-1">AÇIKLAMA / NOT</label><input type="text" id="decl-note" class="w-full text-xs p-2 border rounded-md uppercase outline-none"></div>
-              <div class="sm:col-span-2"><button type="submit" class="w-full bg-[#111111] text-[#FFCC00] font-bold p-2.5 rounded-md text-xs cursor-pointer shadow hover:bg-black transition-colors">TEK BEYANNAME EKLE</button></div>
+            <form id="decl-form" onsubmit="addDeclaration(event)" class="grid grid-cols-1 sm:grid-cols-3 gap-3 bg-slate-50 p-4 rounded-lg border">
+              <div><label class="block text-[10px] font-bold text-slate-600 mb-1">BEYANNAME NO</label><input type="text" id="decl-no" required class="w-full text-xs p-2.5 border border-slate-300 rounded-md uppercase outline-none focus:ring-1 focus:ring-[#111111]"></div>
+              <div><label class="block text-[10px] font-bold text-slate-600 mb-1">B/L (KONŞİMENTO) / MUAYENE</label><input type="text" id="decl-bl" class="w-full text-xs p-2.5 border border-slate-300 rounded-md uppercase outline-none focus:ring-1 focus:ring-[#111111]" placeholder="Örn: MED... / Muayene Statüsü"></div>
+              <div><label class="block text-[10px] font-bold text-slate-600 mb-1">AÇIKLAMA / NOT</label><input type="text" id="decl-note" class="w-full text-xs p-2.5 border border-slate-300 rounded-md uppercase outline-none focus:ring-1 focus:ring-[#111111]"></div>
+              <div class="sm:col-span-3"><button type="submit" class="w-full bg-[#111111] text-[#FFCC00] font-bold p-3 rounded-md text-xs cursor-pointer shadow hover:bg-black transition-colors">TEK BEYANNAME EKLE</button></div>
             </form>
         </div>
       </div>
@@ -468,7 +469,7 @@
     let userRole = 'user'; 
     let ships = [];
     let denizyoluList = [];
-    let currentViewTab = 'DASHBOARD'; 
+    let currentViewTab = 'ACTIVE'; 
     let currentDisplayMode = 'LIST'; 
     let isRegisterMode = false;
     let currentDeclShipId = null;
@@ -604,25 +605,6 @@
             },
             options: { responsive: true, maintainAspectRatio: false, scales: { y: { beginAtZero: true } } }
         });
-
-        const alertsContainer = document.getElementById('live-analytics-list');
-        let htsBekleyen = 0; activeDY.forEach(s => { (s.declarations||[]).forEach(d => { if(!d.htNo) htsBekleyen++; }) });
-        let yanasacakGemi = activeShips.filter(s => { const diff = (new Date(s.eta)-new Date())/3600000; return diff > 0 && diff <= 24; }).length;
-        
-        alertsContainer.innerHTML = `
-            <div class="p-4 bg-orange-50 border border-orange-200 rounded-lg text-sm text-orange-800">
-                <i class="fa-solid fa-ship mb-2 text-xl block"></i>
-                Önümüzdeki 24 saat içinde limanlara yanaşması beklenen <b>${yanasacakGemi} adet</b> aktif gemi bulunuyor.
-            </div>
-            <div class="p-4 bg-blue-50 border border-blue-200 rounded-lg text-sm text-blue-800">
-                <i class="fa-solid fa-satellite mb-2 text-xl block"></i>
-                GitHub Actions robotu günde 2 kez (08:00 ve 14:00) AIS üzerinden hedef saatleri ve ETA verilerini günceller.
-            </div>
-            <div class="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-sm text-emerald-800">
-                <i class="fa-solid fa-check-double mb-2 text-xl block"></i>
-                Bu ay toplam <b>${ithalatCompDecls + ihracatCompDecls} adet</b> beyanname arşive kaldırıldı.
-            </div>
-        `;
     }
 
     const DEFAULT_PRESET_EMAILS = ["gumruk.izmir@medlog.com.tr"];
@@ -892,16 +874,19 @@
         db.collection('ships').where('userId', '==', currentUser.uid).onSnapshot(snap => {
           ships = []; snap.forEach(doc => ships.push({ firestoreId: doc.id, ...doc.data() })); 
           if(currentViewTab === 'ACTIVE') renderShips(); if(currentViewTab === 'ARCHIVE') renderArchive(); if(currentViewTab === 'DASHBOARD') renderDashboard();
+          if(!document.getElementById('declarationsModal').classList.contains('hidden') && currentDeclShipId) renderDeclarationsList();
           updateBell();
         });
 
         db.collection('denizyolu').where('userId', '==', currentUser.uid).onSnapshot(snap => {
           denizyoluList = []; snap.forEach(doc => denizyoluList.push({ firestoreId: doc.id, ...doc.data() })); 
           if(currentViewTab === 'DENIZYOLU') renderDenizyolu(); if(currentViewTab === 'ARCHIVE') renderArchive(); if(currentViewTab === 'DASHBOARD') renderDashboard();
+          if(!document.getElementById('dyDeclarationsModal').classList.contains('hidden') && currentDYShipId) renderDYDeclarationsList();
           updateBell();
         });
 
-        setTab('DASHBOARD');
+        // İLK KARŞILAMA EKRANI İTHALAT (AKTİF) OLARAK GÜNCELLENDİ
+        setTab('ACTIVE');
     }
 
     function toggleAuthMode() {
@@ -973,18 +958,74 @@
     function openRadar(imo) { if(!imo || imo === '-') { alert("IMO yok"); return; } window.open(`https://www.vesselfinder.com/vessels/details/${imo}`, '_blank'); }
 
     function openDeclarationsModal(shipId) { currentDeclShipId = shipId; const ship = ships.find(s => s.firestoreId === shipId); if (!ship) return; document.getElementById('decl-modal-title').innerHTML = `<i class="fa-solid fa-file-lines text-[#FFCC00]"></i> ${ship.name} - HT BEYANNAMELERİ`; document.getElementById('decl-form').reset(); document.getElementById('bulk-ht-input').value = ''; renderDeclarationsList(); updateDocButtons(ship); document.getElementById('declarationsModal').classList.remove('hidden'); }
-    function renderDeclarationsList() { if (!currentDeclShipId) return; const ship = ships.find(s => s.firestoreId === currentDeclShipId); const container = document.getElementById('declarations-list'); if (!ship || !container) return; const list = ship.htDeclarations || []; if (list.length === 0) { container.innerHTML = `<div class="text-xs text-slate-400 text-center py-4">Beyanname yok.</div>`; return; } container.innerHTML = list.map(d => `<div class="flex items-center justify-between p-2 border rounded-md ${d.completed ? 'bg-emerald-50 border-emerald-200' : 'bg-white'}"><div class="flex items-center gap-2 flex-1"><input type="checkbox" class="decl-checkbox w-4 h-4 text-blue-600 rounded" value="${d.id}" checked><div><div class="font-bold text-xs">${d.no}</div>${d.note ? `<div class="text-[10px] text-slate-500">${d.note}</div>` : ''}</div></div><div class="flex gap-1"><button onclick="deleteDeclaration('${d.id}')" class="text-xs bg-red-50 text-red-700 p-1 rounded"><i class="fa-solid fa-trash"></i></button>${d.completed ? `<button onclick="toggleDeclarationStatus('${d.id}', false)" class="text-[9px] bg-emerald-100 text-emerald-800 px-2 py-1 rounded">BİTTİ</button>` : `<button onclick="toggleDeclarationStatus('${d.id}', true)" class="text-[9px] bg-yellow-100 px-2 py-1 rounded">TAMAMLA</button>`}</div></div>`).join(''); }
-    function toggleDeclarationStatus(declId, status) { const ship = ships.find(s => s.firestoreId === currentDeclShipId); db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: (ship.htDeclarations || []).map(d => d.id === declId ? { ...d, completed: status } : d) }); }
-    function deleteDeclaration(declId) { if (!confirm("Silinsin mi?")) return; const ship = ships.find(s => s.firestoreId === currentDeclShipId); db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: (ship.htDeclarations || []).filter(d => d.id !== declId) }).then(() => renderDeclarationsList()); }
-    function addBulkHT() { const text = document.getElementById('bulk-ht-input').value.trim(); if (!text) return; const lines = text.split(/[\n,\t]+/).map(l => l.trim().toUpperCase()).filter(l => l.length > 0); const ship = ships.find(s => s.firestoreId === currentDeclShipId); db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: [...(ship.htDeclarations || []), ...lines.map(l => ({ id: Date.now().toString() + Math.random(), no: l, note: 'TOPLU', completed: false }))] }).then(() => document.getElementById('bulk-ht-input').value = ''); }
-    function addDeclaration(event) { event.preventDefault(); const no = document.getElementById('decl-no').value.trim().toUpperCase(); if (!no) return; const ship = ships.find(s => s.firestoreId === currentDeclShipId); db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: [...(ship.htDeclarations || []), { id: Date.now().toString(), no: no, note: document.getElementById('decl-note').value.trim().toUpperCase(), completed: false }] }).then(() => document.getElementById('decl-form').reset()); }
+    
+    function renderDeclarationsList() { 
+        if (!currentDeclShipId) return; 
+        const ship = ships.find(s => s.firestoreId === currentDeclShipId); 
+        const container = document.getElementById('declarations-list'); 
+        if (!ship || !container) return; 
+        const list = ship.htDeclarations || []; 
+        if (list.length === 0) { 
+            container.innerHTML = `<div class="text-xs text-slate-400 text-center py-4">Beyanname yok.</div>`; 
+            return; 
+        } 
+        container.innerHTML = list.map(d => `
+        <div class="flex items-center justify-between p-2 border rounded-md ${d.completed ? 'bg-emerald-50 border-emerald-200' : 'bg-white'}">
+            <div class="flex items-center gap-2 flex-1 overflow-hidden">
+                <input type="checkbox" class="decl-checkbox w-4 h-4 text-blue-600 rounded shrink-0" value="${d.id}" checked>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-2 w-full ml-1 items-center">
+                    <div class="font-bold text-xs"><span class="text-[9px] text-slate-400 block font-normal">BEYANNAME</span>${d.no}</div>
+                    <div class="text-xs"><span class="text-[9px] text-slate-400 block font-bold text-blue-600">B/L (KONŞİMENTO) / MUAYENE</span>${d.blNo || '-'}</div>
+                    <div class="text-xs"><span class="text-[9px] text-slate-400 block">NOT / DURUM</span>${d.note || '-'}</div>
+                </div>
+            </div>
+            <div class="flex gap-1 ml-2 shrink-0">
+                <button onclick="deleteDeclaration('${d.id}')" class="text-xs bg-red-50 text-red-700 p-1.5 rounded hover:bg-red-100"><i class="fa-solid fa-trash"></i></button>
+                ${d.completed ? `<button onclick="toggleDeclarationStatus('${d.id}', false)" class="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded hover:bg-emerald-200">BİTTİ <i class="fa-solid fa-check"></i></button>` : `<button onclick="toggleDeclarationStatus('${d.id}', true)" class="text-[9px] font-bold bg-yellow-100 text-yellow-800 px-3 py-1.5 rounded hover:bg-yellow-200">TAMAMLA</button>`}
+            </div>
+        </div>`).join(''); 
+    }
+    
+    function toggleDeclarationStatus(declId, status) { 
+        const ship = ships.find(s => s.firestoreId === currentDeclShipId); 
+        db.collection('ships').doc(currentDeclShipId).update({ 
+            htDeclarations: (ship.htDeclarations || []).map(d => d.id === declId ? { ...d, completed: status } : d) 
+        }); 
+    }
+    function deleteDeclaration(declId) { if (!confirm("Silinsin mi?")) return; const ship = ships.find(s => s.firestoreId === currentDeclShipId); db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: (ship.htDeclarations || []).filter(d => d.id !== declId) }); }
+    
+    function addBulkHT() { 
+        const text = document.getElementById('bulk-ht-input').value.trim(); 
+        if (!text) return; 
+        const lines = text.split(/[\n,\t]+/).map(l => l.trim().toUpperCase()).filter(l => l.length > 0); 
+        const ship = ships.find(s => s.firestoreId === currentDeclShipId); 
+        db.collection('ships').doc(currentDeclShipId).update({ 
+            htDeclarations: [...(ship.htDeclarations || []), ...lines.map(l => ({ id: Date.now().toString() + Math.random(), no: l, blNo: '', note: 'TOPLU', completed: false }))] 
+        }).then(() => document.getElementById('bulk-ht-input').value = ''); 
+    }
+    
+    function addDeclaration(event) { 
+        event.preventDefault(); 
+        const no = document.getElementById('decl-no').value.trim().toUpperCase(); 
+        if (!no) return; 
+        const ship = ships.find(s => s.firestoreId === currentDeclShipId); 
+        db.collection('ships').doc(currentDeclShipId).update({ 
+            htDeclarations: [...(ship.htDeclarations || []), { 
+                id: Date.now().toString(), 
+                no: no, 
+                blNo: document.getElementById('decl-bl').value.trim().toUpperCase(), 
+                note: document.getElementById('decl-note').value.trim().toUpperCase(), 
+                completed: false 
+            }] 
+        }).then(() => document.getElementById('decl-form').reset()); 
+    }
 
     function exportMonthlyReport() {
         let exportShips = ships.filter(s => s.status !== 'COMPLETED');
         let reportData = [];
         exportShips.forEach(s => {
             (s.htDeclarations || []).forEach((ht, i) => {
-                reportData.push({ "GEMİ ADI": i===0?s.name:"", "VARIŞ LİMANI": i===0?s.destinationPort:"", "HT NO": ht.no, "DURUM": ht.completed?"TAMAMLANDI":"BEKLİYOR" });
+                reportData.push({ "GEMİ ADI": i===0?s.name:"", "VARIŞ LİMANI": i===0?s.destinationPort:"", "HT NO": ht.no, "B/L (KONŞİMENTO)": ht.blNo||"", "DURUM": ht.completed?"TAMAMLANDI":"BEKLİYOR" });
             });
         });
         const ws = XLSX.utils.json_to_sheet(reportData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Rapor");
