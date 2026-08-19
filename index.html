@@ -96,8 +96,7 @@
             <div class="flex gap-2 w-full xl:w-auto overflow-x-auto pb-2 xl:pb-0">
                 <button onclick="setTab('ACTIVE')" id="tab-active" class="tab-active py-2 px-4 rounded-lg font-bold text-sm shadow-sm transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-satellite-dish"></i> İTHALAT (AKTİF)</button>
                 <button onclick="setTab('DENIZYOLU')" id="tab-denizyolu" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-ship text-[#111111]"></i> İHRACAT (GÖNDERME)</button>
-                <button onclick="setTab('ARCHIVE')" id="tab-archive" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-box-archive"></i> ARŞİV KASASI</button>
-                <button onclick="setTab('DASHBOARD')" id="tab-dashboard" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-chart-pie"></i> DASHBOARD (RAPOR)</button>
+                <button onclick="setTab('ARCHIVE')" id="tab-archive" class="tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-box-archive"></i> ARŞİV VE RAPORLAR</button>
                 <button onclick="setTab('USERS')" id="tab-users" class="hidden tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap"><i class="fa-solid fa-users-cog text-blue-600"></i> KULLANICI YÖNETİMİ</button>
             </div>
             
@@ -124,59 +123,7 @@
             </div>
         </div>
 
-        <!-- 1. DASHBOARD GÖRÜNÜMÜ -->
-        <div id="view-dashboard" class="hidden p-4 md:p-6 bg-slate-50 min-h-[500px] flex flex-col gap-6">
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-l-4 border-l-slate-800 flex justify-between"><div class="font-bold"><p class="text-[11px] text-slate-400 uppercase">Toplam Kayıtlı</p><h4 id="dash-total" class="text-2xl text-[#111111]">0</h4></div><div class="bg-zinc-100 text-[#111111] p-3 rounded-lg"><i class="fa-solid fa-database"></i></div></div>
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-l-4 border-l-blue-500 flex justify-between"><div class="font-bold"><p class="text-[11px] text-slate-400 uppercase">Aktif İthalat</p><h4 id="dash-import" class="text-2xl text-blue-600">0</h4></div><div class="bg-blue-50 text-blue-600 p-3 rounded-lg"><i class="fa-solid fa-satellite-dish"></i></div></div>
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-l-4 border-l-emerald-500 flex justify-between"><div class="font-bold"><p class="text-[11px] text-slate-400 uppercase">Aktif İhracat</p><h4 id="dash-export" class="text-2xl text-emerald-600">0</h4></div><div class="bg-emerald-50 text-emerald-600 p-3 rounded-lg"><i class="fa-solid fa-ship"></i></div></div>
-                <div class="bg-white p-4 rounded-xl shadow-sm border border-l-4 border-l-purple-500 flex justify-between"><div class="font-bold"><p class="text-[11px] text-slate-400 uppercase">Arşivlenmiş İşlem</p><h4 id="dash-archive" class="text-2xl text-purple-600">0</h4></div><div class="bg-purple-50 text-purple-600 p-3 rounded-lg"><i class="fa-solid fa-box-archive"></i></div></div>
-            </div>
-
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div class="lg:col-span-2 bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                    <h3 class="font-bold text-sm text-slate-800 mb-4 border-b pb-2"><i class="fa-solid fa-chart-column text-blue-600"></i> BU AYKİ İŞ HACMİ (BEYANNAME BAZLI)</h3>
-                    <div class="relative h-64 w-full"><canvas id="volumeChart"></canvas></div>
-                </div>
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                    <h3 class="font-bold text-sm text-slate-800 mb-4 border-b pb-2"><i class="fa-solid fa-chart-pie text-emerald-600"></i> AKTİF LİMAN DAĞILIMI</h3>
-                    <div class="relative h-64 w-full flex justify-center"><canvas id="portChart"></canvas></div>
-                </div>
-            </div>
-
-            <!-- SİSTEM SAĞLIĞI VE DENETİM MERKEZİ -->
-            <div id="health-check-panel" class="hidden bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                <div class="flex justify-between items-center mb-4 border-b pb-2">
-                    <h3 class="font-bold text-sm text-slate-800"><i class="fa-solid fa-stethoscope text-red-500 mr-1"></i> SİSTEM SAĞLIĞI VE DENETİM MERKEZİ</h3>
-                    <button onclick="runDiagnostics()" class="bg-[#111111] hover:bg-black text-[#FFCC00] font-bold px-4 py-1.5 rounded-lg text-xs shadow transition-colors"><i class="fa-solid fa-arrows-rotate mr-1"></i> TESTİ BAŞLAT</button>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center gap-3">
-                        <div id="status-db-icon" class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 text-lg"><i class="fa-solid fa-database"></i></div>
-                        <div>
-                            <p class="text-[10px] text-slate-500 font-bold uppercase">Veritabanı (Firestore)</p>
-                            <p id="status-db-text" class="text-xs font-semibold text-slate-700">Bekleniyor...</p>
-                        </div>
-                    </div>
-                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center gap-3">
-                        <div id="status-storage-icon" class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 text-lg"><i class="fa-solid fa-memory"></i></div>
-                        <div>
-                            <p class="text-[10px] text-slate-500 font-bold uppercase">Tarayıcı Belleği</p>
-                            <p id="status-storage-text" class="text-xs font-semibold text-slate-700">Bekleniyor...</p>
-                        </div>
-                    </div>
-                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center gap-3 relative overflow-hidden">
-                        <div id="status-bot-icon" class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 text-lg"><i class="fa-solid fa-robot"></i></div>
-                        <div class="z-10 relative">
-                            <p class="text-[10px] text-slate-500 font-bold uppercase">Arka Plan E-Posta & AIS Robotu</p>
-                            <p id="status-bot-text" class="text-xs font-semibold text-slate-700">Bekleniyor...</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- 2. İTHALAT (AKTİF GEMİLER) GÖRÜNÜMÜ -->
+        <!-- 1. İTHALAT (AKTİF GEMİLER) GÖRÜNÜMÜ -->
         <div id="view-ithalat" class="hidden">
             <div class="bg-white p-5 shadow-sm border-b border-slate-200">
                 <h2 class="text-base font-bold mb-4 text-[#111111] flex items-center gap-2 border-b pb-2"><i class="fa-solid fa-plus-circle text-[#FFCC00]"></i> YENİ GEMİ EKLE (İTHALAT)</h2>
@@ -244,7 +191,7 @@
             </div>
         </div>
 
-        <!-- 3. İHRACAT (DENİZYOLU) GÖRÜNÜMÜ -->
+        <!-- 2. İHRACAT (DENİZYOLU) GÖRÜNÜMÜ -->
         <div id="view-denizyolu" class="hidden bg-slate-50 flex flex-col">
             <div class="bg-white p-5 shadow-sm border-b border-slate-200">
                 <h2 class="text-base font-bold mb-4 text-blue-800 flex items-center gap-2 border-b border-blue-100 pb-2"><i class="fa-solid fa-ship"></i> YENİ İHRACAT GEMİSİ OLUŞTUR</h2>
@@ -270,9 +217,29 @@
             </div>
         </div>
 
-        <!-- 4. ARŞİV KASASI -->
+        <!-- 3. ARŞİV VE RAPORLAR (DASHBOARD BİRLEŞİK) -->
         <div id="view-archive" class="hidden p-4 md:p-6 bg-slate-50 flex flex-col gap-6">
-            <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
+            
+            <!-- DASHBOARD WIDGETLARI -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-l-4 border-l-slate-800 flex justify-between"><div class="font-bold"><p class="text-[11px] text-slate-400 uppercase">Toplam Kayıtlı</p><h4 id="dash-total" class="text-2xl text-[#111111]">0</h4></div><div class="bg-zinc-100 text-[#111111] p-3 rounded-lg"><i class="fa-solid fa-database"></i></div></div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-l-4 border-l-blue-500 flex justify-between"><div class="font-bold"><p class="text-[11px] text-slate-400 uppercase">Aktif İthalat</p><h4 id="dash-import" class="text-2xl text-blue-600">0</h4></div><div class="bg-blue-50 text-blue-600 p-3 rounded-lg"><i class="fa-solid fa-satellite-dish"></i></div></div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-l-4 border-l-emerald-500 flex justify-between"><div class="font-bold"><p class="text-[11px] text-slate-400 uppercase">Aktif İhracat</p><h4 id="dash-export" class="text-2xl text-emerald-600">0</h4></div><div class="bg-emerald-50 text-emerald-600 p-3 rounded-lg"><i class="fa-solid fa-ship"></i></div></div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-l-4 border-l-purple-500 flex justify-between"><div class="font-bold"><p class="text-[11px] text-slate-400 uppercase">Arşivlenmiş İşlem</p><h4 id="dash-archive" class="text-2xl text-purple-600">0</h4></div><div class="bg-purple-50 text-purple-600 p-3 rounded-lg"><i class="fa-solid fa-box-archive"></i></div></div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-sm text-slate-800 mb-4 border-b pb-2"><i class="fa-solid fa-chart-column text-blue-600"></i> BU AYKİ İŞ HACMİ (BEYANNAME BAZLI)</h3>
+                    <div class="relative h-64 w-full"><canvas id="volumeChart"></canvas></div>
+                </div>
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                    <h3 class="font-bold text-sm text-slate-800 mb-4 border-b pb-2"><i class="fa-solid fa-chart-pie text-emerald-600"></i> AKTİF LİMAN DAĞILIMI</h3>
+                    <div class="relative h-64 w-full flex justify-center"><canvas id="portChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border overflow-hidden mt-4">
                 <div class="p-3 bg-slate-100 border-b flex justify-between items-center">
                     <h3 class="font-bold text-slate-700 text-sm"><i class="fa-solid fa-box-archive text-slate-500 mr-2"></i> İTHALAT (KARŞILAMA) ARŞİVİ</h3>
                 </div>
@@ -295,9 +262,40 @@
                     </table>
                 </div>
             </div>
+
+            <!-- SİSTEM SAĞLIĞI VE DENETİM MERKEZİ -->
+            <div id="health-check-panel" class="hidden bg-white p-5 rounded-xl shadow-sm border border-slate-200 mt-2">
+                <div class="flex justify-between items-center mb-4 border-b pb-2">
+                    <h3 class="font-bold text-sm text-slate-800"><i class="fa-solid fa-stethoscope text-red-500 mr-1"></i> SİSTEM SAĞLIĞI VE DENETİM MERKEZİ</h3>
+                    <button onclick="runDiagnostics()" class="bg-[#111111] hover:bg-black text-[#FFCC00] font-bold px-4 py-1.5 rounded-lg text-xs shadow transition-colors"><i class="fa-solid fa-arrows-rotate mr-1"></i> TESTİ BAŞLAT</button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center gap-3">
+                        <div id="status-db-icon" class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 text-lg"><i class="fa-solid fa-database"></i></div>
+                        <div>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase">Veritabanı (Firestore)</p>
+                            <p id="status-db-text" class="text-xs font-semibold text-slate-700">Bekleniyor...</p>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center gap-3">
+                        <div id="status-storage-icon" class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 text-lg"><i class="fa-solid fa-memory"></i></div>
+                        <div>
+                            <p class="text-[10px] text-slate-500 font-bold uppercase">Tarayıcı Belleği</p>
+                            <p id="status-storage-text" class="text-xs font-semibold text-slate-700">Bekleniyor...</p>
+                        </div>
+                    </div>
+                    <div class="bg-slate-50 p-3 rounded-lg border border-slate-200 flex items-center gap-3 relative overflow-hidden">
+                        <div id="status-bot-icon" class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 text-lg"><i class="fa-solid fa-robot"></i></div>
+                        <div class="z-10 relative">
+                            <p class="text-[10px] text-slate-500 font-bold uppercase">Arka Plan E-Posta & AIS Robotu</p>
+                            <p id="status-bot-text" class="text-xs font-semibold text-slate-700">Bekleniyor...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- 5. KULLANICI YÖNETİMİ -->
+        <!-- 4. KULLANICI YÖNETİMİ -->
         <div id="view-users" class="hidden p-4 md:p-6 bg-slate-50 min-h-[500px]">
             <div class="bg-white rounded-xl shadow-sm border overflow-hidden max-w-4xl mx-auto">
                 <div class="p-4 bg-slate-800 border-b flex justify-between items-center">
@@ -712,19 +710,32 @@
         const list = ship.declarations || [];
         if (list.length === 0) { container.innerHTML = `<div class="text-xs text-slate-400 text-center py-6">Beyanname yok.</div>`; return; }
         container.innerHTML = list.map(d => `
-            <div class="flex items-center justify-between p-3 border rounded-lg bg-white">
-                <div class="flex items-center gap-3 flex-1 overflow-hidden mr-2">
+            <div class="flex flex-col sm:flex-row items-center justify-between p-3 border rounded-lg ${d.ambarCikisi ? 'bg-emerald-50 border-emerald-200' : 'bg-white'} mb-2">
+                <div class="flex items-center gap-3 flex-1 w-full overflow-hidden mr-2">
                     <input type="checkbox" class="dy-decl-checkbox w-4 h-4 text-blue-600 rounded shrink-0" value="${d.id}" checked>
-                    <div class="flex-1 overflow-hidden grid grid-cols-2 md:grid-cols-4 gap-2 text-xs">
-                        <div><b>Talimat:</b> ${d.talimat}</div><div><b>IM:</b> ${d.imNo}</div><div><b>HT:</b> ${d.htNo || 'BEKLİYOR'}</div><div><b>Not:</b> ${d.note || '-'}</div>
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs flex-1">
+                        <div><span class="text-[9px] text-slate-400 block font-normal">TALİMAT</span><b>${d.talimat}</b></div>
+                        <div><span class="text-[9px] text-slate-400 block font-bold text-blue-600">IM NO</span>${d.imNo}</div>
+                        <div><span class="text-[9px] text-slate-400 block font-normal">HT NO</span>${d.htNo || '-'}</div>
+                        <div><span class="text-[9px] text-slate-400 block font-normal">NOT / DURUM</span>${d.note || '-'}</div>
                     </div>
                 </div>
-                <div class="flex gap-1">
-                    <button onclick="editDYDeclaration('${d.id}')" class="text-xs bg-blue-50 text-blue-700 px-2 py-1 rounded">DÜZENLE</button>
-                    <button onclick="deleteDYDeclaration('${d.id}')" class="text-xs bg-red-50 text-red-700 w-7 h-7 rounded"><i class="fa-solid fa-trash"></i></button>
+                <div class="flex flex-wrap gap-1 mt-2 sm:mt-0 shrink-0 w-full sm:w-auto justify-end">
+                    ${d.ambarCikisi ? 
+                        `<button onclick="toggleDYAmbar('${d.id}', false)" class="text-[10px] font-bold bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded hover:bg-emerald-200">AMBAR ALINDI <i class="fa-solid fa-check"></i></button>` : 
+                        `<button onclick="toggleDYAmbar('${d.id}', true)" class="text-[10px] font-bold bg-orange-100 text-orange-800 px-3 py-1.5 rounded hover:bg-orange-200">AMBAR BEKLİYOR</button>`
+                    }
+                    <button onclick="editDYDeclaration('${d.id}')" class="text-xs bg-blue-50 text-blue-700 px-2.5 py-1.5 rounded hover:bg-blue-100"><i class="fa-solid fa-pen"></i></button>
+                    <button onclick="deleteDYDeclaration('${d.id}')" class="text-xs bg-red-50 text-red-700 w-8 h-8 rounded flex items-center justify-center hover:bg-red-100"><i class="fa-solid fa-trash"></i></button>
                 </div>
             </div>
         `).join('');
+    }
+
+    function toggleDYAmbar(declId, status) {
+        const ship = denizyoluList.find(s => s.firestoreId === currentDYShipId);
+        const updated = (ship.declarations || []).map(d => d.id === declId ? { ...d, ambarCikisi: status } : d);
+        db.collection('denizyolu').doc(currentDYShipId).update({ declarations: updated });
     }
 
     function toggleAllDYCheckboxes(state) { document.querySelectorAll('.dy-decl-checkbox').forEach(cb => cb.checked = state); }
@@ -734,7 +745,7 @@
         const lines = document.getElementById('dy-bulk-input').value.trim().split(/[\n,\t]+/).map(l => l.trim().toUpperCase()).filter(l => l.length > 0);
         if(lines.length === 0) return;
         const ship = denizyoluList.find(s => s.firestoreId === currentDYShipId);
-        const newDecls = lines.map(line => ({ id: Date.now().toString() + Math.random().toString(36).substr(2, 5), talimat: 'TOPLU GİRİŞ', imNo: line, htNo: '', note: '' }));
+        const newDecls = lines.map(line => ({ id: Date.now().toString() + Math.random().toString(36).substr(2, 5), talimat: 'TOPLU GİRİŞ', imNo: line, htNo: '', note: '', ambarCikisi: false }));
         db.collection('denizyolu').doc(currentDYShipId).update({ declarations: [...(ship.declarations || []), ...newDecls] }).then(() => document.getElementById('dy-bulk-input').value = '');
     }
 
@@ -744,7 +755,7 @@
         const newDecl = { 
             id: Date.now().toString() + Math.random().toString(36).substr(2, 5), 
             talimat: document.getElementById('dy-decl-talimat').value.trim().toUpperCase(), imNo: document.getElementById('dy-decl-im').value.trim().toUpperCase(), 
-            htNo: document.getElementById('dy-decl-ht').value.trim().toUpperCase(), note: document.getElementById('dy-decl-note').value.trim().toUpperCase()
+            htNo: document.getElementById('dy-decl-ht').value.trim().toUpperCase(), note: document.getElementById('dy-decl-note').value.trim().toUpperCase(), ambarCikisi: false
         };
         db.collection('denizyolu').doc(currentDYShipId).update({ declarations: [...(ship.declarations || []), newDecl] }).then(() => { document.getElementById('dy-decl-form').reset(); });
     }
@@ -758,7 +769,7 @@
     function editDYDeclaration(declId) {
         const ship = denizyoluList.find(s => s.firestoreId === currentDYShipId); const decl = (ship.declarations || []).find(d => d.id === declId); if (!decl) return;
         const newHT = prompt(`[${decl.imNo}] için HT Numarası:`, decl.htNo || ""); if (newHT === null) return; 
-        const newNote = prompt(`Not:`, decl.note || ""); if (newNote === null) return; 
+        const newNote = prompt(`Not / Durum (Muayene vb.):`, decl.note || ""); if (newNote === null) return; 
         const updated = (ship.declarations || []).map(d => d.id === declId ? { ...d, htNo: newHT.trim().toUpperCase(), note: newNote.trim().toUpperCase() } : d);
         db.collection('denizyolu').doc(currentDYShipId).update({ declarations: updated });
     }
@@ -873,19 +884,20 @@
 
         db.collection('ships').where('userId', '==', currentUser.uid).onSnapshot(snap => {
           ships = []; snap.forEach(doc => ships.push({ firestoreId: doc.id, ...doc.data() })); 
-          if(currentViewTab === 'ACTIVE') renderShips(); if(currentViewTab === 'ARCHIVE') renderArchive(); if(currentViewTab === 'DASHBOARD') renderDashboard();
+          if(currentViewTab === 'ACTIVE') renderShips(); 
+          if(currentViewTab === 'ARCHIVE') { renderDashboard(); renderArchive(); }
           if(!document.getElementById('declarationsModal').classList.contains('hidden') && currentDeclShipId) renderDeclarationsList();
           updateBell();
         });
 
         db.collection('denizyolu').where('userId', '==', currentUser.uid).onSnapshot(snap => {
           denizyoluList = []; snap.forEach(doc => denizyoluList.push({ firestoreId: doc.id, ...doc.data() })); 
-          if(currentViewTab === 'DENIZYOLU') renderDenizyolu(); if(currentViewTab === 'ARCHIVE') renderArchive(); if(currentViewTab === 'DASHBOARD') renderDashboard();
+          if(currentViewTab === 'DENIZYOLU') renderDenizyolu(); 
+          if(currentViewTab === 'ARCHIVE') { renderDashboard(); renderArchive(); }
           if(!document.getElementById('dyDeclarationsModal').classList.contains('hidden') && currentDYShipId) renderDYDeclarationsList();
           updateBell();
         });
 
-        // İLK KARŞILAMA EKRANI İTHALAT (AKTİF) OLARAK GÜNCELLENDİ
         setTab('ACTIVE');
     }
 
@@ -908,7 +920,7 @@
 
     function setTab(tabName) {
         currentViewTab = tabName;
-        ['tab-dashboard', 'tab-active', 'tab-archive', 'tab-denizyolu', 'tab-users'].forEach(id => { 
+        ['tab-active', 'tab-archive', 'tab-denizyolu', 'tab-users'].forEach(id => { 
             const el = document.getElementById(id);
             if(el) el.className = "tab-inactive py-2 px-4 rounded-lg font-bold text-sm shadow-sm border transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap" + (id==='tab-users' && userRole!=='admin' ? ' hidden' : ''); 
         });
@@ -916,17 +928,16 @@
         let activeBtnId = 'tab-' + tabName.toLowerCase(); if(tabName === 'ACTIVE') activeBtnId = 'tab-active';
         if(document.getElementById(activeBtnId)) document.getElementById(activeBtnId).className = "tab-active py-2 px-4 rounded-lg font-bold text-sm shadow-sm transition-all uppercase flex items-center justify-center gap-2 cursor-pointer whitespace-nowrap";
 
-        ['view-dashboard', 'view-ithalat', 'view-denizyolu', 'view-archive', 'view-users'].forEach(id => document.getElementById(id).classList.add('hidden'));
+        ['view-ithalat', 'view-denizyolu', 'view-archive', 'view-users'].forEach(id => document.getElementById(id).classList.add('hidden'));
         document.getElementById('filter-container').style.display = 'none'; document.getElementById('action-buttons-container').style.display = 'none';
 
-        if(tabName === 'DASHBOARD') { document.getElementById('view-dashboard').classList.remove('hidden'); renderDashboard();
-        } else if(tabName === 'ACTIVE') {
+        if(tabName === 'ACTIVE') {
             document.getElementById('view-ithalat').classList.remove('hidden'); document.getElementById('filter-container').style.display = 'flex'; document.getElementById('filterArchiveDate').classList.add('hidden'); document.getElementById('view-mode-toggles').style.display = 'flex'; document.getElementById('filterPort').style.display = 'block'; document.getElementById('action-buttons-container').style.display = 'flex';
             setViewMode(currentDisplayMode); renderShips();
         } else if(tabName === 'DENIZYOLU') { document.getElementById('view-denizyolu').classList.remove('hidden'); renderDenizyolu();
         } else if(tabName === 'ARCHIVE') {
             document.getElementById('view-archive').classList.remove('hidden'); document.getElementById('filter-container').style.display = 'flex'; document.getElementById('filterArchiveDate').classList.remove('hidden'); document.getElementById('view-mode-toggles').style.display = 'none'; document.getElementById('filterPort').style.display = 'none';
-            renderArchive();
+            renderDashboard(); renderArchive();
         } else if(tabName === 'USERS') { document.getElementById('view-users').classList.remove('hidden'); renderUsers(); }
         updateBell();
     }
@@ -957,7 +968,7 @@
     function deleteShip(id) { if(confirm("Silinsin mi?")) db.collection('ships').doc(id).delete(); }
     function openRadar(imo) { if(!imo || imo === '-') { alert("IMO yok"); return; } window.open(`https://www.vesselfinder.com/vessels/details/${imo}`, '_blank'); }
 
-    function openDeclarationsModal(shipId) { currentDeclShipId = shipId; const ship = ships.find(s => s.firestoreId === shipId); if (!ship) return; document.getElementById('decl-modal-title').innerHTML = `<i class="fa-solid fa-file-lines text-[#FFCC00]"></i> ${ship.name} - HT BEYANNAMELERİ`; document.getElementById('decl-form').reset(); document.getElementById('bulk-ht-input').value = ''; renderDeclarationsList(); updateDocButtons(ship); document.getElementById('declarationsModal').classList.remove('hidden'); }
+    function openDeclarationsModal(shipId) { currentDeclShipId = shipId; const ship = ships.find(s => s.firestoreId === shipId); if (!ship) return; document.getElementById('decl-modal-title').innerHTML = `<i class="fa-solid fa-file-lines text-[#FFCC00]"></i> ${ship.name} - HT BEYANNAMELERİ`; document.getElementById('decl-form').reset(); document.getElementById('bulk-ht-input').value = ''; renderDeclarationsList(); document.getElementById('declarationsModal').classList.remove('hidden'); }
     
     function renderDeclarationsList() { 
         if (!currentDeclShipId) return; 
@@ -976,14 +987,27 @@
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-2 w-full ml-1 items-center">
                     <div class="font-bold text-xs"><span class="text-[9px] text-slate-400 block font-normal">BEYANNAME</span>${d.no}</div>
                     <div class="text-xs"><span class="text-[9px] text-slate-400 block font-bold text-blue-600">B/L (KONŞİMENTO) / MUAYENE</span>${d.blNo || '-'}</div>
-                    <div class="text-xs"><span class="text-[9px] text-slate-400 block">NOT / DURUM</span>${d.note || '-'}</div>
+                    <div class="text-xs"><span class="text-[9px] text-slate-400 block font-normal">NOT / DURUM</span>${d.note || '-'}</div>
                 </div>
             </div>
             <div class="flex gap-1 ml-2 shrink-0">
+                <button onclick="editDeclaration('${d.id}')" class="text-xs bg-blue-50 text-blue-700 p-1.5 rounded hover:bg-blue-100"><i class="fa-solid fa-pen"></i></button>
                 <button onclick="deleteDeclaration('${d.id}')" class="text-xs bg-red-50 text-red-700 p-1.5 rounded hover:bg-red-100"><i class="fa-solid fa-trash"></i></button>
                 ${d.completed ? `<button onclick="toggleDeclarationStatus('${d.id}', false)" class="text-[9px] font-bold bg-emerald-100 text-emerald-800 px-3 py-1.5 rounded hover:bg-emerald-200">BİTTİ <i class="fa-solid fa-check"></i></button>` : `<button onclick="toggleDeclarationStatus('${d.id}', true)" class="text-[9px] font-bold bg-yellow-100 text-yellow-800 px-3 py-1.5 rounded hover:bg-yellow-200">TAMAMLA</button>`}
             </div>
         </div>`).join(''); 
+    }
+
+    function editDeclaration(declId) {
+        const ship = ships.find(s => s.firestoreId === currentDeclShipId); 
+        const decl = (ship.htDeclarations || []).find(d => d.id === declId); 
+        if (!decl) return;
+        const newBL = prompt(`[${decl.no}] B/L (Konşimento) / Muayene:`, decl.blNo || ""); 
+        if (newBL === null) return; 
+        const newNote = prompt(`Not / Durum:`, decl.note || ""); 
+        if (newNote === null) return; 
+        const updated = (ship.htDeclarations || []).map(d => d.id === declId ? { ...d, blNo: newBL.trim().toUpperCase(), note: newNote.trim().toUpperCase() } : d);
+        db.collection('ships').doc(currentDeclShipId).update({ htDeclarations: updated });
     }
     
     function toggleDeclarationStatus(declId, status) { 
@@ -1046,46 +1070,6 @@
             saveAs(doc.getZip().generate({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" }), `${docType}_${ship.name}.docx`);
             db.collection('ships').doc(currentDeclShipId).update(docType === 'AMBAR' ? { docAmbar: true } : { docTescil: true });
         } catch(e) { alert("Evrak hatası: " + e.message); }
-    }
-    function updateDocButtons(ship) {}
-
-    function renderShips() {
-      if(currentViewTab !== 'ACTIVE') return;
-      const tbody = document.getElementById('ship-list-body'); const kbNormal = document.getElementById('kb-normal'); const kb12h = document.getElementById('kb-12h'); const kb6h = document.getElementById('kb-6h'); const kbArrived = document.getElementById('kb-arrived');
-      kbNormal.innerHTML = ''; kb12h.innerHTML = ''; kb6h.innerHTML = ''; kbArrived.innerHTML = '';
-      let cN = 0, c12 = 0, c6 = 0, cA = 0;
-      const filterPort = document.getElementById('filterPort').value; const searchQuery = document.getElementById('searchInput').value.trim().toUpperCase();
-      let filtered = ships.filter(s => s.status !== 'COMPLETED');
-      if(filterPort !== 'ALL') filtered = filtered.filter(s => s.destinationPort === filterPort);
-      if(searchQuery) filtered = filtered.filter(s => (s.name||"").toUpperCase().includes(searchQuery) || (s.imo||"").toUpperCase().includes(searchQuery));
-
-      tbody.innerHTML = '';
-      filtered.sort((a, b) => new Date(a.eta) - new Date(b.eta)).forEach(ship => {
-        const diffHours = (new Date(ship.eta) - new Date()) / 3600000;
-        let bClass = 'bg-blue-100 text-blue-700', bText = 'SEYİRDE'; let targetCol = kbNormal;
-        if (diffHours <= 0) { bClass = 'bg-slate-800 text-white'; bText = 'YANAŞTI'; targetCol = kbArrived; cA++; }
-        else if (diffHours <= 6) { bClass = 'bg-red-100 text-red-700'; bText = '6 SAAT KALA'; targetCol = kb6h; c6++; }
-        else if (diffHours <= 12) { bClass = 'bg-orange-100 text-orange-700'; bText = '12 SAAT KALA'; targetCol = kb12h; c12++; }
-        else { cN++; }
-
-        tbody.innerHTML += `
-        <tr class="border-b hover:bg-zinc-50">
-            <td class="p-3"><div class="font-bold text-sm">${ship.name}</div><div class="text-[10px] text-gray-500">IMO: ${ship.imo || '-'}</div></td>
-            <td class="p-3 text-xs"><b>${ship.originPort || '-'}</b> &rarr; ${ship.destinationPort}<br><span class="bg-[#FFCC00] font-bold text-[10px] px-1 rounded">${ship.note || '-'}</span></td>
-            <td class="p-3 text-xs">${new Date(ship.eta).toLocaleString('tr-TR')}</td>
-            <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${bClass}">${bText}</span></td>
-            <td class="p-3 text-right whitespace-nowrap">
-                <button onclick="openRadar('${ship.imo}')" class="text-blue-600 bg-blue-50 w-8 h-8 rounded border"><i class="fa-solid fa-location-dot"></i></button>
-                <button onclick="openDeclarationsModal('${ship.firestoreId}')" class="text-purple-600 bg-purple-50 px-2 py-1 rounded border text-xs font-bold mx-1">BEYANNAME</button>
-                <button onclick="openEditModal('${ship.firestoreId}')" class="text-yellow-700 bg-yellow-50 w-8 h-8 rounded border"><i class="fa-solid fa-pen"></i></button>
-                <button onclick="completeShip('${ship.firestoreId}')" class="text-emerald-600 bg-emerald-50 w-8 h-8 rounded border mx-1"><i class="fa-solid fa-check"></i></button>
-                <button onclick="deleteShip('${ship.firestoreId}')" class="text-red-600 bg-red-50 w-8 h-8 rounded border"><i class="fa-solid fa-trash"></i></button>
-            </td>
-        </tr>`;
-
-        targetCol.innerHTML += `<div class="bg-white p-3 rounded-lg shadow-sm border text-xs mb-2"><b>${ship.name}</b><br>${ship.destinationPort}<br>${new Date(ship.eta).toLocaleString('tr-TR')}</div>`;
-      });
-      document.getElementById('kb-count-normal').innerText = cN; document.getElementById('kb-count-12h').innerText = c12; document.getElementById('kb-count-6h').innerText = c6; document.getElementById('kb-count-arrived').innerText = cA;
     }
 
     function handleDailyExcel(event) {
