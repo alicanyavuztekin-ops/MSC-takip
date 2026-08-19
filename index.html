@@ -436,9 +436,10 @@
       </div>
   </div>
 
+  <!-- SİLİNMEYEN KALICI E-POSTA REHBERİ MODALI -->
   <div id="emailManagerModal" class="fixed inset-0 bg-slate-900/80 hidden flex items-center justify-center p-4 z-50 backdrop-blur-sm">
       <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl relative">
-          <h3 class="font-bold text-lg text-slate-800 border-b pb-3"><i class="fa-solid fa-address-book text-blue-600"></i> E-POSTA REHBERİ</h3>
+          <h3 class="font-bold text-lg text-slate-800 border-b pb-3"><i class="fa-solid fa-address-book text-blue-600"></i> E-POSTA REHBERİ (BULUT KAYITLI)</h3>
           <button onclick="document.getElementById('emailManagerModal').classList.add('hidden')" class="absolute top-4 right-6 text-slate-400 hover:text-red-600 text-2xl font-bold cursor-pointer">&times;</button>
           <form onsubmit="addSavedEmail(event)" class="flex gap-2">
               <input type="email" id="newPresetEmail" required placeholder="Yeni E-Posta Adresi Ekle" class="flex-1 text-sm p-2.5 border rounded-lg focus:outline-none focus:border-[#111111]">
@@ -474,6 +475,11 @@
     let currentDYShipId = null; 
     let portChartInstance = null;
     let volumeChartInstance = null;
+
+    // YENİ: FIREBASE BAĞLANTILI KALICI E-POSTA DEĞİŞKENLERİ
+    let savedEmailsList = ["gumruk.izmir@medlog.com.tr"];
+    let defaultEmailStr = "";
+    let isEmailInitialized = false;
 
     function getSiteUrl() { return window.location.origin + window.location.pathname; }
     function getTrDateStr() { const d = new Date(); return d.toLocaleDateString('tr-TR') + " " + d.getHours().toString().padStart(2, '0') + ":" + d.getMinutes().toString().padStart(2, '0'); }
@@ -605,22 +611,33 @@
         });
     }
 
-    const DEFAULT_PRESET_EMAILS = ["gumruk.izmir@medlog.com.tr"];
-    function getSavedEmails() { try { const raw = localStorage.getItem('msc_saved_emails'); if (raw) return JSON.parse(raw); } catch(e){} return [...DEFAULT_PRESET_EMAILS]; }
-    function saveSavedEmails(emails) { localStorage.setItem('msc_saved_emails', JSON.stringify(emails)); renderEmailChips(); renderSavedEmailsList(); }
-    function getDefaultEmailString() { return localStorage.getItem('msc_default_email_str') || ""; }
-    function saveAsDefaultEmails() { localStorage.setItem('msc_default_email_str', document.getElementById('notificationEmail').value.trim()); alert("✅ Varsayılan mailler kaydedildi!"); document.getElementById('emailManagerModal').classList.add('hidden'); }
-    function initEmailPresets() { const emailInput = document.getElementById('notificationEmail'); if (emailInput) emailInput.value = getDefaultEmailString(); renderEmailChips(); }
+    // YENİ: FİREBASE BAĞLANTILI E-POSTA YÖNETİMİ
+    function saveAsDefaultEmails() {
+        const val = document.getElementById('notificationEmail').value.trim();
+        db.collection('user_settings').doc(currentUser.uid).set({ defaultEmailStr: val }, { merge: true }).then(() => {
+            alert("✅ Varsayılan mailler buluta kaydedildi!");
+            document.getElementById('emailManagerModal').classList.add('hidden');
+        });
+    }
+
+    function initEmailPresets() {
+        const emailInput = document.getElementById('notificationEmail');
+        if (emailInput) emailInput.value = defaultEmailStr;
+        renderEmailChips();
+    }
+
     function renderEmailChips() {
         const container = document.getElementById('quickEmailChips'); if (!container) return;
         const currentEmails = (document.getElementById('notificationEmail') ? document.getElementById('notificationEmail').value : '').toLowerCase().split(',').map(e => e.trim()).filter(e => e.length > 0);
-        container.innerHTML = getSavedEmails().map(email => {
+        container.innerHTML = savedEmailsList.map(email => {
             const isSelected = currentEmails.includes(email.toLowerCase());
             const shortName = email.split('@')[0];
             return isSelected ? `<button type="button" onclick="toggleEmailChip('${email}')" class="bg-[#111111] text-[#FFCC00] text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1"><i class="fa-solid fa-check"></i> ${shortName}</button>` : `<button type="button" onclick="toggleEmailChip('${email}')" class="bg-white text-slate-600 border text-[10px] px-2.5 py-1 rounded-full flex items-center gap-1"><i class="fa-solid fa-plus text-slate-400"></i> ${shortName}</button>`;
         }).join('');
     }
+
     function updateEmailChipsState() { renderEmailChips(); }
+
     function toggleEmailChip(emailToToggle) {
         const emailInput = document.getElementById('notificationEmail');
         let list = emailInput.value.split(',').map(e => e.trim()).filter(e => e.length > 0);
@@ -628,12 +645,28 @@
         if (idx !== -1) list.splice(idx, 1); else list.push(emailToToggle);
         emailInput.value = list.join(', '); renderEmailChips();
     }
+
     function openEmailManagerModal() { renderSavedEmailsList(); document.getElementById('emailManagerModal').classList.remove('hidden'); }
+
     function renderSavedEmailsList() {
-        document.getElementById('savedEmailsList').innerHTML = getSavedEmails().map((em, idx) => `<div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg text-xs mb-2"><span>${em}</span><button onclick="deleteSavedEmail(${idx})" class="text-red-500 font-bold"><i class="fa-solid fa-trash"></i></button></div>`).join('') || '<div class="text-xs text-slate-400 text-center">Kayıtlı yok.</div>';
+        document.getElementById('savedEmailsList').innerHTML = savedEmailsList.map((em, idx) => `<div class="flex items-center justify-between p-2.5 bg-slate-50 rounded-lg text-xs mb-2"><span>${em}</span><button onclick="deleteSavedEmail(${idx})" class="text-red-500 font-bold"><i class="fa-solid fa-trash"></i></button></div>`).join('') || '<div class="text-xs text-slate-400 text-center">Kayıtlı yok.</div>';
     }
-    function addSavedEmail(e) { e.preventDefault(); const em = document.getElementById('newPresetEmail').value.trim().toLowerCase(); const saved = getSavedEmails(); if(!saved.map(s=>s.toLowerCase()).includes(em)){ saved.push(em); saveSavedEmails(saved); document.getElementById('newPresetEmail').value=''; } }
-    function deleteSavedEmail(idx) { const saved = getSavedEmails(); saved.splice(idx, 1); saveSavedEmails(saved); }
+
+    function addSavedEmail(e) {
+        e.preventDefault();
+        const em = document.getElementById('newPresetEmail').value.trim().toLowerCase();
+        if(!savedEmailsList.map(s=>s.toLowerCase()).includes(em)){
+            const newList = [...savedEmailsList, em];
+            db.collection('user_settings').doc(currentUser.uid).set({ emails: newList }, { merge: true });
+            document.getElementById('newPresetEmail').value='';
+        }
+    }
+
+    function deleteSavedEmail(idx) {
+        const newList = [...savedEmailsList];
+        newList.splice(idx, 1);
+        db.collection('user_settings').doc(currentUser.uid).set({ emails: newList }, { merge: true });
+    }
 
     function populateArchiveMonths() {
         const select = document.getElementById('filterArchiveDate');
@@ -880,7 +913,26 @@
         if(role === 'admin') document.getElementById('tab-users').classList.remove('hidden');
         document.getElementById('health-check-panel').classList.remove('hidden');
 
-        initEmailPresets(); populateArchiveMonths();
+        populateArchiveMonths();
+
+        // YENİ: Firebase Ayar Dinleyicisi (E-postalar Artık Silinmez!)
+        db.collection('user_settings').doc(currentUser.uid).onSnapshot(doc => {
+            if(doc.exists) {
+                if(doc.data().emails) savedEmailsList = doc.data().emails;
+                if(doc.data().defaultEmailStr !== undefined) defaultEmailStr = doc.data().defaultEmailStr;
+            } else {
+                savedEmailsList = ["gumruk.izmir@medlog.com.tr"];
+                defaultEmailStr = "";
+            }
+
+            if(!isEmailInitialized) {
+                initEmailPresets();
+                isEmailInitialized = true;
+            }
+            renderEmailChips();
+            const modal = document.getElementById('emailManagerModal');
+            if(modal && !modal.classList.contains('hidden')) renderSavedEmailsList();
+        });
 
         db.collection('ships').where('userId', '==', currentUser.uid).onSnapshot(snap => {
           ships = []; snap.forEach(doc => ships.push({ firestoreId: doc.id, ...doc.data() })); 
