@@ -1084,6 +1084,47 @@
         };
         reader.readAsArrayBuffer(file);
     }
+
+    // YANLIŞLIKLA SİLİNEN VE EKRANA GEMİLERİ ÇİZEN ANA FONKSİYONUMUZ (EKSİKSİZ GERİ EKLENDİ)
+    function renderShips() {
+      if(currentViewTab !== 'ACTIVE') return;
+      const tbody = document.getElementById('ship-list-body'); const kbNormal = document.getElementById('kb-normal'); const kb12h = document.getElementById('kb-12h'); const kb6h = document.getElementById('kb-6h'); const kbArrived = document.getElementById('kb-arrived');
+      if(!tbody) return;
+      kbNormal.innerHTML = ''; kb12h.innerHTML = ''; kb6h.innerHTML = ''; kbArrived.innerHTML = '';
+      let cN = 0, c12 = 0, c6 = 0, cA = 0;
+      const filterPort = document.getElementById('filterPort').value; const searchQuery = document.getElementById('searchInput').value.trim().toUpperCase();
+      let filtered = ships.filter(s => s.status !== 'COMPLETED');
+      if(filterPort !== 'ALL') filtered = filtered.filter(s => s.destinationPort === filterPort);
+      if(searchQuery) filtered = filtered.filter(s => (s.name||"").toUpperCase().includes(searchQuery) || (s.imo||"").toUpperCase().includes(searchQuery));
+
+      tbody.innerHTML = '';
+      filtered.sort((a, b) => new Date(a.eta) - new Date(b.eta)).forEach(ship => {
+        const diffHours = (new Date(ship.eta) - new Date()) / 3600000;
+        let bClass = 'bg-blue-100 text-blue-700', bText = 'SEYİRDE'; let targetCol = kbNormal;
+        if (diffHours <= 0) { bClass = 'bg-slate-800 text-white'; bText = 'YANAŞTI'; targetCol = kbArrived; cA++; }
+        else if (diffHours <= 6) { bClass = 'bg-red-100 text-red-700'; bText = '6 SAAT KALA'; targetCol = kb6h; c6++; }
+        else if (diffHours <= 12) { bClass = 'bg-orange-100 text-orange-700'; bText = '12 SAAT KALA'; targetCol = kb12h; c12++; }
+        else { cN++; }
+
+        tbody.innerHTML += `
+        <tr class="border-b hover:bg-zinc-50">
+            <td class="p-3"><div class="font-bold text-sm">${ship.name}</div><div class="text-[10px] text-gray-500">IMO: ${ship.imo || '-'}</div></td>
+            <td class="p-3 text-xs"><b>${ship.originPort || '-'}</b> &rarr; ${ship.destinationPort}<br><span class="bg-[#FFCC00] font-bold text-[10px] px-1 rounded">${ship.note || '-'}</span></td>
+            <td class="p-3 text-xs">${new Date(ship.eta).toLocaleString('tr-TR')}</td>
+            <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${bClass}">${bText}</span></td>
+            <td class="p-3 text-right whitespace-nowrap">
+                <button onclick="openRadar('${ship.imo}')" class="text-blue-600 bg-blue-50 w-8 h-8 rounded border"><i class="fa-solid fa-location-dot"></i></button>
+                <button onclick="openDeclarationsModal('${ship.firestoreId}')" class="text-purple-600 bg-purple-50 px-2 py-1 rounded border text-xs font-bold mx-1">BEYANNAME</button>
+                <button onclick="openEditModal('${ship.firestoreId}')" class="text-yellow-700 bg-yellow-50 w-8 h-8 rounded border"><i class="fa-solid fa-pen"></i></button>
+                <button onclick="completeShip('${ship.firestoreId}')" class="text-emerald-600 bg-emerald-50 w-8 h-8 rounded border mx-1"><i class="fa-solid fa-check"></i></button>
+                <button onclick="deleteShip('${ship.firestoreId}')" class="text-red-600 bg-red-50 w-8 h-8 rounded border"><i class="fa-solid fa-trash"></i></button>
+            </td>
+        </tr>`;
+
+        targetCol.innerHTML += `<div class="bg-white p-3 rounded-lg shadow-sm border text-xs mb-2"><b>${ship.name}</b><br>${ship.destinationPort}<br>${new Date(ship.eta).toLocaleString('tr-TR')}</div>`;
+      });
+      document.getElementById('kb-count-normal').innerText = cN; document.getElementById('kb-count-12h').innerText = c12; document.getElementById('kb-count-6h').innerText = c6; document.getElementById('kb-count-arrived').innerText = cA;
+    }
   </script>
 </body>
 </html>
