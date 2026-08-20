@@ -476,7 +476,6 @@
     let portChartInstance = null;
     let volumeChartInstance = null;
 
-    // YENİ: FIREBASE BAĞLANTILI KALICI E-POSTA DEĞİŞKENLERİ
     let savedEmailsList = ["gumruk.izmir@medlog.com.tr"];
     let defaultEmailStr = "";
     let isEmailInitialized = false;
@@ -611,7 +610,6 @@
         });
     }
 
-    // YENİ: FİREBASE BAĞLANTILI E-POSTA YÖNETİMİ
     function saveAsDefaultEmails() {
         const val = document.getElementById('notificationEmail').value.trim();
         db.collection('user_settings').doc(currentUser.uid).set({ defaultEmailStr: val }, { merge: true }).then(() => {
@@ -915,7 +913,6 @@
 
         populateArchiveMonths();
 
-        // YENİ: Firebase Ayar Dinleyicisi (E-postalar Artık Silinmez!)
         db.collection('user_settings').doc(currentUser.uid).onSnapshot(doc => {
             if(doc.exists) {
                 if(doc.data().emails) savedEmailsList = doc.data().emails;
@@ -1096,17 +1093,89 @@
         }).then(() => document.getElementById('decl-form').reset()); 
     }
 
+    // YENİDEN YAZILAN "TAMAMLANANLAR" RAPOR ALMA FONKSİYONU
     function exportMonthlyReport() {
-        let exportShips = ships.filter(s => s.status !== 'COMPLETED');
+        let isArchive = currentViewTab === 'ARCHIVE';
         let reportData = [];
-        exportShips.forEach(s => {
-            (s.htDeclarations || []).forEach((ht, i) => {
-                reportData.push({ "GEMİ ADI": i===0?s.name:"", "VARIŞ LİMANI": i===0?s.destinationPort:"", "HT NO": ht.no, "B/L (KONŞİMENTO)": ht.blNo||"", "DURUM": ht.completed?"TAMAMLANDI":"BEKLİYOR" });
+        
+        // Hangi verileri alacağımızı belirliyoruz (Arşiv sekmesindeyse tamamlananlar, değilse aktifler)
+        let fShips = isArchive ? ships.filter(s => s.status === 'COMPLETED') : ships.filter(s => s.status !== 'COMPLETED');
+        let fDY = isArchive ? denizyoluList.filter(d => d.status === 'COMPLETED') : denizyoluList.filter(d => d.status !== 'COMPLETED');
+
+        // Arşiv sekmesindeyse ve 'TÜM ZAMANLAR' seçili değilse, seçili aya göre filtrele
+        if (isArchive) {
+            const month = document.getElementById('filterArchiveDate').value;
+            if (month !== 'ALL') {
+                fShips = fShips.filter(s => s.createdAt && s.createdAt.startsWith(month));
+                fDY = fDY.filter(d => d.createdAt && d.createdAt.startsWith(month));
+            }
+        }
+
+        if(fShips.length === 0 && fDY.length === 0) {
+            alert("Seçili döneme ait kayıt bulunamadı!");
+            return;
+        }
+
+        // 1. İTHALAT LİSTESİ
+        if(fShips.length > 0) {
+            reportData.push({ "İŞLEM TİPİ": isArchive ? "--- İTHALAT (ARŞİV) ---" : "--- AKTİF İTHALAT ---", "GEMİ ADI": "", "ROTA / LİMAN": "", "BEYANNAME / HT NO": "", "B/L / IM / MUAYENE": "", "NOT / DURUM": "" });
+            fShips.forEach(s => {
+                if(!s.htDeclarations || s.htDeclarations.length === 0) {
+                    reportData.push({ "İŞLEM TİPİ": "İTHALAT", "GEMİ ADI": s.name, "ROTA / LİMAN": s.destinationPort, "BEYANNAME / HT NO": "YOK", "B/L / IM / MUAYENE": "-", "NOT / DURUM": s.note || "-" });
+                } else {
+                    s.htDeclarations.forEach((ht, i) => {
+                        reportData.push({ 
+                            "İŞLEM TİPİ": i === 0 ? "İTHALAT" : "", 
+                            "GEMİ ADI": i === 0 ? s.name : "", 
+                            "ROTA / LİMAN": i === 0 ? s.destinationPort : "", 
+                            "BEYANNAME / HT NO": ht.no, 
+                            "B/L / IM / MUAYENE": ht.blNo || "-", 
+                            "NOT / DURUM": ht.note || "-" 
+                        });
+                    });
+                }
+                reportData.push({ "İŞLEM TİPİ": "", "GEMİ ADI": "", "ROTA / LİMAN": "", "BEYANNAME / HT NO": "", "B/L / IM / MUAYENE": "", "NOT / DURUM": "" }); // Gemiler arası boşluk
             });
-        });
-        const ws = XLSX.utils.json_to_sheet(reportData); const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Rapor");
-        XLSX.writeFile(wb, `Operasyon_Raporu_${getTrDateStr().replace(/[: ]/g,"_")}.xlsx`);
+        }
+
+        // 2. İHRACAT LİSTESİ
+        if(fDY.length > 0) {
+            reportData.push({ "İŞLEM TİPİ": isArchive ? "--- İHRACAT (ARŞİV) ---" : "--- AKTİF İHRACAT ---", "GEMİ ADI": "", "ROTA / LİMAN": "", "BEYANNAME / HT NO": "", "B/L / IM / MUAYENE": "", "NOT / DURUM": "" });
+            fDY.forEach(d => {
+                if(!d.declarations || d.declarations.length === 0) {
+                    reportData.push({ "İŞLEM TİPİ": "İHRACAT", "GEMİ ADI": d.shipName, "ROTA / LİMAN": `${d.fromPort} -> ${d.toPort}`, "BEYANNAME / HT NO": "YOK", "B/L / IM / MUAYENE": "-", "NOT / DURUM": "-" });
+                } else {
+                    d.declarations.forEach((dec, i) => {
+                        reportData.push({ 
+                            "İŞLEM TİPİ": i === 0 ? "İHRACAT" : "", 
+                            "GEMİ ADI": i === 0 ? d.shipName : "", 
+                            "ROTA / LİMAN": i === 0 ? `${d.fromPort} -> ${d.toPort}` : "", 
+                            "BEYANNAME / HT NO": dec.htNo || "BEKLİYOR", 
+                            "B/L / IM / MUAYENE": dec.imNo || "-", 
+                            "NOT / DURUM": dec.note || "-" 
+                        });
+                    });
+                }
+                reportData.push({ "İŞLEM TİPİ": "", "GEMİ ADI": "", "ROTA / LİMAN": "", "BEYANNAME / HT NO": "", "B/L / IM / MUAYENE": "", "NOT / DURUM": "" }); // Gemiler arası boşluk
+            });
+        }
+
+        const ws = XLSX.utils.json_to_sheet(reportData); 
+        ws['!cols'] = [{wch: 18}, {wch: 25}, {wch: 25}, {wch: 25}, {wch: 25}, {wch: 25}];
+        const wb = XLSX.utils.book_new(); 
+        XLSX.utils.book_append_sheet(wb, ws, "Rapor");
+        
+        let fileName = "";
+        if (isArchive) {
+            const m = document.getElementById('filterArchiveDate').value;
+            fileName = m === 'ALL' ? 'Tum_Zamanlar_Arsiv_Raporu.xlsx' : `Tamamlanan_Isler_${m}.xlsx`;
+        } else {
+            fileName = `Aktif_Operasyonlar_${getTrDateStr().substring(0,10).replace(/\./g,"_")}.xlsx`;
+        }
+        
+        XLSX.writeFile(wb, fileName);
     }
+
     function toggleAllDeclCheckboxes(state) { document.querySelectorAll('.decl-checkbox').forEach(cb => cb.checked = state); }
 
     async function generateDoc(docType) {
