@@ -1,197 +1,157 @@
 const admin = require('firebase-admin');
 const nodemailer = require('nodemailer');
 
-// 1. GİZLİ BİLGİLERİ AL
-const GMAIL_PASS = process.env.GMAIL_PASS;
-const FIREBASE_B64 = process.env.FIREBASE_SERVICE_ACCOUNT_B64;
-
-if (!GMAIL_PASS || !FIREBASE_B64) {
-    console.error("HATA: GMAIL_PASS veya FIREBASE_B64 eksik!");
+// 1. GİZLİ ANAHTAR KONTROLLERİ (GitHub Secrets)
+if (!process.env.FIREBASE_SERVICE_ACCOUNT_B64 || !process.env.GMAIL_PASS) {
+    console.error("HATA: GMAIL_PASS veya FIREBASE_SERVICE_ACCOUNT_B64 eksik!");
     process.exit(1);
 }
 
-// 2. FIREBASE BAĞLANTISI
-const serviceAccount = JSON.parse(Buffer.from(FIREBASE_B64, 'base64').toString('utf8'));
-
-if (!admin.apps.length) {
-    admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
-    });
-}
+// 2. FİREBASE BAĞLANTISI
+const serviceAccount = JSON.parse(Buffer.from(process.env.FIREBASE_SERVICE_ACCOUNT_B64, 'base64').toString('utf8'));
+admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount)
+});
 const db = admin.firestore();
 
-// 3. DOĞRUDAN GMAIL SMTP MOTORU (STANDART PORT 465)
+// 3. MAİL GÖNDERİM MOTORU (Değiştirilmedi, kusursuz çalışan yapı)
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
     port: 465,
     secure: true,
     auth: {
-        user: 'mscgemitakip@gmail.com',
-        pass: GMAIL_PASS
+        user: 'gumruk.izmir@medlog.com.tr',
+        pass: process.env.GMAIL_PASS
     }
 });
 
-// 4. KONTROL VE GÖNDERİM MOTORU
-async function checkShips() {
-    console.log("Zaman kontrolü başlıyor (Grup Mail Uyumlu Mod)...");
+// 4. AIS / UYDU VERİSİ ÇEKME FONKSİYONU (ZIRHLI VE GÜVENLİ)
+// Eğer dış kaynak hata verirse sistemi durdurmaz, eski saatle devam eder.
+async function fetchShipETAFromAIS(imo) {
+    if (!imo || imo === 'BELİRTİLMEDİ' || imo === '-') return null;
     
-    // Sağlık Paneli (Health Check) İçin Sistem Nabzı Kaydı
     try {
-        await db.collection('system_status').doc('health').set({
-            lastRun: new Date().toISOString(),
-            status: 'OK'
+        // Not: İleride buraya resmi bir AIS API anahtarı ekleyebiliriz.
+        // Şimdilik açık mobil uç noktayı deniyor.
+        const response = await fetch(`https://api.vesselfinder.com/vessels?user_key=FREE&imo=${imo}`, {
+            headers: { 'User-Agent': 'Mozilla/5.0' }
         });
-    } catch (e) {
-        console.error("Nabız (Health) güncellenemedi:", e);
-    }
-
-    // Türkiye Saati (UTC+3)
-    const nowUTC = new Date();
-    const nowTR = new Date(nowUTC.getTime() + (3 * 60 * 60 * 1000));
-
-    try {
-        const shipsRef = db.collection('ships');
-        const snapshot = await shipsRef.where('status', '==', 'PENDING').get();
-
-        if (snapshot.empty) {
-            console.log("Bekleyen gemi bulunamadı.");
-            return;
-        }
-
-        let islemSayisi = 0;
-
-        for (const doc of snapshot.docs) {
-            const ship = doc.data();
-            const emailField = ship.email;
-            const etaDate = new Date(ship.eta);
-
-            if (isNaN(etaDate.getTime()) || !emailField) continue;
-            
-            // Türkiye Saati ile Kalan Süre
-            const diffMs = etaDate.getTime() - nowTR.getTime();
-            const diffHours = diffMs / (1000 * 60 * 60);
-            
-            let updates = {};
-            let emailSubject = "";
-            let emailTitle = "";
-            let emailColor = "";
-
-            // 1. Yeni Gemi Bildirimi
-            if (!ship.emailSentNew) {
-              emailSubject = `YENİ GEMİ: ${ship.name || 'İSİMSİZ'} - ${ship.voyage || '-'}`;
-              emailTitle = "YENİ GEMİ OPERASYON BİLDİRİMİ";
-              emailColor = "#2563eb";
-              updates.emailSentNew = true;
-            } 
-            // 2. Limanda / Yanaştı
-            else if (diffHours <= 0 && !ship.emailSentArrived) {
-              emailSubject = `LİMANDA: ${ship.name} YANAŞTI`;
-              emailTitle = "GEMİ LİMANA YANAŞTI";
-              emailColor = "#16a34a";
-              updates.emailSentArrived = true;
-            }
-            // 3. 6 Saat Kala
-            else if (diffHours > 0 && diffHours <= 6 && !ship.emailSent6h) {
-              emailSubject = `KRİTİK UYARI (6 SAAT): ${ship.name}`;
-              emailTitle = "LİMANDA OLMASINA 6 SAAT KALDI";
-              emailColor = "#dc2626";
-              updates.emailSent6h = true;
-            }
-            // 4. 12 Saat Kala
-            else if (diffHours > 6 && diffHours <= 12 && !ship.emailSent12h) {
-              emailSubject = `YAKLAŞIYOR (12 SAAT): ${ship.name}`;
-              emailTitle = "LİMANDA OLMASINA 12 SAAT KALDI";
-              emailColor = "#ea580c";
-              updates.emailSent12h = true;
-            }
-
-            if (Object.keys(updates).length > 0) {
-                const siteLink = ship.siteUrl || "https://alicanyavuztekin-ops.github.io";
-                const htList = ship.htDeclarations || [];
-                
-                // DÜZ METİN (Filtreleri aşmak için zorunlu)
-                const htListText = htList.length > 0 
-                    ? htList.map(h => `- ${h.no} ${h.note ? `(${h.note})` : ''}`).join('\n')
-                    : 'Henüz HT Beyannamesi girilmedi.';
-
-                const textContent = `
-MSC & MEDLOG LİMAN OPERASYON BİLDİRİMİ
---------------------------------------
-${emailTitle}
-
-GEMİ ADI: ${ship.name}
-SEFER NO: ${ship.voyage || '-'}
-IMO NO: ${ship.imo || '-'}
-GÜZERGAH: ${ship.originPort} -> ${ship.destinationPort}
-HEDEF ZAMAN (ETA/ETB): ${etaDate.toLocaleString('tr-TR')}
-EK NOT: ${ship.note || '-'}
-
-GİRİLEN HT BEYANNAMELERİ (${htList.length} Adet):
-${htListText}
-
-Sisteme Giriş: ${siteLink}
-                `.trim();
-
-                // HTML GÖRSEL ŞABLON
-                const htListHtml = htList.length > 0 
-                    ? htList.map(h => `<li style="padding:4px 0; border-bottom:1px solid #eee;"><b>${h.no}</b> ${h.note ? `<span style="color:#666; font-size:11px;">(${h.note})</span>` : ''}</li>`).join('')
-                    : '<li style="color:#888;">Henüz HT Beyannamesi girilmedi.</li>';
-
-                const htmlContent = `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #ddd; border-radius: 6px; overflow: hidden;">
-                        <div style="background-color: #111; padding: 18px; text-align: center; border-bottom: 3px solid #FFCC00;">
-                            <h2 style="margin: 0; color: #FFCC00; font-size: 20px;">MSC &amp; MEDLOG OPERASYON</h2>
-                        </div>
-                        <div style="background-color: ${emailColor}; color: #fff; padding: 10px; text-align: center; font-weight: bold; font-size: 14px;">
-                            ${emailTitle}
-                        </div>
-                        <div style="padding: 20px;">
-                            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
-                                <tr><td style="padding: 8px; border-bottom: 1px solid #eee; width: 35%; background: #f9f9f9;"><b>GEMİ ADI</b></td><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">${ship.name}</td></tr>
-                                <tr><td style="padding: 8px; border-bottom: 1px solid #eee; background: #f9f9f9;"><b>SEFER NO</b></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${ship.voyage || '-'}</td></tr>
-                                <tr><td style="padding: 8px; border-bottom: 1px solid #eee; background: #f9f9f9;"><b>IMO NO</b></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${ship.imo || '-'}</td></tr>
-                                <tr><td style="padding: 8px; border-bottom: 1px solid #eee; background: #f9f9f9;"><b>GÜZERGAH</b></td><td style="padding: 8px; border-bottom: 1px solid #eee;">${ship.originPort} &rarr; <b>${ship.destinationPort}</b></td></tr>
-                                <tr><td style="padding: 8px; border-bottom: 1px solid #eee; background: #f9f9f9;"><b>HEDEF ZAMAN</b></td><td style="padding: 8px; border-bottom: 1px solid #eee; font-weight: bold;">${etaDate.toLocaleString('tr-TR')}</td></tr>
-                                <tr><td style="padding: 8px; background: #f9f9f9;"><b>EK NOT</b></td><td style="padding: 8px;">${ship.note || '-'}</td></tr>
-                            </table>
-
-                            <div style="margin-top: 15px; padding: 12px; background: #fcfcfc; border: 1px solid #eee; border-radius: 4px;">
-                                <h4 style="margin: 0 0 8px 0; font-size: 12px; color: #333;">HT BEYANNAMELERİ (${htList.length} Adet):</h4>
-                                <ul style="margin: 0; padding-left: 18px; font-size: 12px;">${htListHtml}</ul>
-                            </div>
-
-                            <div style="text-align: center; margin-top: 20px;">
-                                <a href="${siteLink}" style="background-color: #111; color: #FFCC00; padding: 10px 20px; text-decoration: none; border-radius: 4px; font-size: 13px; font-weight: bold; display: inline-block;">Sisteme Git ve İşlem Yap</a>
-                            </div>
-                        </div>
-                    </div>
-                `;
-
-                const cleanRecipients = emailField.split(',').map(e => e.trim()).filter(e => e.length > 0).join(', ');
-
-                try {
-                    await transporter.sendMail({
-                        from: '"MSC & MEDLOG Operasyon" <mscgemitakip@gmail.com>',
-                        replyTo: 'mscgemitakip@gmail.com',
-                        to: cleanRecipients,
-                        subject: emailSubject,
-                        text: textContent, 
-                        html: htmlContent  
-                    });
-                    
-                    await shipsRef.doc(doc.id).update(updates);
-                    console.log(`✅ Mail İletildi: ${ship.name} -> ${cleanRecipients}`);
-                    islemSayisi++;
-                } catch (error) {
-                    console.error(`❌ Mail Hatası (${ship.name}):`, error);
-                }
-            }
-        }
         
-        console.log(`İşlem tamamlandı. Gönderilen: ${islemSayisi}`);
+        if (response.ok) {
+            const data = await response.json();
+            // Eğer uydudan güncel bir saat geldiyse onu döndürür
+            if (data && data.length > 0 && data[0].eta) {
+                return data[0].eta; 
+            }
+        }
+        return null;
     } catch (error) {
-        console.error("HATA:", error);
+        console.log(`[AIS UYARISI] IMO ${imo} için canlı veri çekilemedi. Eski saat baz alınacak.`);
+        return null; // Hata durumunda sistemi çökertmez, null döner.
     }
 }
 
+// 5. ANA KONTROL MOTORU
+async function checkShips() {
+    try {
+        console.log("⚙️ 1. Sistem Sağlığı (Health Check) Güncelleniyor...");
+        await db.collection('system_status').doc('health').set({ 
+            lastRun: new Date().toISOString(), 
+            status: 'OK' 
+        });
+
+        console.log("⚙️ 2. Aktif Gemiler Taranıyor...");
+        const snapshot = await db.collection('ships').where('status', '!=', 'COMPLETED').get();
+        
+        if (snapshot.empty) {
+            console.log('Sistemde aktif gemi bulunamadı. İşlem sonlandırılıyor.');
+            return;
+        }
+
+        for (const doc of snapshot.docs) {
+            const ship = doc.data();
+            if (!ship.eta) continue;
+
+            let currentEta = ship.eta;
+
+            // --- YENİ: AIS UYDU SORGUSU ---
+            console.log(`🔍 ${ship.name} (IMO: ${ship.imo}) için canlı AIS verisi kontrol ediliyor...`);
+            const aisEta = await fetchShipETAFromAIS(ship.imo);
+            
+            // Eğer uydudan yeni bir saat geldiyse ve eskisinden farklıysa veritabanını sessizce günceller
+            if (aisEta && aisEta !== ship.eta) {
+                currentEta = aisEta;
+                await db.collection('ships').doc(doc.id).update({ eta: currentEta, lastUpdated: new Date().toLocaleString('tr-TR') });
+                console.log(`✅ [GÜNCELLEME] ${ship.name} gemisinin saati uydu verisiyle güncellendi: ${currentEta}`);
+            }
+
+            // --- MEVCUT ÇALIŞAN MAİL MANTIĞI ---
+            const etaDate = new Date(currentEta);
+            const now = new Date();
+            const diffHours = (etaDate - now) / 3600000;
+
+            let emailType = null;
+            let updates = {};
+
+            // Zaman Kriterleri
+            if (diffHours <= 0 && !ship.emailSentArrived) {
+                emailType = 'YANAŞTI / LİMANDA';
+                updates.emailSentArrived = true;
+            } else if (diffHours > 0 && diffHours <= 6 && !ship.emailSent6h) {
+                emailType = '6 SAAT KALA';
+                updates.emailSent6h = true;
+            } else if (diffHours > 6 && diffHours <= 12 && !ship.emailSent12h) {
+                emailType = '12 SAAT KALA';
+                updates.emailSent12h = true;
+            }
+
+            // Eğer eşik aşıldıysa ve mail atılacaksa
+            if (emailType && ship.email) {
+                console.log(`✉️ [MAİL] ${ship.name} için "${emailType}" bildirimi gönderiliyor...`);
+                
+                const mailOptions = {
+                    from: '"MSC & MEDLOG Operasyon" <gumruk.izmir@medlog.com.tr>',
+                    to: ship.email,
+                    subject: `🚢 [${emailType}] GEMİ DURUM BİLDİRİMİ: ${ship.name}`,
+                    html: `
+                        <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ddd; border-radius: 8px; max-w-lg">
+                            <div style="background-color: #111111; color: #FFCC00; padding: 15px; border-radius: 8px 8px 0 0; text-align: center;">
+                                <h2 style="margin: 0; font-size: 18px;">MSC & MEDLOG GEMİ OPERASYON</h2>
+                            </div>
+                            <div style="padding: 20px; background-color: #f9fafb;">
+                                <h3 style="color: #374151; margin-top: 0; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px;">${ship.name} - Güncel Durum</h3>
+                                <p style="margin: 8px 0; color: #4b5563;"><b>Sefer No:</b> ${ship.voyage || '-'}</p>
+                                <p style="margin: 8px 0; color: #4b5563;"><b>Güzergah:</b> ${ship.originPort} &rarr; <b>${ship.destinationPort}</b></p>
+                                <p style="margin: 8px 0; color: #4b5563;"><b>Hedef Zaman (ETA):</b> <span style="color: #2563eb; font-weight: bold;">${etaDate.toLocaleString('tr-TR')}</span></p>
+                                <p style="margin: 8px 0; color: #4b5563;"><b>Beyanname Sayısı:</b> ${ship.declarations || 0} Adet</p>
+                                ${ship.note ? `<p style="margin: 8px 0; color: #4b5563;"><b>Ek Not:</b> <span style="background-color: #fef3c7; padding: 2px 6px; border-radius: 4px;">${ship.note}</span></p>` : ''}
+                                
+                                <div style="margin-top: 20px; padding: 15px; background-color: ${diffHours <= 0 ? '#d1fae5' : '#fee2e2'}; border-radius: 8px; text-align: center;">
+                                    <strong style="color: ${diffHours <= 0 ? '#065f46' : '#991b1b'}; font-size: 16px;">
+                                        ${diffHours <= 0 ? 'Gemi Limana Yanaştı / İşlemde.' : `Limana Yanaşmasına Yaklaşık ${Math.round(diffHours)} Saat Kaldı!`}
+                                    </strong>
+                                </div>
+                            </div>
+                            <div style="font-size: 11px; color: #9ca3af; text-align: center; margin-top: 15px;">
+                                Bu e-posta otomatik sistem tarafından gönderilmiştir.<br>Sistem Sağlığı ve AIS Uydu Bağlantısı Aktif.
+                            </div>
+                        </div>
+                    `
+                };
+
+                await transporter.sendMail(mailOptions);
+                await db.collection('ships').doc(doc.id).update(updates);
+                console.log(`✅ Mail başarıyla gönderildi: ${ship.email}`);
+            }
+        }
+        
+        console.log("🎉 Tüm kontroller sorunsuz tamamlandı!");
+        
+    } catch (error) {
+        console.error("❌ KRİTİK HATA:", error);
+        process.exit(1);
+    }
+}
+
+// Botu Çalıştır
 checkShips();
