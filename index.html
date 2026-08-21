@@ -833,7 +833,7 @@
             fShips.forEach(ship => {
                 tbodyShips.innerHTML += `
                 <tr class="border-b hover:bg-zinc-50">
-                    <td class="p-3"><div class="font-bold text-sm">${ship.name}</div><div class="text-[10px] text-gray-500">IMO: ${ship.imo || '-'}</div></td>
+                    <td class="p-3"><div class="font-bold text-sm">${ship.name}</div><div class="text-[10px] text-gray-500">IMO: ${ship.imo || '-'} | Sefer: ${ship.voyage || '-'}</div></td>
                     <td class="p-3 text-xs">${ship.originPort || '-'} &rarr; ${ship.destinationPort}</td>
                     <td class="p-3 text-xs text-slate-500">${new Date(ship.createdAt).toLocaleString('tr-TR')}</td>
                     <td class="p-3 text-right">
@@ -913,6 +913,7 @@
 
         populateArchiveMonths();
 
+        // YENİ: Firebase Ayar Dinleyicisi (E-postalar Artık Silinmez!)
         db.collection('user_settings').doc(currentUser.uid).onSnapshot(doc => {
             if(doc.exists) {
                 if(doc.data().emails) savedEmailsList = doc.data().emails;
@@ -1098,11 +1099,9 @@
         let isArchive = currentViewTab === 'ARCHIVE';
         let reportData = [];
         
-        // Hangi verileri alacağımızı belirliyoruz (Arşiv sekmesindeyse tamamlananlar, değilse aktifler)
         let fShips = isArchive ? ships.filter(s => s.status === 'COMPLETED') : ships.filter(s => s.status !== 'COMPLETED');
         let fDY = isArchive ? denizyoluList.filter(d => d.status === 'COMPLETED') : denizyoluList.filter(d => d.status !== 'COMPLETED');
 
-        // Arşiv sekmesindeyse ve 'TÜM ZAMANLAR' seçili değilse, seçili aya göre filtrele
         if (isArchive) {
             const month = document.getElementById('filterArchiveDate').value;
             if (month !== 'ALL') {
@@ -1116,7 +1115,6 @@
             return;
         }
 
-        // 1. İTHALAT LİSTESİ
         if(fShips.length > 0) {
             reportData.push({ "İŞLEM TİPİ": isArchive ? "--- İTHALAT (ARŞİV) ---" : "--- AKTİF İTHALAT ---", "GEMİ ADI": "", "ROTA / LİMAN": "", "BEYANNAME / HT NO": "", "B/L / IM / MUAYENE": "", "NOT / DURUM": "" });
             fShips.forEach(s => {
@@ -1134,11 +1132,10 @@
                         });
                     });
                 }
-                reportData.push({ "İŞLEM TİPİ": "", "GEMİ ADI": "", "ROTA / LİMAN": "", "BEYANNAME / HT NO": "", "B/L / IM / MUAYENE": "", "NOT / DURUM": "" }); // Gemiler arası boşluk
+                reportData.push({ "İŞLEM TİPİ": "", "GEMİ ADI": "", "ROTA / LİMAN": "", "BEYANNAME / HT NO": "", "B/L / IM / MUAYENE": "", "NOT / DURUM": "" });
             });
         }
 
-        // 2. İHRACAT LİSTESİ
         if(fDY.length > 0) {
             reportData.push({ "İŞLEM TİPİ": isArchive ? "--- İHRACAT (ARŞİV) ---" : "--- AKTİF İHRACAT ---", "GEMİ ADI": "", "ROTA / LİMAN": "", "BEYANNAME / HT NO": "", "B/L / IM / MUAYENE": "", "NOT / DURUM": "" });
             fDY.forEach(d => {
@@ -1156,7 +1153,7 @@
                         });
                     });
                 }
-                reportData.push({ "İŞLEM TİPİ": "", "GEMİ ADI": "", "ROTA / LİMAN": "", "BEYANNAME / HT NO": "", "B/L / IM / MUAYENE": "", "NOT / DURUM": "" }); // Gemiler arası boşluk
+                reportData.push({ "İŞLEM TİPİ": "", "GEMİ ADI": "", "ROTA / LİMAN": "", "BEYANNAME / HT NO": "", "B/L / IM / MUAYENE": "", "NOT / DURUM": "" });
             });
         }
 
@@ -1228,7 +1225,7 @@
 
         tbody.innerHTML += `
         <tr class="border-b hover:bg-zinc-50">
-            <td class="p-3"><div class="font-bold text-sm">${ship.name}</div><div class="text-[10px] text-gray-500">IMO: ${ship.imo || '-'}</div></td>
+            <td class="p-3"><div class="font-bold text-sm">${ship.name}</div><div class="text-[10px] text-gray-500">IMO: ${ship.imo || '-'} | Sefer: ${ship.voyage || '-'}</div></td>
             <td class="p-3 text-xs"><b>${ship.originPort || '-'}</b> &rarr; ${ship.destinationPort}<br><span class="bg-[#FFCC00] font-bold text-[10px] px-1 rounded">${ship.note || '-'}</span></td>
             <td class="p-3 text-xs">${new Date(ship.eta).toLocaleString('tr-TR')}</td>
             <td class="p-3"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${bClass}">${bText}</span></td>
@@ -1241,7 +1238,7 @@
             </td>
         </tr>`;
 
-        targetCol.innerHTML += `<div class="bg-white p-3 rounded-lg shadow-sm border text-xs mb-2"><b>${ship.name}</b><br>${ship.destinationPort}<br>${new Date(ship.eta).toLocaleString('tr-TR')}</div>`;
+        targetCol.innerHTML += `<div class="bg-white p-3 rounded-lg shadow-sm border text-xs mb-2"><b>${ship.name}</b> <span class="text-[10px] text-slate-500">(${ship.voyage || '-'})</span><br>${ship.destinationPort}<br>${new Date(ship.eta).toLocaleString('tr-TR')}</div>`;
       });
       document.getElementById('kb-count-normal').innerText = cN; document.getElementById('kb-count-12h').innerText = c12; document.getElementById('kb-count-6h').innerText = c6; document.getElementById('kb-count-arrived').innerText = cA;
     }
